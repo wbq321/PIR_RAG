@@ -12,7 +12,7 @@ data:
   corpus_path: "data/corpus_10000.csv"
   
   # Path to the local sentence transformer model
-  model_path: "./local_bge_model"
+  model_path: "../shared_models/bge_model"
   
   # Pre-processed size-based groups (created by data preparation)
   size_groups:

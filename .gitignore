@@ -1,5 +1,6 @@
 # Model and data directories
 local_bge_model/
+../shared_models/
 msmarco_data/
 msmarco_data_prepared/
 data/

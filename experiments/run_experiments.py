@@ -29,7 +29,7 @@ from pir_rag.utils import prepare_docs_by_size, prepare_evaluation_data
 class PIRRAGExperimentRunner:
     """Main experiment runner for PIR-RAG system."""
     
-    def __init__(self, embeddings_path: str, corpus_path: str, model_path: str = "./local_bge_model"):
+    def __init__(self, embeddings_path: str, corpus_path: str, model_path: str = "../shared_models/bge_model"):
         """
         Initialize the experiment runner.
         
@@ -290,7 +290,7 @@ def main():
                         help="Path to embeddings .npy file")
     parser.add_argument("--corpus_path", type=str, required=True,
                         help="Path to corpus .csv file")
-    parser.add_argument("--model_path", type=str, default="./local_bge_model",
+    parser.add_argument("--model_path", type=str, default="../shared_models/bge_model",
                         help="Path to local sentence transformer model")
     parser.add_argument("--output_dir", type=str, default="./results",
                         help="Directory to save results")
