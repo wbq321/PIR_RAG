@@ -312,12 +312,25 @@ class PIRRAGExperimentRunner:
             return []
         
         # Load full dataset
-        corpus_texts, embeddings = self._load_full_dataset()
+        #corpus_texts, embeddings = self._load_full_dataset()
+        
+        if 'target_size_group' in exp_config:
+            # Use specific size group
+            target_group = exp_config['target_size_group']
+            n_docs = exp_config.get('n_docs', None)
+            corpus_texts, embeddings = self._load_size_group_data(target_group, n_docs)
+            print(f"Using size group '{target_group}' with {len(corpus_texts)} documents")
+        else:
+            # Use full dataset (original behavior)
+            corpus_texts, embeddings = self._load_full_dataset()
         
         results = []
         cluster_counts = exp_config['cluster_counts']
         
         for n_clusters in cluster_counts:
+            if n_clusters > len(corpus_texts):
+                print(f"  -> Skipping {n_clusters} clusters: exceeds document count ({len(corpus_texts)})")
+                continue
             config = {
                 "name": f"Clusters_{n_clusters}",
                 "experiment_type": "cluster_count",
@@ -325,7 +338,9 @@ class PIRRAGExperimentRunner:
                 "n_eval_queries": exp_config['n_eval_queries'],
                 **exp_config['fixed_params']
             }
-            
+            if 'target_size_group' in exp_config:
+                config['size_group'] = exp_config['target_size_group']
+                config['n_docs_used'] = len(corpus_texts)
             result = self.run_single_experiment(config, corpus_texts, embeddings)
             results.append(result)
         

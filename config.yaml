@@ -37,7 +37,7 @@ experiments:
   
   # Document Size Impact (using pre-processed size groups)
   document_size:
-    enabled: true
+    enabled: false
     size_groups: ["small", "medium_small", "medium", "medium_large", "large"]
     n_docs_per_group: 100               # Fixed number of docs from each size group
     n_eval_queries: 10                  # Queries per size group
@@ -48,7 +48,7 @@ experiments:
   
   # Document Count Impact (using same size group)
   document_count:
-    enabled: true  # Set to true to enable
+    enabled: false  # Set to true to enable
     target_size_group: "medium"         # Use medium size group (2500-3500 bytes)
     doc_counts: [100, 150, 200, 250, 300]  # Different numbers of documents to test
     n_eval_queries: 10                  # Queries per document count
@@ -59,12 +59,14 @@ experiments:
   
   # Cluster Count Impact
   cluster_count:
-    enabled: false  # Set to true to enable
-    cluster_counts: [100, 500, 1000, 5000, 10000]
-    n_eval_queries: 50
+    enabled: true  # Set to true to enable
+    target_size_group: "small"
+    n_docs:500
+    cluster_counts: [10, 50, 100]
+    n_eval_queries: 10
     fixed_params:
-      key_length: 2048
-      top_n_clusters: 3
+      key_length: 1024
+      top_n_clusters: 1
   
   # Top-K Clusters Impact
   top_k_clusters:
