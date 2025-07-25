@@ -65,7 +65,7 @@ sbatch slurm/run_experiments.sbatch
 python experiments/run_experiments.py \
     --embeddings_path data/embeddings_10000.npy \
     --corpus_path data/corpus_10000.csv \
-    --model_path ./local_bge_model
+    --model_path ../shared_models/bge_model
 ```
 
 ## System Architecture

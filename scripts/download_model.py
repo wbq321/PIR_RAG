@@ -4,7 +4,7 @@ import os
 
 # 定义模型名和你希望保存的本地路径 (一个简单的、在你项目目录下的文件夹名)
 model_name = 'BAAI/bge-base-en-v1.5'
-local_model_path = './local_bge_model' 
+local_model_path = '../shared_models/bge_model' 
 
 # 检查目录是否已存在，如果存在则跳过，避免重复下载
 if os.path.exists(local_model_path):

@@ -190,9 +190,9 @@ clean_files() {
     fi
     
     # Remove model
-    if [[ -d "./local_bge_model" ]]; then
-        echo -e "${YELLOW}Removing local model...${NC}"
-        rm -rf "./local_bge_model"
+    if [[ -d "../shared_models/bge_model" ]]; then
+        echo -e "${YELLOW}Removing shared model...${NC}"
+        rm -rf "../shared_models/bge_model"
     fi
     
     # Remove cached data
@@ -226,7 +226,7 @@ check_status() {
     fi
     
     # Check model
-    if [[ -d "./local_bge_model" ]]; then
+    if [[ -d "../shared_models/bge_model" ]]; then
         echo -e "Model: ${GREEN}✓ Downloaded${NC}"
     else
         echo -e "Model: ${RED}✗ Not downloaded${NC}"
