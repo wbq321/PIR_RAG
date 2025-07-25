@@ -48,7 +48,7 @@ experiments:
   
   # Document Count Impact (using same size group)
   document_count:
-    enabled: false  # Set to true to enable
+    enabled: true  # Set to true to enable
     target_size_group: "medium"         # Use medium size group (2500-3500 bytes)
     doc_counts: [100, 150, 200, 250, 300]  # Different numbers of documents to test
     n_eval_queries: 10                  # Queries per document count
