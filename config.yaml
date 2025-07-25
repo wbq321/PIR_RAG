@@ -61,7 +61,7 @@ experiments:
   cluster_count:
     enabled: true  # Set to true to enable
     target_size_group: "small"
-    n_docs:500
+    n_docs: 500
     cluster_counts: [10, 50, 100]
     n_eval_queries: 10
     fixed_params:

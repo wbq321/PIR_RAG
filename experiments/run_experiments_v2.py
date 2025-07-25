@@ -128,7 +128,7 @@ class PIRRAGExperimentRunner:
         Returns:
             Dictionary with experiment results
         """
-        print(f"\\n--- Running: {config.get('name', 'Unnamed Experiment')} ---")
+        print(f"\n--- Running: {config.get('name', 'Unnamed Experiment')} ---")
         print(f"Documents: {len(corpus_texts)}, Clusters: {config['n_clusters']}")
         
         # Prepare evaluation data
@@ -209,7 +209,7 @@ class PIRRAGExperimentRunner:
     
     def run_document_size_experiments(self) -> list:
         """Run experiments varying document sizes using pre-processed groups."""
-        print("\\n" + "="*60)
+        print("\n" + "="*60)
         print("Document Size Impact Experiments (Using Size Groups)")
         print("="*60)
         
@@ -247,7 +247,7 @@ class PIRRAGExperimentRunner:
     
     def run_document_count_experiments(self) -> list:
         """Run experiments varying document counts within same size group."""
-        print("\\n" + "="*60)
+        print("\n" + "="*60)
         print("Document Count Impact Experiments")
         print("="*60)
         
@@ -302,7 +302,7 @@ class PIRRAGExperimentRunner:
     
     def run_cluster_experiments(self) -> list:
         """Run experiments varying number of clusters."""
-        print("\\n" + "="*50)
+        print("\n" + "="*50)
         print("Cluster Count Impact Experiments")
         print("="*50)
         
@@ -348,7 +348,7 @@ class PIRRAGExperimentRunner:
     
     def run_top_k_experiments(self) -> list:
         """Run experiments varying top-k clusters retrieved."""
-        print("\\n" + "="*50)
+        print("\n" + "="*50)
         print("Top-K Clusters Impact Experiments")
         print("="*50)
         
@@ -379,7 +379,7 @@ class PIRRAGExperimentRunner:
     
     def run_key_length_experiments(self) -> list:
         """Run experiments varying encryption key length."""
-        print("\\n" + "="*50)
+        print("\n" + "="*50)
         print("Key Length Impact Experiments")
         print("="*50)
         
@@ -446,7 +446,7 @@ def main():
     results_df = runner.run_all_experiments()
     
     if results_df.empty:
-        print("\\nNo experiments were run. Check your configuration file.")
+        print("\nNo experiments were run. Check your configuration file.")
         return
     
     # Save results
@@ -456,9 +456,9 @@ def main():
     
     results_df.to_csv(output_path, index=False)
     
-    print("\\n\\n--- EXPERIMENT RESULTS ---")
+    print("\n\n--- EXPERIMENT RESULTS ---")
     print(results_df.to_string())
-    print(f"\\nResults saved to {output_path}")
+    print(f"\nResults saved to {output_path}")
 
 
 if __name__ == "__main__":
