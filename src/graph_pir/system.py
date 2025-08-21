@@ -279,20 +279,44 @@ class DocumentPIRServer:
         
         # Encode each document to chunks
         doc_chunks = []
-        for doc in documents:
-            chunks = encode_text_to_chunks(doc)
-            doc_chunks.append(chunks)
+        for i, doc in enumerate(documents):
+            if not doc or not isinstance(doc, str):
+                print(f"Warning: Document {i} is empty or invalid, using placeholder")
+                doc = f"Empty document {i}"
+            
+            try:
+                chunks = encode_text_to_chunks(doc)
+                if not isinstance(chunks, list):
+                    print(f"Error: encode_text_to_chunks returned {type(chunks)} instead of list for doc {i}")
+                    chunks = [0]  # Fallback
+                doc_chunks.append(chunks)
+            except Exception as e:
+                print(f"Error encoding document {i}: {e}")
+                doc_chunks.append([0])  # Fallback empty chunk
             
         # Find max chunks needed
-        self.max_chunks = max(len(chunks) for chunks in doc_chunks) if doc_chunks else 0
+        if not doc_chunks:
+            self.max_chunks = 1
+        else:
+            chunk_lengths = []
+            for chunks in doc_chunks:
+                if isinstance(chunks, list):
+                    chunk_lengths.append(len(chunks))
+                else:
+                    print(f"Warning: chunks is not a list: {type(chunks)}")
+                    chunk_lengths.append(1)
+            self.max_chunks = max(chunk_lengths) if chunk_lengths else 1
+        
+        print(f"[DocPIR] Max chunks per document: {self.max_chunks}")
         
         # Create PIR database organized by chunk position (similar to PIR-RAG)
         self.doc_chunks_db = [[] for _ in range(self.max_chunks)]
         for chunk_idx in range(self.max_chunks):
-            for doc_chunks in doc_chunks:
-                self.doc_chunks_db[chunk_idx].append(
-                    doc_chunks[chunk_idx] if chunk_idx < len(doc_chunks) else 0
-                )
+            for doc_chunks_list in doc_chunks:
+                if isinstance(doc_chunks_list, list) and chunk_idx < len(doc_chunks_list):
+                    self.doc_chunks_db[chunk_idx].append(doc_chunks_list[chunk_idx])
+                else:
+                    self.doc_chunks_db[chunk_idx].append(0)  # Padding
                 
         return {
             "doc_pir_max_chunks": self.max_chunks,

@@ -9,13 +9,7 @@ cd /path/to/PIR_RAG
 python -m experiments.run_pir_comparison --embeddings_path data/embeddings_10000.npy --corpus_path data/corpus_10000.csv --data_size 100 --n_queries 1 --n_clusters 10 --model_path ../shared_models/bge_model
 ```
 
-## Solution 2: Use the wrapper script
-```bash
-cd /path/to/PIR_RAG
-python run_pir_comparison_wrapper.py --embeddings_path data/embeddings_10000.npy --corpus_path data/corpus_10000.csv --data_size 100 --n_queries 1 --n_clusters 10 --model_path ../shared_models/bge_model
-```
-
-## Solution 3: Set PYTHONPATH
+## Solution 2: Set PYTHONPATH
 ```bash
 export PYTHONPATH=/path/to/PIR_RAG/src:$PYTHONPATH
 cd /path/to/PIR_RAG
