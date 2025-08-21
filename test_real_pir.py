@@ -6,6 +6,7 @@ Run this on the cluster to verify the implementation works correctly.
 
 import sys
 import os
+import traceback
 sys.path.append('src')
 
 import numpy as np
@@ -107,7 +108,9 @@ def compare_with_pir_rag():
     print("="*60)
 
     try:
-        from pir_rag.system import PIRRAGSystem
+        # Import PIR-RAG components
+        from src.pir_rag.server import PIRRAGServer
+        from src.pir_rag.client import PIRRAGClient
 
         # Small test for comparison
         n_docs = 20
@@ -118,6 +121,73 @@ def compare_with_pir_rag():
 
         # Test PIR-RAG
         print("Testing PIR-RAG...")
+        start_time = time.time()
+        
+        # Set up PIR-RAG server and client
+        pir_rag_server = PIRRAGServer()
+        pir_rag_client = PIRRAGClient()
+        
+        # Server setup
+        server_metrics = pir_rag_server.setup(embeddings, documents, n_clusters=4)
+        
+        # Client setup  
+        client_metrics = pir_rag_client.setup(pir_rag_server.centroids)
+        
+        # Test query
+        query_embedding = np.random.randn(embedding_dim).astype(np.float32)
+        
+        # PIR-RAG query process
+        query_start = time.time()
+        
+        # Client side: encrypt query and find best cluster
+        encrypted_query_vector, cluster_selection_metrics = pir_rag_client.create_encrypted_query_vector(
+            query_embedding, top_k_clusters=1
+        )
+        
+        # Server side: process PIR query
+        encrypted_results, server_query_metrics = pir_rag_server.process_pir_query(
+            encrypted_query_vector, pir_rag_client.public_key
+        )
+        
+        # Client side: decrypt results
+        decrypted_docs, client_query_metrics = pir_rag_client.decrypt_pir_response(
+            encrypted_results
+        )
+        
+        query_time = time.time() - query_start
+        total_time = time.time() - start_time
+        
+        # Calculate communication costs
+        total_upload = cluster_selection_metrics.get('upload_bytes', 0) + server_query_metrics.get('upload_bytes', 0)
+        total_download = server_query_metrics.get('download_bytes', 0) + client_query_metrics.get('download_bytes', 0)
+        
+        print(f"PIR-RAG Results:")
+        print(f"  Total time: {total_time:.4f}s")
+        print(f"  Query time: {query_time:.4f}s") 
+        print(f"  Upload: {total_upload} bytes")
+        print(f"  Download: {total_download} bytes")
+        print(f"  Total communication: {total_upload + total_download} bytes")
+        print(f"  Documents retrieved: {len(decrypted_docs)}")
+        
+        print("\n" + "="*60)
+        print("COMPARISON SUMMARY")
+        print("="*60)
+        print("Note: Both systems now use real cryptographic operations")
+        print("Communication efficiency depends on:")
+        print("- PIR-RAG: Paillier homomorphic encryption + K-means clustering")
+        print("- Graph-PIR: AES-based PIR + graph traversal")
+        print("- Dataset size, query patterns, and cluster/graph structure")
+        
+        return True
+
+    except ImportError as e:
+        print(f"❌ Cannot import PIR-RAG: {e}")
+        print("Skipping PIR-RAG comparison")
+        return False
+    except Exception as e:
+        print(f"❌ PIR-RAG comparison failed: {e}")
+        traceback.print_exc()
+        return False
         pir_rag = PIRRAGSystem()
         pir_rag_start = time.perf_counter()
         pir_rag.setup(embeddings, documents, k_clusters=5)
