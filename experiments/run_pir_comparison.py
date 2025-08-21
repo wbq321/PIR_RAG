@@ -3,7 +3,7 @@ Communication Efficiency Comparison: PIR-RAG vs Graph-PIR
 
 Compares the two systems on the same dataset to evaluate:
 - Upload/download bytes
-- Query latency  
+- Query latency
 - Preprocessing costs
 - Retrieval quality
 """
@@ -37,12 +37,12 @@ def load_test_data(embeddings_path: str = None, corpus_path: str = None, data_si
             corpus_df = pd.read_csv(corpus_path)
             documents = corpus_df['text'].iloc[:data_size].tolist()
             print(f"Loaded {len(documents)} documents, embedding dim: {embeddings.shape[1]}")
-        
+
         # Try default paths if no paths specified
         elif embeddings_path is None and corpus_path is None:
             default_embeddings = "data/embeddings_10000.npy"
             default_corpus = "data/corpus_10000.csv"
-            
+
             if os.path.exists(default_embeddings) and os.path.exists(default_corpus):
                 print(f"Loading default MS MARCO data (first {data_size} samples)...")
                 embeddings = np.load(default_embeddings)[:data_size]
@@ -53,7 +53,7 @@ def load_test_data(embeddings_path: str = None, corpus_path: str = None, data_si
                 raise FileNotFoundError("Default data files not found")
         else:
             raise FileNotFoundError("Specified data files not found")
-            
+
     except Exception as e:
         print(f"Could not load real data ({e}), generating synthetic data for {data_size} documents...")
         # Generate synthetic data
@@ -61,12 +61,12 @@ def load_test_data(embeddings_path: str = None, corpus_path: str = None, data_si
         np.random.seed(42)
         embeddings = np.random.randn(data_size, embedding_dim).astype(np.float32)
         documents = [
-            f"This is document {i} about topic {i%10}. " + 
+            f"This is document {i} about topic {i%10}. " +
             f"It contains information relevant to query types and has some content for testing. " * 3
             for i in range(data_size)
         ]
         print(f"Generated {len(documents)} documents, embedding dim: {embeddings.shape[1]}")
-        
+
     return embeddings, documents
 
 
@@ -74,11 +74,11 @@ def generate_test_queries(documents: List[str], n_queries: int = 10) -> List[str
     """Generate realistic test queries by sampling from corpus documents."""
     if len(documents) == 0:
         raise ValueError("Cannot generate queries from empty document list")
-    
+
     # Sample random documents to use as queries
     np.random.seed(42)  # For reproducible results
     query_indices = np.random.choice(len(documents), size=min(n_queries, len(documents)), replace=False)
-    
+
     selected_queries = []
     for idx in query_indices:
         doc_text = documents[idx]
@@ -91,13 +91,13 @@ def generate_test_queries(documents: List[str], n_queries: int = 10) -> List[str
             query = doc_text[:100].strip()
             if len(doc_text) > 100:
                 query += "..."
-        
+
         # Ensure query is not too short
         if len(query.strip()) < 10:
             query = doc_text[:50].strip() + "..."
-            
+
         selected_queries.append(query)
-    
+
     print(f"Generated {len(selected_queries)} queries from corpus documents")
     return selected_queries
 
@@ -120,32 +120,32 @@ def load_model(model_path: str) -> SentenceTransformer:
             raise RuntimeError(f"Failed to load any model: {e2}")
 
 
-def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str], 
+def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
                           n_clusters: int, n_queries: int = 10, key_length: int = 2048,
                           model: SentenceTransformer = None) -> Dict[str, Any]:
     """Run PIR-RAG experiment."""
     print(f"\n=== PIR-RAG Experiment (clusters={n_clusters}) ===")
-    
+
     # Setup
     setup_start = time.perf_counter()
     server = PIRRAGServer()
     server_metrics = server.setup(embeddings, documents, n_clusters)
-    
+
     client = PIRRAGClient()
     client_metrics = client.setup(server.centroids, key_length=key_length)
     setup_time = time.perf_counter() - setup_start
-    
+
     print(f"Setup complete in {setup_time:.2f}s")
-    
+
     # Run queries
     all_metrics = []
     total_upload = 0
     total_download = 0
     total_query_time = 0
-    
+
     # Generate test queries
     test_queries = generate_test_queries(documents, n_queries)
-    
+
     for i, query_text in enumerate(test_queries):
         # Encode query using the model
         if model is not None:
@@ -154,23 +154,23 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
             # Fallback to random if no model (for testing only)
             query_embedding = torch.tensor(np.random.randn(embeddings.shape[1]).astype(np.float32))
             print(f"Warning: Using random query embedding for query {i+1} (no model provided)")
-        
+
         # Find relevant clusters
         cluster_indices = client.find_relevant_clusters(query_embedding, top_k=3)
-        
+
         # Perform PIR retrieval
         query_start = time.perf_counter()
         retrieved_docs, query_metrics = client.pir_retrieve(server, cluster_indices)
         query_time = time.perf_counter() - query_start
-        
+
         total_upload += query_metrics["total_upload_bytes"]
         total_download += query_metrics["total_download_bytes"]
         total_query_time += query_time
-        
+
         if i == 0:
             print(f"First query: '{query_text[:50]}...'")
             print(f"Retrieved {len(retrieved_docs)} docs in {query_time:.3f}s")
-    
+
     avg_metrics = {
         "system": "PIR-RAG",
         "setup_time": setup_time,
@@ -184,37 +184,37 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
         "server_setup_metrics": server_metrics,
         "client_setup_metrics": client_metrics
     }
-    
+
     print(f"PIR-RAG Results:")
     print(f"  Avg query time: {avg_metrics['avg_query_time']:.3f}s")
     print(f"  Avg upload: {avg_metrics['avg_upload_bytes']:,} bytes")
     print(f"  Avg download: {avg_metrics['avg_download_bytes']:,} bytes")
-    
+
     return avg_metrics
 
 
-def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str], 
-                           n_queries: int = 10, top_k: int = 10, 
+def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
+                           n_queries: int = 10, top_k: int = 10,
                            model: SentenceTransformer = None) -> Dict[str, Any]:
     """Run Graph-PIR experiment."""
     print(f"\n=== Graph-PIR Experiment ===")
-    
+
     # Setup
     setup_start = time.perf_counter()
     graph_pir = GraphPIRSystem()
     setup_metrics = graph_pir.setup(embeddings, documents)
     setup_time = time.perf_counter() - setup_start
-    
+
     print(f"Setup complete in {setup_time:.2f}s")
-    
+
     # Run queries
     total_upload = 0
     total_download = 0
     total_query_time = 0
-    
+
     # Generate test queries
     test_queries = generate_test_queries(documents, n_queries)
-    
+
     for i, query_text in enumerate(test_queries):
         # Encode query using the model
         if model is not None:
@@ -223,21 +223,21 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
             # Fallback to random if no model (for testing only)
             query_embedding = np.random.randn(embeddings.shape[1]).astype(np.float32)
             print(f"Warning: Using random query embedding for query {i+1} (no model provided)")
-        
+
         # Perform Graph-PIR query
         query_start = time.perf_counter()
         retrieved_docs, query_metrics = graph_pir.query(query_embedding, top_k=top_k)
         query_time = time.perf_counter() - query_start
-        
+
         total_upload += query_metrics["phase1_upload_bytes"] + query_metrics["phase2_upload_bytes"]
         total_download += query_metrics["phase1_download_bytes"] + query_metrics["phase2_download_bytes"]
         total_query_time += query_time
-        
+
         if i == 0:
             print(f"First query: '{query_text[:50]}...'")
             print(f"Retrieved {len(retrieved_docs)} docs in {query_time:.3f}s")
             print(f"  Phase 1: {query_metrics['phase1_time']:.3f}s, Phase 2: {query_metrics['phase2_time']:.3f}s")
-    
+
     avg_metrics = {
         "system": "Graph-PIR",
         "setup_time": setup_time,
@@ -249,19 +249,19 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
         "n_queries": n_queries,
         "setup_metrics": setup_metrics
     }
-    
+
     print(f"Graph-PIR Results:")
     print(f"  Avg query time: {avg_metrics['avg_query_time']:.3f}s")
     print(f"  Avg upload: {avg_metrics['avg_upload_bytes']:,} bytes")
     print(f"  Avg download: {avg_metrics['avg_download_bytes']:,} bytes")
-    
+
     return avg_metrics
 
 
 def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict):
     """Compare results between the two systems."""
     print(f"\n=== COMPARISON SUMMARY ===")
-    
+
     # Setup time comparison
     pir_setup = pir_rag_results["setup_time"]
     graph_setup = graph_pir_results["setup_time"]
@@ -269,7 +269,7 @@ def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict):
     print(f"  PIR-RAG: {pir_setup:.2f}s")
     print(f"  Graph-PIR: {graph_setup:.2f}s")
     print(f"  Ratio (Graph/PIR): {graph_setup/pir_setup:.2f}x")
-    
+
     # Query time comparison
     pir_query = pir_rag_results["avg_query_time"]
     graph_query = graph_pir_results["avg_query_time"]
@@ -277,11 +277,11 @@ def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict):
     print(f"  PIR-RAG: {pir_query:.3f}s")
     print(f"  Graph-PIR: {graph_query:.3f}s")
     print(f"  Ratio (Graph/PIR): {graph_query/pir_query:.2f}x")
-    
+
     # Communication cost comparison
     pir_total_comm = pir_rag_results["avg_upload_bytes"] + pir_rag_results["avg_download_bytes"]
     graph_total_comm = graph_pir_results["avg_upload_bytes"] + graph_pir_results["avg_download_bytes"]
-    
+
     print(f"\nCommunication Costs (per query):")
     print(f"  PIR-RAG:")
     print(f"    Upload: {pir_rag_results['avg_upload_bytes']:,} bytes")
@@ -292,19 +292,19 @@ def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict):
     print(f"    Download: {graph_pir_results['avg_download_bytes']:,} bytes")
     print(f"    Total: {graph_total_comm:,} bytes")
     print(f"  Communication Ratio (Graph/PIR): {graph_total_comm/pir_total_comm:.2f}x")
-    
+
     # Summary
     print(f"\n=== KEY INSIGHTS ===")
     if graph_setup < pir_setup:
         print(f"✓ Graph-PIR has {pir_setup/graph_setup:.1f}x faster setup")
     else:
         print(f"✓ PIR-RAG has {graph_setup/pir_setup:.1f}x faster setup")
-        
+
     if graph_query < pir_query:
         print(f"✓ Graph-PIR has {pir_query/graph_query:.1f}x faster queries")
     else:
         print(f"✓ PIR-RAG has {graph_query/pir_query:.1f}x faster queries")
-        
+
     if graph_total_comm < pir_total_comm:
         print(f"✓ Graph-PIR has {pir_total_comm/graph_total_comm:.1f}x lower communication cost")
     else:
@@ -314,7 +314,7 @@ def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict):
 def main():
     """Main experiment runner with command-line arguments."""
     parser = argparse.ArgumentParser(description='Compare PIR-RAG vs Graph-PIR communication efficiency')
-    
+
     # Data arguments
     parser.add_argument('--embeddings_path', type=str, default=None,
                        help='Path to embeddings file (.npy format)')
@@ -324,7 +324,7 @@ def main():
                        help='Path to sentence transformer model (optional, for reranking)')
     parser.add_argument('--data_size', type=int, default=1000,
                        help='Number of documents to use (default: 1000)')
-    
+
     # Experiment arguments
     parser.add_argument('--n_queries', type=int, default=5,
                        help='Number of test queries to run (default: 5)')
@@ -334,13 +334,13 @@ def main():
                        help='Number of documents to retrieve per query (default: 10)')
     parser.add_argument('--key_length', type=int, default=1024,
                        help='Paillier key length for PIR-RAG (default: 1024)')
-    
+
     # Output arguments
     parser.add_argument('--output_dir', type=str, default='results',
                        help='Directory to save results (default: results)')
     parser.add_argument('--output_prefix', type=str, default='pir_comparison',
                        help='Prefix for output files (default: pir_comparison)')
-    
+
     # System arguments
     parser.add_argument('--skip_pir_rag', action='store_true',
                        help='Skip PIR-RAG experiment (only run Graph-PIR)')
@@ -348,11 +348,11 @@ def main():
                        help='Skip Graph-PIR experiment (only run PIR-RAG)')
     parser.add_argument('--verbose', action='store_true',
                        help='Enable verbose output')
-    
+
     args = parser.parse_args()
-    
+
     print("=== PIR-RAG vs Graph-PIR Communication Efficiency Comparison ===")
-    
+
     # Print configuration
     print(f"Experiment configuration:")
     print(f"  Dataset size: {args.data_size} documents")
@@ -367,10 +367,10 @@ def main():
     print(f"  Top-k retrieval: {args.top_k}")
     print(f"  Key length: {args.key_length}")
     print(f"  Output directory: {args.output_dir}")
-    
+
     # Load data
     embeddings, documents = load_test_data(args.embeddings_path, args.corpus_path, args.data_size)
-    
+
     # Load model for query encoding
     model = None
     if args.model_path:
@@ -378,7 +378,7 @@ def main():
     else:
         print("Warning: No model path provided. Will use random query embeddings.")
         print("For realistic results, provide --model_path argument.")
-    
+
     # Run experiments
     results = []
     try:
@@ -387,13 +387,13 @@ def main():
                 embeddings, documents, args.n_clusters, args.n_queries, args.key_length, model
             )
             results.append(pir_rag_results)
-        
+
         if not args.skip_graph_pir:
             graph_pir_results = run_graph_pir_experiment(
                 embeddings, documents, args.n_queries, args.top_k, model
             )
             results.append(graph_pir_results)
-        
+
         # Compare results if both systems were run
         if len(results) == 2:
             compare_systems(results[0], results[1])
@@ -402,17 +402,17 @@ def main():
             print(f"Setup time: {results[0]['setup_time']:.2f}s")
             print(f"Avg query time: {results[0]['avg_query_time']:.3f}s")
             print(f"Avg communication: {results[0]['avg_upload_bytes'] + results[0]['avg_download_bytes']:,} bytes")
-        
+
         # Save results
         if results:
             timestamp = pd.Timestamp.now().strftime("%Y%m%d-%H%M%S")
             results_df = pd.DataFrame(results)
-            
+
             os.makedirs(args.output_dir, exist_ok=True)
             results_file = os.path.join(args.output_dir, f"{args.output_prefix}_{timestamp}.csv")
             results_df.to_csv(results_file, index=False)
             print(f"\nResults saved to: {results_file}")
-        
+
     except Exception as e:
         print(f"Experiment failed: {e}")
         if args.verbose:

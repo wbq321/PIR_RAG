@@ -13,7 +13,7 @@ from .graph_search import GraphSearch
 
 __all__ = [
     "GraphPIRSystem",
-    "PianoPIRClient", 
+    "PianoPIRClient",
     "PianoPIRServer",
     "GraphSearch"
 ]
