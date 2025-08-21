@@ -11,6 +11,7 @@ sys.path.append('src')
 
 import numpy as np
 import time
+import torch
 from graph_pir.system import GraphPIRSystem
 
 def test_real_pir_operations():
@@ -134,40 +135,29 @@ def compare_with_pir_rag():
         client_metrics = pir_rag_client.setup(pir_rag_server.centroids)
         
         # Test query
-        query_embedding = np.random.randn(embedding_dim).astype(np.float32)
+        query_embedding = torch.tensor(np.random.randn(embedding_dim).astype(np.float32))
         
         # PIR-RAG query process
         query_start = time.time()
         
-        # Client side: encrypt query and find best cluster
-        encrypted_query_vector, cluster_selection_metrics = pir_rag_client.create_encrypted_query_vector(
-            query_embedding, top_k_clusters=1
-        )
+        # Step 1: Client finds relevant clusters
+        relevant_clusters = pir_rag_client.find_relevant_clusters(query_embedding, top_k=2)
+        print(f"  Found {len(relevant_clusters)} relevant clusters: {relevant_clusters}")
         
-        # Server side: process PIR query
-        encrypted_results, server_query_metrics = pir_rag_server.process_pir_query(
-            encrypted_query_vector, pir_rag_client.public_key
-        )
-        
-        # Client side: decrypt results
-        decrypted_docs, client_query_metrics = pir_rag_client.decrypt_pir_response(
-            encrypted_results
-        )
+        # Step 2: Client performs PIR retrieval
+        retrieved_docs, pir_metrics = pir_rag_client.pir_retrieve(pir_rag_server, relevant_clusters)
         
         query_time = time.time() - query_start
         total_time = time.time() - start_time
         
-        # Calculate communication costs
-        total_upload = cluster_selection_metrics.get('upload_bytes', 0) + server_query_metrics.get('upload_bytes', 0)
-        total_download = server_query_metrics.get('download_bytes', 0) + client_query_metrics.get('download_bytes', 0)
-        
         print(f"PIR-RAG Results:")
         print(f"  Total time: {total_time:.4f}s")
         print(f"  Query time: {query_time:.4f}s") 
-        print(f"  Upload: {total_upload} bytes")
-        print(f"  Download: {total_download} bytes")
-        print(f"  Total communication: {total_upload + total_download} bytes")
-        print(f"  Documents retrieved: {len(decrypted_docs)}")
+        print(f"  Upload: {pir_metrics.get('upload_bytes', 0)} bytes")
+        print(f"  Download: {pir_metrics.get('download_bytes', 0)} bytes")
+        print(f"  Total communication: {pir_metrics.get('total_bytes', 0)} bytes")
+        print(f"  Documents retrieved: {len(retrieved_docs)}")
+        print(f"  Clusters queried: {len(relevant_clusters)}")
         
         print("\n" + "="*60)
         print("COMPARISON SUMMARY")
