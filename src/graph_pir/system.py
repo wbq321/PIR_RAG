@@ -39,6 +39,9 @@ class GraphPIRSystem:
         self.doc_pir_server = None
         self.documents = None
         self.embeddings = None
+        # Paillier keys for document retrieval (generate once, reuse many times)
+        self.paillier_public_key = None
+        self.paillier_private_key = None
 
     def _prepare_vector_database(self, vector_db: np.ndarray, embedding_dim: int,
                                 graph_dict: Dict) -> List[int]:
@@ -166,6 +169,15 @@ class GraphPIRSystem:
 
         # Convert documents to PIR database format
         doc_setup_metrics = self.doc_pir_server.setup_database(documents)
+
+        # 4. Generate Paillier keys for document retrieval (same as PIR-RAG approach)
+        print("[GraphPIR] Generating Paillier keys...")
+        from phe import paillier
+        key_start = time.perf_counter()
+        self.paillier_public_key, self.paillier_private_key = paillier.generate_paillier_keypair(n_length=1024)
+        key_gen_time = time.perf_counter() - key_start
+        print(f"[GraphPIR] Paillier key generation completed in {key_gen_time:.2f}s")
+
         doc_pir_time = time.perf_counter() - doc_pir_start
 
         total_setup_time = time.perf_counter() - setup_start
@@ -175,6 +187,7 @@ class GraphPIRSystem:
             "graph_setup_time": graph_setup_time,
             "vector_pir_setup_time": vector_pir_time,
             "doc_pir_setup_time": doc_pir_time,
+            "paillier_key_generation_time": key_gen_time,
             "n_documents": len(documents),
             "embedding_dim": embeddings.shape[1],
             "graph_params": graph_params,
@@ -343,15 +356,11 @@ class GraphPIRSystem:
         Phase 2: Use REAL document PIR with Paillier encryption to retrieve actual document texts.
         Similar to PIR-RAG's approach but for individual documents.
         """
-        from phe import paillier
-
         print(f"[GraphPIR] Phase 2: Document PIR with Paillier encryption for {len(candidate_indices)} documents")
 
-        # Generate Paillier keys (same approach as PIR-RAG)
-        print("[GraphPIR] Generating Paillier keys...")
-        key_start = time.perf_counter()
-        public_key, private_key = paillier.generate_paillier_keypair(n_length=1024)
-        key_gen_time = time.perf_counter() - key_start
+        # Use pre-generated Paillier keys (same approach as PIR-RAG)
+        public_key = self.paillier_public_key
+        private_key = self.paillier_private_key
 
         upload_bytes = 0
         download_bytes = 0
@@ -404,7 +413,6 @@ class GraphPIRSystem:
             "phase2_upload_bytes": upload_bytes,
             "phase2_download_bytes": download_bytes,
             "documents_retrieved": len(retrieved_docs),
-            "key_generation_time": key_gen_time,
             "encryption_time": encryption_time,
             "server_processing_time": server_time,
             "decryption_time": decryption_time,

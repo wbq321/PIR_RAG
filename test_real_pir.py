@@ -123,42 +123,42 @@ def compare_with_pir_rag():
         # Test PIR-RAG
         print("Testing PIR-RAG...")
         start_time = time.time()
-        
+
         # Set up PIR-RAG server and client
         pir_rag_server = PIRRAGServer()
         pir_rag_client = PIRRAGClient()
-        
+
         # Server setup
         server_metrics = pir_rag_server.setup(embeddings, documents, n_clusters=4)
-        
-        # Client setup  
+
+        # Client setup
         client_metrics = pir_rag_client.setup(pir_rag_server.centroids)
-        
+
         # Test query
         query_embedding = torch.tensor(np.random.randn(embedding_dim).astype(np.float32))
-        
+
         # PIR-RAG query process
         query_start = time.time()
-        
+
         # Step 1: Client finds relevant clusters
         relevant_clusters = pir_rag_client.find_relevant_clusters(query_embedding, top_k=2)
         print(f"  Found {len(relevant_clusters)} relevant clusters: {relevant_clusters}")
-        
+
         # Step 2: Client performs PIR retrieval
         retrieved_docs, pir_metrics = pir_rag_client.pir_retrieve(pir_rag_server, relevant_clusters)
-        
+
         query_time = time.time() - query_start
         total_time = time.time() - start_time
-        
+
         print(f"PIR-RAG Results:")
         print(f"  Total time: {total_time:.4f}s")
-        print(f"  Query time: {query_time:.4f}s") 
+        print(f"  Query time: {query_time:.4f}s")
         print(f"  Upload: {pir_metrics.get('upload_bytes', 0)} bytes")
         print(f"  Download: {pir_metrics.get('download_bytes', 0)} bytes")
         print(f"  Total communication: {pir_metrics.get('total_bytes', 0)} bytes")
         print(f"  Documents retrieved: {len(retrieved_docs)}")
         print(f"  Clusters queried: {len(relevant_clusters)}")
-        
+
         print("\n" + "="*60)
         print("COMPARISON SUMMARY")
         print("="*60)
@@ -167,7 +167,7 @@ def compare_with_pir_rag():
         print("- PIR-RAG: Paillier homomorphic encryption + K-means clustering")
         print("- Graph-PIR: AES-based PIR + graph traversal")
         print("- Dataset size, query patterns, and cluster/graph structure")
-        
+
         return True
 
     except ImportError as e:
