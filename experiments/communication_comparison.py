@@ -309,6 +309,7 @@ def main():
     parser.add_argument("--output_path", default="communication_comparison_results.json", help="Output file path")
     parser.add_argument("--n_queries", type=int, default=20, help="Number of test queries")
     parser.add_argument("--top_k", type=int, default=10, help="Number of top results to retrieve")
+    parser.add_argument("--max_docs", type=int, default=None, help="Maximum number of documents to use (for testing with smaller datasets)")
     
     args = parser.parse_args()
     
@@ -318,7 +319,14 @@ def main():
     corpus_df = pd.read_csv(args.corpus_path)
     documents = corpus_df['text'].tolist()
     
-    print(f"Loaded {len(embeddings)} embeddings and {len(documents)} documents")
+    # Limit dataset size if specified
+    if args.max_docs is not None:
+        max_docs = min(args.max_docs, len(documents), len(embeddings))
+        embeddings = embeddings[:max_docs]
+        documents = documents[:max_docs]
+        print(f"Limited dataset to {max_docs} documents for testing")
+    
+    print(f"Using {len(embeddings)} embeddings and {len(documents)} documents")
     
     # Load model
     print("Loading model...")

@@ -17,8 +17,8 @@ def test_graph_pir_basic():
     print("Testing Graph-PIR Basic Functionality...")
     
     # Create synthetic data
-    n_docs = 1000
-    embedding_dim = 128
+    n_docs = 500  # Smaller for faster testing
+    embedding_dim = 64  # Smaller dimension for faster testing
     
     print(f"Creating synthetic dataset: {n_docs} docs, {embedding_dim}D embeddings")
     

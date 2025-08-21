@@ -69,7 +69,8 @@ python experiments/communication_comparison.py \
     --model_path "${MODEL_PATH}" \
     --output_path "${OUTPUT_FILE}" \
     --n_queries 30 \
-    --top_k 10
+    --top_k 10 \
+    --max_docs 1000
 
 if [ $? -eq 0 ]; then
     echo ""
