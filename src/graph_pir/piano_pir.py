@@ -55,11 +55,12 @@ fnv = FNVModule()
 class PianoPIRConfig:
     """Configuration for PianoPIR matching the Go implementation."""
 
-    def __init__(self, db_size: int, db_entry_byte_num: int, failure_prob_log2: int = 40):
+    def __init__(self, db_size: int, db_entry_byte_num: int, failure_prob_log2: int = 40, embedding_dim: int = 384):
         self.db_entry_byte_num = db_entry_byte_num
         self.db_entry_size = db_entry_byte_num // 8  # uint64 entries
         self.db_size = db_size
         self.failure_prob_log2 = failure_prob_log2
+        self.embedding_dim = embedding_dim
 
         # Calculate chunk size and set size (matching Go logic)
         target_chunk_size = max(1, int(math.sqrt(db_size)))
@@ -389,18 +390,19 @@ class PianoPIRClient:
             result_bytes += struct.pack('<Q', val)
 
         # Extract vector part (first part of the data, before neighbors)
-        # Assume 384-dimensional float32 vectors = 384 * 4 = 1536 bytes
-        vector_bytes = result_bytes[:1536]  # TODO: make this configurable
+        # Use configured embedding dimension: embedding_dim * 4 bytes (float32)
+        vector_byte_size = self.config.embedding_dim * 4
+        vector_bytes = result_bytes[:vector_byte_size]
 
         # Convert bytes back to float32 array
         vector = np.frombuffer(vector_bytes, dtype=np.float32)
 
         # Handle potential padding by taking only the expected number of dimensions
-        if len(vector) > 384:
-            vector = vector[:384]
-        elif len(vector) < 384:
+        if len(vector) > self.config.embedding_dim:
+            vector = vector[:self.config.embedding_dim]
+        elif len(vector) < self.config.embedding_dim:
             # Pad with zeros if somehow we got less data
-            padded = np.zeros(384, dtype=np.float32)
+            padded = np.zeros(self.config.embedding_dim, dtype=np.float32)
             padded[:len(vector)] = vector
             vector = padded
 

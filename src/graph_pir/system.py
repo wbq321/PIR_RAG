@@ -146,7 +146,8 @@ class GraphPIRSystem:
         vector_entry_size += 16 * 4
         vector_config = PianoPIRConfig(
             db_size=len(embeddings),
-            db_entry_byte_num=vector_entry_size
+            db_entry_byte_num=vector_entry_size,
+            embedding_dim=embeddings.shape[1]  # Pass the actual embedding dimension
         )
 
         # Convert vector database to uint64 format
