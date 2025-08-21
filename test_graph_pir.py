@@ -7,7 +7,7 @@ import numpy as np
 from pathlib import Path
 
 # Add the source directory to path
-sys.path.append(str(Path(__file__).parent.parent / "src"))
+sys.path.append(str(Path(__file__).parent / "src"))
 
 from graph_pir import GraphPIRSystem
 

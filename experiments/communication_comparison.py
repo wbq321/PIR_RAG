@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 # Add the PIR_RAG source to path
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from pir_rag import PIRRAGClient, PIRRAGServer
 from graph_pir import GraphPIRSystem
