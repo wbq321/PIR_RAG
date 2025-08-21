@@ -12,7 +12,7 @@ This implementation closely follows the Go version's approach:
 import struct
 import hashlib
 import time
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional, Dict
 import numpy as np
 import math
 from Crypto.Cipher import AES
@@ -316,6 +316,95 @@ class PianoPIRClient:
         decrypted_data = response  # The XOR sum is our "decrypted" result
 
         return decrypted_data
+    
+    def query_vectors(self, server: 'PianoPIRServer', indices: List[int]) -> Tuple[List[np.ndarray], Dict]:
+        """
+        Query multiple vectors using PIR (compatibility method for system.py).
+        
+        Args:
+            server: PIR server to query
+            indices: List of vector indices to retrieve
+            
+        Returns:
+            Tuple of (vectors, metrics)
+        """
+        import numpy as np
+        
+        start_time = time.time()
+        
+        # Create queries for all indices
+        all_offsets = []
+        all_encrypted_queries = []
+        upload_bytes = 0
+        
+        for index in indices:
+            offsets, encrypted_query = self.create_query(index)
+            all_offsets.append(offsets)
+            all_encrypted_queries.append(encrypted_query)
+            upload_bytes += len(encrypted_query)
+        
+        # Process queries on server
+        responses = []
+        download_bytes = 0
+        
+        for i, offsets in enumerate(all_offsets):
+            response = server.private_query(offsets)
+            responses.append(response)
+            # Calculate download cost
+            response_size = len(response) * 8  # 8 bytes per uint64
+            encrypted_response_size = response_size + 32  # AES overhead
+            download_bytes += encrypted_response_size
+        
+        # Decrypt responses and convert back to vectors
+        vectors = []
+        for i, response in enumerate(responses):
+            encrypted_query = all_encrypted_queries[i]
+            decrypted = self.decrypt_response(response, encrypted_query, indices[i])
+            
+            # Convert uint64 data back to vector format
+            vector = self._extract_vector_from_uint64(decrypted)
+            vectors.append(vector)
+        
+        end_time = time.time()
+        
+        # Return metrics compatible with system.py expectations
+        metrics = {
+            'upload_bytes': upload_bytes,
+            'download_bytes': download_bytes,
+            'total_bytes': upload_bytes + download_bytes,
+            'query_time': end_time - start_time,
+            'num_queries': len(indices)
+        }
+        
+        return vectors, metrics
+    
+    def _extract_vector_from_uint64(self, uint64_data: List[int]) -> np.ndarray:
+        """Extract vector from uint64 PIR response data."""
+        import struct
+        import numpy as np
+        
+        # Convert uint64 back to bytes
+        result_bytes = b''
+        for val in uint64_data:
+            result_bytes += struct.pack('<Q', val)
+        
+        # Extract vector part (first part of the data, before neighbors)
+        # Assume 384-dimensional float32 vectors = 384 * 4 = 1536 bytes
+        vector_bytes = result_bytes[:1536]  # TODO: make this configurable
+        
+        # Convert bytes back to float32 array
+        vector = np.frombuffer(vector_bytes, dtype=np.float32)
+        
+        # Handle potential padding by taking only the expected number of dimensions
+        if len(vector) > 384:
+            vector = vector[:384]
+        elif len(vector) < 384:
+            # Pad with zeros if somehow we got less data
+            padded = np.zeros(384, dtype=np.float32)
+            padded[:len(vector)] = vector
+            vector = padded
+        
+        return vector
 
 
 class SimpleBatchPianoPIR:
