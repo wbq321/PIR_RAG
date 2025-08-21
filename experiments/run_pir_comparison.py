@@ -22,6 +22,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from pir_rag import PIRRAGClient, PIRRAGServer
 from graph_pir import GraphPIRSystem
+from sentence_transformers import SentenceTransformer
 
 
 def load_test_data(embeddings_path: str = None, corpus_path: str = None, data_size: int = 1000):
@@ -67,8 +68,59 @@ def load_test_data(embeddings_path: str = None, corpus_path: str = None, data_si
     return embeddings, documents
 
 
+def generate_test_queries(documents: List[str], n_queries: int = 10) -> List[str]:
+    """Generate realistic test queries by sampling from corpus documents."""
+    if len(documents) == 0:
+        raise ValueError("Cannot generate queries from empty document list")
+    
+    # Sample random documents to use as queries
+    np.random.seed(42)  # For reproducible results
+    query_indices = np.random.choice(len(documents), size=min(n_queries, len(documents)), replace=False)
+    
+    selected_queries = []
+    for idx in query_indices:
+        doc_text = documents[idx]
+        # Take first sentence or first 100 characters as query
+        if '.' in doc_text:
+            # Use first sentence
+            query = doc_text.split('.')[0].strip() + '.'
+        else:
+            # Use first 100 characters
+            query = doc_text[:100].strip()
+            if len(doc_text) > 100:
+                query += "..."
+        
+        # Ensure query is not too short
+        if len(query.strip()) < 10:
+            query = doc_text[:50].strip() + "..."
+            
+        selected_queries.append(query)
+    
+    print(f"Generated {len(selected_queries)} queries from corpus documents")
+    return selected_queries
+
+
+def load_model(model_path: str) -> SentenceTransformer:
+    """Load sentence transformer model for query encoding."""
+    try:
+        print(f"Loading sentence transformer model from {model_path}...")
+        model = SentenceTransformer(model_path)
+        print(f"✓ Model loaded successfully")
+        return model
+    except Exception as e:
+        print(f"Error loading model from {model_path}: {e}")
+        print("Trying default model...")
+        try:
+            model = SentenceTransformer('all-MiniLM-L6-v2')
+            print("✓ Loaded default model: all-MiniLM-L6-v2")
+            return model
+        except Exception as e2:
+            raise RuntimeError(f"Failed to load any model: {e2}")
+
+
 def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str], 
-                          n_clusters: int, n_queries: int = 10, key_length: int = 2048) -> Dict[str, Any]:
+                          n_clusters: int, n_queries: int = 10, key_length: int = 2048,
+                          model: SentenceTransformer = None) -> Dict[str, Any]:
     """Run PIR-RAG experiment."""
     print(f"\n=== PIR-RAG Experiment (clusters={n_clusters}) ===")
     
@@ -89,10 +141,17 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
     total_download = 0
     total_query_time = 0
     
-    np.random.seed(42)
-    for i in range(n_queries):
-        # Generate random query
-        query_embedding = torch.tensor(np.random.randn(embeddings.shape[1]).astype(np.float32))
+    # Generate test queries
+    test_queries = generate_test_queries(documents, n_queries)
+    
+    for i, query_text in enumerate(test_queries):
+        # Encode query using the model
+        if model is not None:
+            query_embedding = torch.tensor(model.encode([query_text])[0])
+        else:
+            # Fallback to random if no model (for testing only)
+            query_embedding = torch.tensor(np.random.randn(embeddings.shape[1]).astype(np.float32))
+            print(f"Warning: Using random query embedding for query {i+1} (no model provided)")
         
         # Find relevant clusters
         cluster_indices = client.find_relevant_clusters(query_embedding, top_k=3)
@@ -107,7 +166,8 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
         total_query_time += query_time
         
         if i == 0:
-            print(f"First query: retrieved {len(retrieved_docs)} docs in {query_time:.3f}s")
+            print(f"First query: '{query_text[:50]}...'")
+            print(f"Retrieved {len(retrieved_docs)} docs in {query_time:.3f}s")
     
     avg_metrics = {
         "system": "PIR-RAG",
@@ -132,7 +192,8 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
 
 
 def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str], 
-                           n_queries: int = 10, top_k: int = 10) -> Dict[str, Any]:
+                           n_queries: int = 10, top_k: int = 10, 
+                           model: SentenceTransformer = None) -> Dict[str, Any]:
     """Run Graph-PIR experiment."""
     print(f"\n=== Graph-PIR Experiment ===")
     
@@ -149,10 +210,17 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
     total_download = 0
     total_query_time = 0
     
-    np.random.seed(42)
-    for i in range(n_queries):
-        # Generate random query (same as PIR-RAG for fair comparison)
-        query_embedding = np.random.randn(embeddings.shape[1]).astype(np.float32)
+    # Generate test queries
+    test_queries = generate_test_queries(documents, n_queries)
+    
+    for i, query_text in enumerate(test_queries):
+        # Encode query using the model
+        if model is not None:
+            query_embedding = model.encode([query_text])[0].astype(np.float32)
+        else:
+            # Fallback to random if no model (for testing only)
+            query_embedding = np.random.randn(embeddings.shape[1]).astype(np.float32)
+            print(f"Warning: Using random query embedding for query {i+1} (no model provided)")
         
         # Perform Graph-PIR query
         query_start = time.perf_counter()
@@ -164,7 +232,8 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
         total_query_time += query_time
         
         if i == 0:
-            print(f"First query: retrieved {len(retrieved_docs)} docs in {query_time:.3f}s")
+            print(f"First query: '{query_text[:50]}...'")
+            print(f"Retrieved {len(retrieved_docs)} docs in {query_time:.3f}s")
             print(f"  Phase 1: {query_metrics['phase1_time']:.3f}s, Phase 2: {query_metrics['phase2_time']:.3f}s")
     
     avg_metrics = {
@@ -249,6 +318,8 @@ def main():
                        help='Path to embeddings file (.npy format)')
     parser.add_argument('--corpus_path', type=str, default=None,
                        help='Path to corpus file (.csv format with "text" column)')
+    parser.add_argument('--model_path', type=str, default=None,
+                       help='Path to sentence transformer model (optional, for reranking)')
     parser.add_argument('--data_size', type=int, default=1000,
                        help='Number of documents to use (default: 1000)')
     
@@ -287,6 +358,8 @@ def main():
         print(f"  Embeddings: {args.embeddings_path}")
     if args.corpus_path:
         print(f"  Corpus: {args.corpus_path}")
+    if args.model_path:
+        print(f"  Model: {args.model_path}")
     print(f"  PIR-RAG clusters: {args.n_clusters}")
     print(f"  Test queries: {args.n_queries}")
     print(f"  Top-k retrieval: {args.top_k}")
@@ -296,18 +369,26 @@ def main():
     # Load data
     embeddings, documents = load_test_data(args.embeddings_path, args.corpus_path, args.data_size)
     
+    # Load model for query encoding
+    model = None
+    if args.model_path:
+        model = load_model(args.model_path)
+    else:
+        print("Warning: No model path provided. Will use random query embeddings.")
+        print("For realistic results, provide --model_path argument.")
+    
     # Run experiments
     results = []
     try:
         if not args.skip_pir_rag:
             pir_rag_results = run_pir_rag_experiment(
-                embeddings, documents, args.n_clusters, args.n_queries, args.key_length
+                embeddings, documents, args.n_clusters, args.n_queries, args.key_length, model
             )
             results.append(pir_rag_results)
         
         if not args.skip_graph_pir:
             graph_pir_results = run_graph_pir_experiment(
-                embeddings, documents, args.n_queries, args.top_k
+                embeddings, documents, args.n_queries, args.top_k, model
             )
             results.append(graph_pir_results)
         
