@@ -1,336 +1,232 @@
 """
-Graph-based search engine with PIR integration.
-Simplified implementation of the graph ANN search from private-search-temp.
+Graph-based Approximate Nearest Neighbor search for Graph-PIR.
+
+Implements HNSW-style graph construction and search.
+Based on the graph search approach from private-search-temp.
 """
 
 import numpy as np
+from typing import List, Dict, Any, Tuple
 import heapq
-import random
-import time
-import math
-from typing import List, Tuple, Dict, Any, Optional
-from .piano_pir import SimpleBatchPianoPIR
+from collections import defaultdict
 
 
-class GraphSearchEngine:
+class GraphSearch:
     """
-    Graph-based Approximate Nearest Neighbor search with PIR integration.
-    Simplified version of the Go implementation in private-search-temp.
+    Graph-based ANN search implementation.
+    
+    Builds a navigable small world graph for efficient nearest neighbor search.
+    Similar to HNSW but simplified for PIR integration.
     """
     
-    def __init__(self, vectors: np.ndarray, graph: Optional[np.ndarray] = None, 
-                 neighbor_count: int = 32, private_mode: bool = True):
+    def __init__(self):
+        self.graph = defaultdict(list)  # adjacency list
+        self.embeddings = None
+        self.n_nodes = 0
+        self.entry_point = 0
+        self.built = False
+        
+    def build_graph(self, embeddings: np.ndarray, k_neighbors: int = 16, 
+                   ef_construction: int = 200, max_connections: int = 16):
         """
-        Initialize the graph search engine.
+        Build the graph structure from embeddings.
         
         Args:
-            vectors: Document embedding vectors (n_docs, embedding_dim)
-            graph: Pre-built graph adjacency matrix (n_docs, neighbor_count)
-            neighbor_count: Number of neighbors per node in the graph
-            private_mode: Whether to use PIR for private access
+            embeddings: Document embeddings [n_docs, embedding_dim]
+            k_neighbors: Number of neighbors to connect during construction
+            ef_construction: Size of dynamic candidate list during construction
+            max_connections: Maximum connections per node
         """
-        self.vectors = vectors
-        self.n_docs, self.embedding_dim = vectors.shape
-        self.neighbor_count = neighbor_count
-        self.private_mode = private_mode
+        print(f"[GraphSearch] Building graph for {len(embeddings)} nodes...")
+        print(f"[GraphSearch] Parameters: k={k_neighbors}, ef={ef_construction}, max_conn={max_connections}")
         
-        # Build or use provided graph
-        if graph is None:
-            print(f"Building graph with {neighbor_count} neighbors per node...")
-            self.graph = self._build_graph()
-        else:
-            self.graph = graph
-            
-        # Setup PIR database if in private mode
-        if private_mode:
-            self._setup_pir_database()
+        self.embeddings = embeddings.copy()
+        self.n_nodes = len(embeddings)
+        self.graph = defaultdict(list)
         
-        # Search statistics
-        self.total_vertex_accesses = 0
-        self.total_search_time = 0
-        self.search_count = 0
-        
-    def _build_graph(self) -> np.ndarray:
-        """Build a simplified graph using random neighbors + some nearest neighbors"""
-        graph = np.zeros((self.n_docs, self.neighbor_count), dtype=np.int32)
-        
-        print("  -> Building graph structure...")
-        for i in range(self.n_docs):
-            if i % 10000 == 0:
-                print(f"     Processing node {i}/{self.n_docs}")
+        # Build graph incrementally
+        for i in range(self.n_nodes):
+            if i == 0:
+                self.entry_point = 0
+                continue
                 
-            # For simplicity, use random neighbors with some actual nearest neighbors
-            neighbors = set()
+            # Find nearest neighbors for current node
+            candidates = self._search_layer(embeddings[i], ef_construction, 0)
             
-            # Add some random neighbors
-            while len(neighbors) < self.neighbor_count // 2:
-                neighbor = random.randint(0, self.n_docs - 1)
-                if neighbor != i:
-                    neighbors.add(neighbor)
+            # Connect to k_neighbors closest nodes
+            neighbors = self._select_neighbors(candidates, k_neighbors)
             
-            # Add some actual nearest neighbors based on cosine similarity
-            if len(neighbors) < self.neighbor_count:
-                distances = np.dot(self.vectors[i], self.vectors.T)
-                distances[i] = -float('inf')  # Exclude self
+            for neighbor_idx, _ in neighbors:
+                # Add bidirectional connections
+                self.graph[i].append(neighbor_idx)
+                self.graph[neighbor_idx].append(i)
                 
-                # Get top candidates
-                top_indices = np.argsort(distances)[-self.neighbor_count:]
-                for idx in top_indices:
-                    if len(neighbors) >= self.neighbor_count:
-                        break
-                    neighbors.add(idx)
-            
-            # Fill remaining slots with random if needed
-            while len(neighbors) < self.neighbor_count:
-                neighbor = random.randint(0, self.n_docs - 1)
-                if neighbor != i:
-                    neighbors.add(neighbor)
+                # Prune connections if too many
+                if len(self.graph[neighbor_idx]) > max_connections:
+                    self.graph[neighbor_idx] = self._prune_connections(
+                        neighbor_idx, self.graph[neighbor_idx], max_connections
+                    )
                     
-            graph[i] = list(neighbors)[:self.neighbor_count]
-            
-        return graph
-    
-    def _setup_pir_database(self):
-        """Setup PIR database for private vertex access"""
-        print("  -> Setting up PIR database...")
+            if (i + 1) % 100 == 0:
+                print(f"[GraphSearch] Built {i + 1}/{self.n_nodes} nodes")
+                
+        self.built = True
         
-        # Create database entries: [vector_data + neighbor_data]
-        entry_size = self.embedding_dim * 4 + self.neighbor_count * 4  # float32 + int32
-        raw_db = np.zeros((self.n_docs, entry_size // 4), dtype=np.uint32)
+        # Print graph statistics
+        avg_degree = np.mean([len(neighbors) for neighbors in self.graph.values()])
+        max_degree = max([len(neighbors) for neighbors in self.graph.values()])
+        print(f"[GraphSearch] Graph built: avg_degree={avg_degree:.1f}, max_degree={max_degree}")
         
-        for i in range(self.n_docs):
-            # Pack vector data (float32 -> uint32)
-            vector_bytes = self.vectors[i].astype(np.float32).tobytes()
-            vector_uint32 = np.frombuffer(vector_bytes, dtype=np.uint32)
-            
-            # Pack neighbor data
-            neighbor_bytes = self.graph[i].astype(np.int32).tobytes()
-            neighbor_uint32 = np.frombuffer(neighbor_bytes, dtype=np.uint32)
-            
-            # Combine into database entry
-            raw_db[i, :len(vector_uint32)] = vector_uint32
-            raw_db[i, len(vector_uint32):len(vector_uint32)+len(neighbor_uint32)] = neighbor_uint32
-        
-        # Initialize batch PIR
-        batch_size = min(100, max(10, int(math.sqrt(self.n_docs))))
-        self.pir_system = SimpleBatchPianoPIR(
-            db_size=self.n_docs,
-            db_entry_byte_num=entry_size,
-            batch_size=batch_size,
-            raw_db=raw_db
-        )
-        
-        # Preprocess PIR
-        self.pir_system.preprocessing()
-        print(f"  -> PIR setup complete. Batch size: {batch_size}")
-    
-    def _unpack_vertex_data(self, raw_data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Unpack raw database entry into vector and neighbors"""
-        # Convert back to bytes then to proper types
-        raw_bytes = raw_data.astype(np.uint32).tobytes()
-        
-        # Extract vector (first embedding_dim float32 values)
-        vector_bytes = raw_bytes[:self.embedding_dim * 4]
-        vector = np.frombuffer(vector_bytes, dtype=np.float32)
-        
-        # Extract neighbors (next neighbor_count int32 values)
-        neighbor_bytes = raw_bytes[self.embedding_dim * 4:self.embedding_dim * 4 + self.neighbor_count * 4]
-        neighbors = np.frombuffer(neighbor_bytes, dtype=np.int32)
-        
-        return vector, neighbors
-    
-    def _get_vertices_private(self, vertex_ids: List[int]) -> List[Dict[str, Any]]:
-        """Retrieve vertex information using PIR"""
-        if not hasattr(self, 'pir_system'):
-            raise RuntimeError("PIR system not initialized")
-            
-        # Query PIR system
-        raw_results, comm_stats = self.pir_system.batch_query(vertex_ids)
-        
-        # Unpack results
-        vertices = []
-        for i, raw_data in enumerate(raw_results):
-            vector, neighbors = self._unpack_vertex_data(raw_data)
-            vertices.append({
-                'id': vertex_ids[i],
-                'vector': vector,
-                'neighbors': neighbors,
-                'communication_bytes': comm_stats['total_upload_bytes'] + comm_stats['total_download_bytes']
-            })
-        
-        return vertices
-    
-    def _get_vertices_non_private(self, vertex_ids: List[int]) -> List[Dict[str, Any]]:
-        """Retrieve vertex information directly (non-private baseline)"""
-        vertices = []
-        for vid in vertex_ids:
-            if 0 <= vid < self.n_docs:
-                vertices.append({
-                    'id': vid,
-                    'vector': self.vectors[vid],
-                    'neighbors': self.graph[vid],
-                    'communication_bytes': 0  # No communication cost in non-private mode
-                })
-            else:
-                # Return dummy vertex for out-of-bounds
-                vertices.append({
-                    'id': vid,
-                    'vector': np.zeros(self.embedding_dim),
-                    'neighbors': np.array([0] * self.neighbor_count),
-                    'communication_bytes': 0
-                })
-        return vertices
-    
-    def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
-        """Compute cosine similarity between two vectors"""
-        norm_a = np.linalg.norm(a)
-        norm_b = np.linalg.norm(b)
-        if norm_a == 0 or norm_b == 0:
-            return 0.0
-        return np.dot(a, b) / (norm_a * norm_b)
-    
-    def search_knn(self, query_vector: np.ndarray, k: int, 
-                   max_steps: int = 15, parallel_exploration: int = 2) -> Tuple[List[int], Dict[str, Any]]:
+    def search(self, query_embedding: np.ndarray, top_k: int) -> List[int]:
         """
-        Perform k-nearest neighbor search using graph traversal with PIR.
+        Search for top-k nearest neighbors using graph traversal.
         
         Args:
-            query_vector: Query embedding vector
-            k: Number of nearest neighbors to find
-            max_steps: Maximum number of search steps
-            parallel_exploration: Number of vertices to explore in parallel at each step
+            query_embedding: Query vector
+            top_k: Number of nearest neighbors to return
             
         Returns:
-            Tuple of (top_k_indices, search_metrics)
+            List of document indices sorted by similarity
         """
-        start_time = time.perf_counter()
+        if not self.built:
+            raise ValueError("Graph not built. Call build_graph() first.")
+            
+        # Use larger ef during search for better recall
+        ef_search = max(top_k * 2, 50)
         
-        # Initialize search
+        # Search starting from entry point
+        candidates = self._search_layer(query_embedding, ef_search, self.entry_point)
+        
+        # Return top-k candidates
+        top_candidates = self._select_neighbors(candidates, top_k)
+        return [idx for idx, _ in top_candidates]
+        
+    def _search_layer(self, query: np.ndarray, ef: int, entry_point: int) -> List[Tuple[int, float]]:
+        """
+        Search a single layer of the graph.
+        
+        Args:
+            query: Query vector
+            ef: Size of dynamic candidate list
+            entry_point: Starting node for search
+            
+        Returns:
+            List of (node_index, distance) tuples
+        """
         visited = set()
-        candidates = []  # Min-heap of (negative_similarity, vertex_id)
+        candidates = []  # min-heap: (distance, node_idx)
+        dynamic_candidates = []  # max-heap: (-distance, node_idx)
         
-        # Start from random vertices (simplified start vertex selection)
-        start_vertex_count = min(int(math.sqrt(self.n_docs)), 10)
-        start_vertices = random.sample(range(self.n_docs), start_vertex_count)
+        # Initialize with entry point
+        dist = self._calculate_distance(query, self.embeddings[entry_point])
+        heapq.heappush(candidates, (dist, entry_point))
+        heapq.heappush(dynamic_candidates, (-dist, entry_point))
+        visited.add(entry_point)
         
-        # Performance tracking
-        metrics = {
-            "total_communication_bytes": 0,
-            "vertex_accesses": 0,
-            "steps_taken": 0,
-            "start_vertices": len(start_vertices)
+        while candidates:
+            # Get closest unvisited candidate
+            current_dist, current_node = heapq.heappop(candidates)
+            
+            # Check if we can improve dynamic candidates
+            if len(dynamic_candidates) >= ef:
+                worst_dist = -dynamic_candidates[0][0]
+                if current_dist > worst_dist:
+                    break
+                    
+            # Explore neighbors
+            for neighbor in self.graph[current_node]:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    neighbor_dist = self._calculate_distance(query, self.embeddings[neighbor])
+                    
+                    # Add to candidates for further exploration
+                    heapq.heappush(candidates, (neighbor_dist, neighbor))
+                    
+                    # Add to dynamic candidates (best ef candidates so far)
+                    heapq.heappush(dynamic_candidates, (-neighbor_dist, neighbor))
+                    
+                    # Keep only ef best candidates
+                    if len(dynamic_candidates) > ef:
+                        heapq.heappop(dynamic_candidates)
+                        
+        # Convert back to (node_idx, distance) format
+        result = [(node_idx, -dist) for dist, node_idx in dynamic_candidates]
+        result.sort(key=lambda x: x[1])  # Sort by distance (ascending)
+        
+        return result
+        
+    def _select_neighbors(self, candidates: List[Tuple[int, float]], k: int) -> List[Tuple[int, float]]:
+        """
+        Select k best neighbors from candidates.
+        
+        Args:
+            candidates: List of (node_index, distance) tuples
+            k: Number of neighbors to select
+            
+        Returns:
+            k best neighbors sorted by distance
+        """
+        # Sort by distance and take top k
+        sorted_candidates = sorted(candidates, key=lambda x: x[1])
+        return sorted_candidates[:k]
+        
+    def _prune_connections(self, node_idx: int, connections: List[int], 
+                          max_connections: int) -> List[int]:
+        """
+        Prune connections to keep only the best ones.
+        
+        Args:
+            node_idx: Index of the node to prune
+            connections: Current connections of the node  
+            max_connections: Maximum allowed connections
+            
+        Returns:
+            Pruned list of connections
+        """
+        if len(connections) <= max_connections:
+            return connections
+            
+        # Calculate distances to all connections
+        node_embedding = self.embeddings[node_idx]
+        connection_distances = []
+        
+        for conn_idx in connections:
+            dist = self._calculate_distance(node_embedding, self.embeddings[conn_idx])
+            connection_distances.append((conn_idx, dist))
+            
+        # Keep closest connections
+        connection_distances.sort(key=lambda x: x[1])
+        return [conn_idx for conn_idx, _ in connection_distances[:max_connections]]
+        
+    def _calculate_distance(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+        """
+        Calculate distance between two vectors.
+        Using negative cosine similarity (higher similarity = lower distance).
+        """
+        # Cosine similarity
+        dot_product = np.dot(vec1, vec2)
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 1.0  # Maximum distance
+            
+        cosine_sim = dot_product / (norm1 * norm2)
+        return 1.0 - cosine_sim  # Convert to distance (0 = identical, 2 = opposite)
+        
+    def get_graph_info(self) -> Dict[str, Any]:
+        """Get information about the constructed graph."""
+        if not self.built:
+            return {"status": "not_built"}
+            
+        degrees = [len(neighbors) for neighbors in self.graph.values()]
+        
+        return {
+            "status": "built",
+            "n_nodes": self.n_nodes,
+            "n_edges": sum(degrees) // 2,  # Each edge counted twice
+            "avg_degree": np.mean(degrees),
+            "max_degree": max(degrees),
+            "min_degree": min(degrees),
+            "entry_point": self.entry_point
         }
-        
-        # Get initial vertices
-        if self.private_mode:
-            initial_vertices = self._get_vertices_private(start_vertices)
-        else:
-            initial_vertices = self._get_vertices_non_private(start_vertices)
-        
-        metrics["total_communication_bytes"] += sum(v["communication_bytes"] for v in initial_vertices)
-        metrics["vertex_accesses"] += len(initial_vertices)
-        
-        # Add initial candidates
-        for vertex in initial_vertices:
-            if vertex['id'] not in visited:
-                similarity = self._cosine_similarity(query_vector, vertex['vector'])
-                heapq.heappush(candidates, (-similarity, vertex['id']))  # Negative for max-heap
-                visited.add(vertex['id'])
-        
-        # Graph traversal
-        for step in range(max_steps):
-            metrics["steps_taken"] += 1
-            
-            if not candidates:
-                break
-                
-            # Select vertices to explore in this step
-            current_exploration = []
-            neighbors_to_visit = []
-            
-            # Get top candidates for this step
-            step_candidates = []
-            for _ in range(min(parallel_exploration, len(candidates))):
-                if candidates:
-                    neg_sim, vertex_id = heapq.heappop(candidates)
-                    step_candidates.append((neg_sim, vertex_id))
-            
-            # Put them back and collect neighbors
-            for neg_sim, vertex_id in step_candidates:
-                heapq.heappush(candidates, (neg_sim, vertex_id))
-                
-                # We need to get the neighbors of this vertex
-                if self.private_mode:
-                    vertex_data = self._get_vertices_private([vertex_id])[0]
-                else:
-                    vertex_data = self._get_vertices_non_private([vertex_id])[0]
-                
-                metrics["total_communication_bytes"] += vertex_data["communication_bytes"]
-                metrics["vertex_accesses"] += 1
-                
-                # Add unvisited neighbors to exploration list
-                for neighbor_id in vertex_data['neighbors']:
-                    if neighbor_id not in visited and 0 <= neighbor_id < self.n_docs:
-                        neighbors_to_visit.append(neighbor_id)
-                        visited.add(neighbor_id)
-            
-            # Batch query neighbors if any
-            if neighbors_to_visit:
-                if self.private_mode:
-                    neighbor_vertices = self._get_vertices_private(neighbors_to_visit)
-                else:
-                    neighbor_vertices = self._get_vertices_non_private(neighbors_to_visit)
-                
-                metrics["total_communication_bytes"] += sum(v["communication_bytes"] for v in neighbor_vertices)
-                metrics["vertex_accesses"] += len(neighbor_vertices)
-                
-                # Add neighbors as candidates
-                for vertex in neighbor_vertices:
-                    similarity = self._cosine_similarity(query_vector, vertex['vector'])
-                    heapq.heappush(candidates, (-similarity, vertex['id']))
-        
-        # Extract top-k results
-        final_candidates = []
-        while candidates and len(final_candidates) < k:
-            neg_sim, vertex_id = heapq.heappop(candidates)
-            final_candidates.append((vertex_id, -neg_sim))
-        
-        # Sort by similarity (descending)
-        final_candidates.sort(key=lambda x: x[1], reverse=True)
-        top_k_indices = [vertex_id for vertex_id, _ in final_candidates[:k]]
-        
-        # Update statistics
-        search_time = time.perf_counter() - start_time
-        metrics["search_time"] = search_time
-        metrics["results_found"] = len(top_k_indices)
-        
-        self.total_vertex_accesses += metrics["vertex_accesses"]
-        self.total_search_time += search_time
-        self.search_count += 1
-        
-        return top_k_indices, metrics
-    
-    def get_overall_stats(self) -> Dict[str, Any]:
-        """Get overall search engine statistics"""
-        stats = {
-            "total_searches": self.search_count,
-            "total_vertex_accesses": self.total_vertex_accesses,
-            "total_search_time": self.total_search_time,
-            "avg_vertex_accesses_per_search": self.total_vertex_accesses / max(1, self.search_count),
-            "avg_search_time": self.total_search_time / max(1, self.search_count),
-            "private_mode": self.private_mode,
-            "graph_neighbor_count": self.neighbor_count,
-            "database_size": self.n_docs,
-            "embedding_dimension": self.embedding_dim
-        }
-        
-        if self.private_mode and hasattr(self, 'pir_system'):
-            pir_stats = self.pir_system.get_stats()
-            stats.update({
-                "pir_preprocessing_time": pir_stats["preprocessing_time"],
-                "pir_total_communication_bytes": pir_stats["total_communication_bytes"],
-                "pir_avg_communication_per_query": pir_stats["avg_communication_per_query"],
-                "pir_partition_count": pir_stats["partition_count"]
-            })
-        
-        return stats

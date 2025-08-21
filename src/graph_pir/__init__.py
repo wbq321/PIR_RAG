@@ -1,17 +1,19 @@
 """
-Graph-based PIR Search: Python implementation of private-search-temp for comparison
+Graph-PIR: Graph-based Private Information Retrieval
 
-A simplified implementation of PianoPIR + Graph-based ANN search for 
-communication efficiency comparison with PIR-RAG.
+A PIR system that combines graph-based ANN search with document retrieval PIR.
+Uses two-phase approach: graph traversal + document PIR for fair RAG comparison.
 """
 
-from .piano_pir import PianoPIRClient, PianoPIRServer
-from .graph_search import GraphSearchEngine
+__version__ = "0.1.0"
+
 from .system import GraphPIRSystem
+from .piano_pir import PianoPIRClient, PianoPIRServer
+from .graph_search import GraphSearch
 
 __all__ = [
-    "PianoPIRClient",
-    "PianoPIRServer", 
-    "GraphSearchEngine",
-    "GraphPIRSystem"
+    "GraphPIRSystem",
+    "PianoPIRClient", 
+    "PianoPIRServer",
+    "GraphSearch"
 ]
