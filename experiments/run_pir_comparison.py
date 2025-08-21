@@ -18,7 +18,9 @@ import os
 import argparse
 
 # Add PIR_RAG to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(current_dir, '..', 'src')
+sys.path.insert(0, src_dir)
 
 from pir_rag import PIRRAGClient, PIRRAGServer
 from graph_pir import GraphPIRSystem

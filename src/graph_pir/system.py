@@ -14,7 +14,12 @@ import torch
 
 from .piano_pir import PianoPIRClient, PianoPIRServer
 from .graph_search import GraphSearch
-from ..pir_rag.utils import encode_text_to_chunks, decode_chunks_to_text
+
+# Import PIR-RAG utils with absolute import
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from pir_rag.utils import encode_text_to_chunks, decode_chunks_to_text
 
 
 class GraphPIRSystem:
