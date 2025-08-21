@@ -12,13 +12,45 @@ This implementation closely follows the Go version's approach:
 import struct
 import hashlib
 import time
-import fnv
 from typing import List, Tuple, Union, Optional
 import numpy as np
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
 import math
+
+
+# Helper function to add fnv hash support
+class FNVHash:
+    """FNV-1a 64-bit hash implementation."""
+    
+    def __init__(self):
+        self.reset()
+    
+    def reset(self):
+        self.hash_value = 0xcbf29ce484222325  # FNV offset basis
+    
+    def update(self, data: bytes):
+        for byte in data:
+            self.hash_value ^= byte
+            self.hash_value *= 0x100000001b3  # FNV prime
+            self.hash_value &= 0xffffffffffffffff  # Keep it 64-bit
+    
+    def digest(self) -> int:
+        return self.hash_value
+
+
+# Add fnv module simulation
+class FNVModule:
+    """Simulate the fnv module used in Go."""
+    
+    @staticmethod
+    def FNV1a64():
+        return FNVHash()
+
+
+# Make fnv available
+fnv = FNVModule()
 
 
 class PianoPIRConfig:
@@ -334,36 +366,3 @@ def create_pir_system(database: List[bytes], db_entry_byte_num: int = 1024) -> S
         SimpleBatchPianoPIR instance
     """
     return SimpleBatchPianoPIR(database, db_entry_byte_num)
-
-
-# Helper function to add fnv hash support
-class FNVHash:
-    """FNV-1a 64-bit hash implementation."""
-    
-    def __init__(self):
-        self.reset()
-    
-    def reset(self):
-        self.hash_value = 0xcbf29ce484222325  # FNV offset basis
-    
-    def update(self, data: bytes):
-        for byte in data:
-            self.hash_value ^= byte
-            self.hash_value *= 0x100000001b3  # FNV prime
-            self.hash_value &= 0xffffffffffffffff  # Keep it 64-bit
-    
-    def digest(self) -> int:
-        return self.hash_value
-
-
-# Add fnv module simulation
-class FNVModule:
-    """Simulate the fnv module used in Go."""
-    
-    @staticmethod
-    def FNV1a64():
-        return FNVHash()
-
-
-# Make fnv available
-fnv = FNVModule()
