@@ -82,22 +82,23 @@ class GraphPIRSystem:
         self.vector_pir_server = PianoPIRServer()
         self.vector_pir_client = PianoPIRClient()
         
-        # Convert embeddings to PIR database format
-        # Each embedding becomes a database entry
+        # Convert embeddings to PIR database format with graph structure
         vector_db = embeddings.flatten().astype(np.float32)
-        self.vector_pir_server.setup_database(vector_db, embeddings.shape[1])
+        graph_dict = {}
+        if hasattr(self.graph_search, 'graph'):
+            graph_dict = self.graph_search.graph
+        
+        self.vector_pir_server.setup_database(vector_db, embeddings.shape[1], graph_dict)
         self.vector_pir_client.setup()
         vector_pir_time = time.perf_counter() - vector_pir_start
         
-        # 3. Set up document PIR for final retrieval
+        # 3. Set up document PIR database (just store documents, no separate PIR client)
         print("[GraphPIR] Setting up document PIR...")
         doc_pir_start = time.perf_counter()
         self.doc_pir_server = DocumentPIRServer()
-        self.doc_pir_client = DocumentPIRClient()
         
         # Convert documents to PIR database format
         doc_setup_metrics = self.doc_pir_server.setup_database(documents)
-        self.doc_pir_client.setup()
         doc_pir_time = time.perf_counter() - doc_pir_start
         
         total_setup_time = time.perf_counter() - setup_start
@@ -185,53 +186,210 @@ class GraphPIRSystem:
     def _phase1_graph_search(self, query_embedding: np.ndarray, 
                            num_candidates: int) -> Tuple[List[int], Dict[str, Any]]:
         """
-        Phase 1: Use graph search + vector PIR to find candidate document indices.
+        Phase 1: Use graph search + REAL vector PIR to find candidate document indices.
+        Based on private-search-temp implementation.
         """
-        # Use graph search to find candidates (simulated PIR for now)
-        # In a full implementation, this would use vector PIR for each graph traversal step
-        candidate_indices = self.graph_search.search(query_embedding, num_candidates)
+        print("[GraphPIR] Phase 1: Graph traversal with vector PIR...")
         
-        # Simulate PIR communication costs
-        # In reality, each graph traversal step would require PIR queries
+        # Track PIR communication costs
+        total_upload_bytes = 0
+        total_download_bytes = 0
+        pir_query_count = 0
+        
+        # Initialize graph search state
+        visited = set()
+        candidates = []
+        
+        # Start with entry point(s) - use first few documents as entry points
+        n_entry_points = min(5, len(self.embeddings))
+        current_nodes = list(range(n_entry_points))
+        
+        # Add entry points to visited
+        for node in current_nodes:
+            visited.add(node)
+            # Calculate distance to query
+            dist = self._calculate_distance(query_embedding, self.embeddings[node])
+            candidates.append((node, dist))
+        
+        max_iterations = 10  # Limit graph traversal steps
+        nodes_per_step = 5   # Number of neighbors to explore per step
+        
+        for iteration in range(max_iterations):
+            if len(candidates) >= num_candidates:
+                break
+                
+            # Select best unvisited neighbors to explore
+            next_nodes_to_query = []
+            
+            # Get neighbors of current best nodes using graph structure
+            for node_id in current_nodes:
+                if hasattr(self.graph_search, 'graph') and node_id in self.graph_search.graph:
+                    neighbors = self.graph_search.graph[node_id][:nodes_per_step]
+                    for neighbor in neighbors:
+                        if neighbor not in visited and neighbor < len(self.embeddings):
+                            next_nodes_to_query.append(neighbor)
+                            visited.add(neighbor)
+                            
+            if not next_nodes_to_query:
+                break
+                
+            # Use REAL PIR to retrieve vectors for these nodes
+            print(f"[GraphPIR] PIR query for {len(next_nodes_to_query)} vectors at iteration {iteration}")
+            
+            # Generate PIR query for the neighbor vectors
+            pir_vectors, pir_metrics = self.vector_pir_client.query_vectors(
+                self.vector_pir_server, next_nodes_to_query
+            )
+            
+            total_upload_bytes += pir_metrics["upload_bytes"]
+            total_download_bytes += pir_metrics["download_bytes"]
+            pir_query_count += 1
+            
+            # Calculate distances and add to candidates
+            current_nodes = []
+            for i, node_id in enumerate(next_nodes_to_query):
+                if i < len(pir_vectors):
+                    # Use the retrieved vector to calculate distance
+                    vector = pir_vectors[i]
+                    dist = self._calculate_distance(query_embedding, vector)
+                    candidates.append((node_id, dist))
+                    current_nodes.append(node_id)
+        
+        # Sort candidates by distance and return top candidates
+        candidates.sort(key=lambda x: x[1])
+        candidate_indices = [idx for idx, _ in candidates[:num_candidates]]
+        
         phase1_metrics = {
-            "phase1_upload_bytes": len(candidate_indices) * 64,  # Simulated
-            "phase1_download_bytes": len(candidate_indices) * 1024,  # Simulated  
-            "graph_traversal_steps": min(50, len(candidate_indices))  # Simulated
+            "phase1_upload_bytes": total_upload_bytes,
+            "phase1_download_bytes": total_download_bytes,  
+            "graph_traversal_steps": pir_query_count,
+            "pir_queries_made": pir_query_count,
+            "total_nodes_explored": len(visited)
         }
+        
+        print(f"[GraphPIR] Phase 1 complete: {pir_query_count} PIR queries, {len(visited)} nodes explored")
         
         return candidate_indices, phase1_metrics
         
     def _phase2_document_retrieval(self, candidate_indices: List[int]) -> Tuple[List[str], Dict[str, Any]]:
         """
-        Phase 2: Use document PIR to retrieve actual document texts.
+        Phase 2: Use REAL document PIR with Paillier encryption to retrieve actual document texts.
+        Similar to PIR-RAG's approach but for individual documents.
         """
-        # Generate PIR queries for each candidate document
+        from phe import paillier
+        
+        print(f"[GraphPIR] Phase 2: Document PIR with Paillier encryption for {len(candidate_indices)} documents")
+        
+        # Generate Paillier keys (same approach as PIR-RAG)
+        print("[GraphPIR] Generating Paillier keys...")
+        key_start = time.perf_counter()
+        public_key, private_key = paillier.generate_paillier_keypair(n_length=1024)
+        key_gen_time = time.perf_counter() - key_start
+        
         upload_bytes = 0
         download_bytes = 0
+        encryption_time = 0
+        decryption_time = 0
+        server_time = 0
+        
         retrieved_docs = []
         
         for doc_idx in candidate_indices:
-            # Generate PIR query for this document
-            query_data, query_upload = self.doc_pir_client.generate_query(doc_idx)
+            # Generate PIR query for this document (similar to PIR-RAG)
+            query_start = time.perf_counter()
+            
+            # Create PIR query vector: encrypt 1 for target document, 0 for others
+            encrypted_query = []
+            for i in range(len(self.documents)):
+                if i == doc_idx:
+                    encrypted_query.append(public_key.encrypt(1))
+                else:
+                    encrypted_query.append(public_key.encrypt(0))
+            
+            query_gen_time = time.perf_counter() - query_start
+            encryption_time += query_gen_time
+            
+            # Calculate upload size (encrypted query vector)
+            query_upload = sum(len(str(c.ciphertext())) for c in encrypted_query)
             upload_bytes += query_upload
             
-            # Server processes PIR query
-            response_data = self.doc_pir_server.process_query(query_data)
+            # Server processes PIR query using homomorphic operations
+            server_start = time.perf_counter()
+            encrypted_response = self._process_document_pir_query(encrypted_query, public_key)
+            server_processing_time = time.perf_counter() - server_start
+            server_time += server_processing_time
             
-            # Client decrypts response
-            doc_text, response_download = self.doc_pir_client.decrypt_response(response_data)
+            # Calculate download size (encrypted response chunks)
+            response_download = sum(len(str(c.ciphertext())) for c in encrypted_response)
             download_bytes += response_download
             
-            if doc_text:  # Only add non-empty documents
+            # Client decrypts response
+            decrypt_start = time.perf_counter()
+            decrypted_chunks = [private_key.decrypt(c) for c in encrypted_response]
+            doc_text = decode_chunks_to_text(decrypted_chunks)
+            decrypt_time = time.perf_counter() - decrypt_start
+            decryption_time += decrypt_time
+            
+            if doc_text.strip():  # Only add non-empty documents
                 retrieved_docs.append(doc_text)
         
         phase2_metrics = {
             "phase2_upload_bytes": upload_bytes,
             "phase2_download_bytes": download_bytes,
-            "documents_retrieved": len(retrieved_docs)
+            "documents_retrieved": len(retrieved_docs),
+            "key_generation_time": key_gen_time,
+            "encryption_time": encryption_time,
+            "server_processing_time": server_time,
+            "decryption_time": decryption_time,
+            "total_pir_documents": len(candidate_indices)
         }
         
+        print(f"[GraphPIR] Phase 2 complete: {len(retrieved_docs)} documents retrieved")
+        print(f"[GraphPIR] Communication: {upload_bytes:,} upload, {download_bytes:,} download bytes")
+        
         return retrieved_docs, phase2_metrics
+        
+    def _process_document_pir_query(self, encrypted_query: List, public_key) -> List:
+        """
+        Server-side processing of document PIR query using homomorphic encryption.
+        Identical approach to PIR-RAG's handle_pir_query.
+        """
+        if not hasattr(self.doc_pir_server, 'doc_chunks_db'):
+            raise ValueError("Document PIR server not properly set up")
+        
+        # Perform homomorphic computation for each chunk position (same as PIR-RAG)
+        encrypted_response = []
+        for chunk_db in self.doc_pir_server.doc_chunks_db:
+            # Compute sum of (chunk_value * encrypted_query_bit) for all documents
+            chunk_result = public_key.encrypt(0)  # Start with encrypted zero
+            for i, chunk_value in enumerate(chunk_db):
+                if i < len(encrypted_query):
+                    # Homomorphic multiplication and addition
+                    chunk_result += chunk_value * encrypted_query[i]
+            encrypted_response.append(chunk_result)
+        
+        return encrypted_response
+        
+    def _calculate_distance(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+        """
+        Calculate distance between two vectors using cosine similarity.
+        """
+        # Handle different input types
+        if isinstance(vec1, torch.Tensor):
+            vec1 = vec1.numpy()
+        if isinstance(vec2, torch.Tensor):
+            vec2 = vec2.numpy()
+            
+        # Cosine similarity
+        dot_product = np.dot(vec1, vec2)
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 1.0  # Maximum distance
+            
+        cosine_sim = dot_product / (norm1 * norm2)
+        return 1.0 - cosine_sim  # Convert to distance (0 = identical, 2 = opposite)
         
     def _rerank_documents(self, query_embedding: np.ndarray, 
                          documents: List[str], top_k: int) -> List[str]:
@@ -322,67 +480,6 @@ class DocumentPIRServer:
             "doc_pir_max_chunks": self.max_chunks,
             "doc_pir_db_size": len(documents)
         }
-        
-    def process_query(self, query_data: Dict) -> Dict:
-        """
-        Process a PIR query for a specific document.
-        Similar to PIR-RAG's handle_pir_query but for single document.
-        """
-        # Simulate PIR processing
-        # In reality, this would use homomorphic encryption
-        doc_idx = query_data["target_doc_idx"]  # This would be encrypted
-        
-        # Return encrypted chunks for the requested document
-        response_chunks = []
-        for chunk_idx in range(self.max_chunks):
-            if doc_idx < len(self.doc_chunks_db[chunk_idx]):
-                response_chunks.append(self.doc_chunks_db[chunk_idx][doc_idx])
-            else:
-                response_chunks.append(0)
-                
-        return {
-            "encrypted_chunks": response_chunks,
-            "chunk_count": len(response_chunks)
-        }
-
-
-class DocumentPIRClient:
-    """
-    PIR client for document retrieval.
-    Similar to PIR-RAG client but for individual documents.
-    """
-    
-    def __init__(self):
-        self.setup_complete = False
-        
-    def setup(self):
-        """Set up PIR client (key generation, etc.)"""
-        # In reality, would generate Paillier keys like PIR-RAG
-        self.setup_complete = True
-        
-    def generate_query(self, doc_idx: int) -> Tuple[Dict, int]:
-        """
-        Generate PIR query for a specific document.
-        """
-        if not self.setup_complete:
-            raise ValueError("Client not set up")
-            
-        # In reality, would generate encrypted query vector
-        query_data = {
-            "target_doc_idx": doc_idx,  # This would be encrypted
-            "query_type": "document_retrieval"
-        }
-        
-        # Simulate upload size
-        upload_bytes = 2048  # Simulated encrypted query size
-        
-        return query_data, upload_bytes
-        
-    def decrypt_response(self, response_data: Dict) -> Tuple[str, int]:
-        """
-        Decrypt PIR response and decode back to document text.
-        """
-        # Simulate decryption and decoding (similar to PIR-RAG)
         encrypted_chunks = response_data["encrypted_chunks"]
         
         # In reality, would decrypt each chunk
