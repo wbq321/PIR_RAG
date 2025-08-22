@@ -284,7 +284,8 @@ class TiptoeSystem:
         
         # Get cluster's ranking matrix
         ranking_matrix = self.cluster_ranking_dbs[cluster_id]
-        n_docs_in_cluster = ranking_matrix.shape[0]
+        # Note: ranking_matrix has shape (dimensions, n_documents) due to transpose in prepare_ranking_database
+        n_docs_in_cluster = ranking_matrix.shape[1]  # Documents are columns
         
         if n_docs_in_cluster == 0:
             return [], {
@@ -304,7 +305,7 @@ class TiptoeSystem:
         total_comm = 0
         
         for i in range(n_docs_in_cluster):
-            doc_embedding = ranking_matrix[i]
+            doc_embedding = ranking_matrix[:, i]  # Get column i (document i)
             
             # Compute similarity score (dot product)
             score = np.dot(query_reduced, doc_embedding)
