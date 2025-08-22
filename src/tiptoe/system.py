@@ -363,7 +363,6 @@ class TiptoeSystem:
                 
                 # Get document chunks
                 chunks = doc_chunks[doc_idx]
-                print(f"[Tiptoe] Debug: doc_idx={doc_idx}, chunks type={type(chunks)}, chunks={chunks}")
                 
                 # Simulate PIR retrieval (in real system this would be homomorphic)
                 # Each chunk retrieval requires a separate PIR query
@@ -375,7 +374,7 @@ class TiptoeSystem:
                     doc_text = decode_chunks_to_text(chunks)
                     retrieved_docs.append(doc_text)
                 else:
-                    print(f"[Tiptoe] Error: Expected chunks to be list, got {type(chunks)}")
+                    # Fallback for unexpected types
                     doc_upload = 64  # Single query
                     doc_download = 100  # Estimate
                     doc_text = f"Error retrieving document {doc_idx}"
