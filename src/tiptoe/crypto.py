@@ -356,9 +356,9 @@ class TiptoeHomomorphicRanking:
         self.t_bits = t_bits
 
     def encrypt_vector(self, vec):
-        # For BFV, encrypt each element separately (element-wise)
+        # For BFV, encrypt each element separately (element-wise, np.int64)
         arr = np.array(vec, dtype=np.int64)
-        return [self.HE.encryptInt(int(x)) for x in arr]
+        return [self.HE.encryptInt(np.int64(x)) for x in arr]
 
     def decrypt_vector(self, ctxt):
         # Decrypt a ciphertext vector
