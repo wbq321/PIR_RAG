@@ -230,6 +230,30 @@ class TiptoeClustering:
 
         return int(nearest_cluster), metrics
 
+    def reduce_query_embedding(self, query_embedding: np.ndarray) -> np.ndarray:
+        """
+        Apply PCA reduction and quantization to query embedding.
+        
+        This extracts the embedding processing logic for use in ranking service.
+        
+        Args:
+            query_embedding: Original high-dimensional query embedding
+            
+        Returns:
+            Reduced and quantized query embedding
+        """
+        if self.pca_model is None:
+            raise ValueError("Clustering not setup. Call setup_clustering() first.")
+        
+        # Apply same PCA transformation as training
+        normalized_query = normalize(query_embedding.reshape(1, -1), norm='l2')
+        reduced_query = self.pca_model.transform(normalized_query)[0]
+        
+        # Apply same quantization (5-bit precision like Tiptoe)
+        quantized_query = np.round(reduced_query * (1 << 5)).astype(np.int32)
+        
+        return quantized_query
+
     def get_cluster_database(self, cluster_id: int, embeddings: np.ndarray) -> np.ndarray:
         """
         Get all embeddings belonging to a specific cluster for PIR database.
