@@ -292,8 +292,8 @@ class TiptoeSystem:
         pir_start = time.perf_counter()
         
         # Use REAL PIR system for ranking (like PIR-RAG and Graph-PIR)
-        encrypted_query, query_metrics = self.pir_system.generate_pir_query(
-            quantized_query, ranking_matrix.shape[1], target_index=0  # We want all scores
+        encrypted_query, query_metrics = self.pir_system.create_pir_query(
+            target_index=0, database_size=ranking_matrix.shape[1]  # We want all scores
         )
         
         # Server processes the encrypted query 
@@ -388,8 +388,8 @@ class TiptoeSystem:
                 
                 # Create PIR query for this specific document
                 pir_query_vector = [1 if j == doc_idx else 0 for j in range(len(doc_chunks))]
-                encrypted_query, query_metrics = self.pir_system.generate_pir_query(
-                    pir_query_vector, len(doc_chunks), target_index=doc_idx
+                encrypted_query, query_metrics = self.pir_system.create_pir_query(
+                    target_index=doc_idx, database_size=len(doc_chunks)
                 )
                 
                 # Server processes query (retrieves encrypted chunks)
