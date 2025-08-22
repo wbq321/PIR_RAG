@@ -372,7 +372,7 @@ class TiptoeHomomorphicRanking:
             arr = np.array(doc_vec, dtype=np.int64)
             # Multiply each encrypted query element by corresponding doc value
             prod = [ctxt_query[j] * int(arr[j]) for j in range(len(arr))]
-            dot = prod[0]
+            dot = prod[0].copy()  # Use copy to avoid transparent ciphertext
             for c in prod[1:]:
                 dot += c
             results.append(dot)
