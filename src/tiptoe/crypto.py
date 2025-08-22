@@ -356,8 +356,9 @@ class TiptoeHomomorphicRanking:
         self.t_bits = t_bits
 
     def encrypt_vector(self, vec):
-        # Encrypt a numpy vector (float or int)
-        return self.HE.encryptFrac(vec) if self.scheme == 'CKKS' else self.HE.encryptInt(vec)
+        # Ensure input is np.int64 for BFV
+        arr = np.array(vec, dtype=np.int64)
+        return self.HE.encryptInt(arr)
 
     def decrypt_vector(self, ctxt):
         # Decrypt a ciphertext vector
@@ -369,8 +370,8 @@ class TiptoeHomomorphicRanking:
         # Returns: list of encrypted dot products (one per document)
         results = []
         for doc_vec in db_vecs:
-            # Elementwise multiply and sum (homomorphic dot product)
-            enc_doc = self.encrypt_vector(doc_vec)
+            arr = np.array(doc_vec, dtype=np.int64)
+            enc_doc = self.HE.encryptInt(arr)
             prod = ctxt_query * enc_doc
             dot = prod.sum()
             results.append(dot)
