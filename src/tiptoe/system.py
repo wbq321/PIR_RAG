@@ -386,19 +386,23 @@ class TiptoeSystem:
                 # Get document chunks
                 chunks = doc_chunks[doc_idx]
                 
-                # Create PIR query for this specific document
-                pir_query_vector = [1 if j == doc_idx else 0 for j in range(len(doc_chunks))]
+                # For document retrieval, we use a simpler approach:
+                # Create a database of document indices and retrieve the index
+                doc_indices_list = list(range(len(doc_chunks)))
                 encrypted_query, query_metrics = self.pir_system.create_pir_query(
                     target_index=doc_idx, database_size=len(doc_chunks)
                 )
                 
-                # Server processes query (retrieves encrypted chunks)
+                # Server processes query to retrieve document index (not full chunks)
                 encrypted_response, server_metrics = self.pir_system.process_pir_query(
-                    encrypted_query, doc_chunks
+                    encrypted_query, doc_indices_list
                 )
                 
-                # Client decrypts response to get document chunks
-                # For simplicity, we get the chunks directly but track crypto timing
+                # Client decrypts response to get document index
+                retrieved_index = self.pir_system.decrypt_pir_response(encrypted_response)
+                
+                # Use the retrieved index to get actual document chunks
+                # (In real system, chunks would be encrypted and retrieved homomorphically)
                 if isinstance(chunks, list):
                     doc_upload = query_metrics['upload_bytes']
                     doc_download = server_metrics['download_bytes']
