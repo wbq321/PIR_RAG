@@ -267,8 +267,18 @@ def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
     print(f"[Tiptoe] Setting up Tiptoe system...")
     print(f"[Tiptoe] Documents: {len(documents)}, Embeddings: {embeddings.shape}")
     
+    # Adjust parameters for small datasets
+    n_docs = len(documents)
+    actual_target_dim = min(192, n_docs - 1)  # Can't exceed n_samples - 1
+    actual_n_clusters = min(n_clusters, n_docs)  # Can't have more clusters than documents
+    
+    if actual_target_dim != 192:
+        print(f"[Tiptoe] Adjusting target dimension from 192 to {actual_target_dim} for small dataset")
+    if actual_n_clusters != n_clusters:
+        print(f"[Tiptoe] Adjusting clusters from {n_clusters} to {actual_n_clusters} for small dataset")
+    
     # Setup
-    tiptoe = TiptoeSystem(target_dim=192, n_clusters=n_clusters)
+    tiptoe = TiptoeSystem(target_dim=actual_target_dim, n_clusters=actual_n_clusters)
     setup_start = time.perf_counter()
     setup_metrics = tiptoe.setup(embeddings, documents)
     setup_time = time.perf_counter() - setup_start

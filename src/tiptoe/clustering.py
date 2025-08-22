@@ -109,9 +109,18 @@ class TiptoeClustering:
         Returns:
             Reduced and quantized embeddings
         """
+        # Determine actual target dimension (can't exceed number of samples)
+        n_samples, n_features = embeddings.shape
+        max_components = min(n_samples, n_features)
+        actual_target_dim = min(self.target_dim, max_components)
+        
+        if actual_target_dim != self.target_dim:
+            print(f"[Tiptoe] Warning: Reducing target dimension from {self.target_dim} to {actual_target_dim} due to sample size limit")
+            self.target_dim = actual_target_dim  # Update for consistency
+        
         # Step 1: Train PCA model
         print(f"[Tiptoe] Training PCA model...")
-        self.pca_model = PCA(n_components=self.target_dim, svd_solver='full')
+        self.pca_model = PCA(n_components=actual_target_dim, svd_solver='full')
         
         # Normalize embeddings first (common practice)
         normalized_embeddings = normalize(embeddings, norm='l2')
@@ -140,13 +149,21 @@ class TiptoeClustering:
         Returns:
             Tuple of (cluster_assignments, cluster_centroids)
         """
-        print(f"[Tiptoe] Running MiniBatch K-means clustering...")
+        n_samples = len(reduced_embeddings)
+        
+        # Adjust number of clusters for small datasets
+        actual_n_clusters = min(self.n_clusters, n_samples)
+        if actual_n_clusters != self.n_clusters:
+            print(f"[Tiptoe] Warning: Reducing clusters from {self.n_clusters} to {actual_n_clusters} due to dataset size")
+            self.n_clusters = actual_n_clusters  # Update for consistency
+        
+        print(f"[Tiptoe] Running MiniBatch K-means clustering with {actual_n_clusters} clusters...")
         
         # Use MiniBatchKMeans for efficiency (like Tiptoe)
         self.kmeans_model = MiniBatchKMeans(
-            n_clusters=self.n_clusters,
+            n_clusters=actual_n_clusters,
             random_state=42,
-            batch_size=1000,
+            batch_size=min(1000, n_samples),  # Adjust batch size for small datasets
             max_iter=100
         )
         
