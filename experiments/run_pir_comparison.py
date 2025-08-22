@@ -260,7 +260,7 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
 
 
 def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
-                         test_queries: List[str], n_clusters: int = 100,
+                         n_clusters: int, n_queries: int, 
                          top_k: int = 10, model: SentenceTransformer = None) -> Dict[str, Any]:
     """Run Tiptoe private search experiment."""
     print(f"\n=== Tiptoe Experiment ===")
@@ -286,15 +286,15 @@ def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
     print(f"Setup complete in {setup_time:.2f}s")
     
     # Generate test queries
-    test_queries = generate_test_queries(documents, len(test_queries))
-    print(f"Generated {len(test_queries)} queries from corpus documents")
+    generated_queries = generate_test_queries(documents, n_queries)
+    print(f"Generated {len(generated_queries)} queries from corpus documents")
     
     # Run queries
     total_upload = 0
     total_download = 0
     total_query_time = 0
     
-    for i, query_text in enumerate(test_queries):
+    for i, query_text in enumerate(generated_queries):
         # Encode query using the model
         if model is not None:
             query_embedding = model.encode([query_text])[0].astype(np.float32)
@@ -320,12 +320,12 @@ def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
     avg_metrics = {
         "system": "Tiptoe",
         "setup_time": setup_time,
-        "avg_query_time": total_query_time / len(test_queries),
-        "avg_upload_bytes": total_upload / len(test_queries),
-        "avg_download_bytes": total_download / len(test_queries),
+        "avg_query_time": total_query_time / len(generated_queries),
+        "avg_upload_bytes": total_upload / len(generated_queries),
+        "avg_download_bytes": total_download / len(generated_queries),
         "total_upload_bytes": total_upload,
         "total_download_bytes": total_download,
-        "n_queries": len(test_queries),
+        "n_queries": len(generated_queries),
         "setup_metrics": setup_metrics
     }
     
@@ -524,7 +524,7 @@ def main():
         if 'tiptoe' in systems_to_run:
             print("\n=== Running Tiptoe Experiment ===")
             tiptoe_results = run_tiptoe_experiment(
-                embeddings, documents, args.n_clusters, args.n_queries, model
+                embeddings, documents, args.n_clusters, args.n_queries, args.top_k, model
             )
             results.append(tiptoe_results)
             systems.append('Tiptoe')
