@@ -436,10 +436,13 @@ def main():
                        help='Prefix for output files (default: pir_comparison)')
 
     # System arguments
+    parser.add_argument('--systems', type=str, default='all',
+                       choices=['all', 'pir-rag', 'graph-pir', 'tiptoe', 'pir-rag,graph-pir', 'pir-rag,tiptoe', 'graph-pir,tiptoe'],
+                       help='Systems to compare: all, pir-rag, graph-pir, tiptoe, or comma-separated combinations (default: all)')
     parser.add_argument('--skip_pir_rag', action='store_true',
-                       help='Skip PIR-RAG experiment (only run Graph-PIR)')
+                       help='Skip PIR-RAG experiment (deprecated, use --systems instead)')
     parser.add_argument('--skip_graph_pir', action='store_true',
-                       help='Skip Graph-PIR experiment (only run PIR-RAG)')
+                       help='Skip Graph-PIR experiment (deprecated, use --systems instead)')
     parser.add_argument('--verbose', action='store_true',
                        help='Enable verbose output')
 
@@ -473,26 +476,55 @@ def main():
         print("Warning: No model path provided. Will use random query embeddings.")
         print("For realistic results, provide --model_path argument.")
 
+    # Determine which systems to run
+    if args.systems == 'all':
+        systems_to_run = ['pir-rag', 'graph-pir', 'tiptoe']
+    else:
+        systems_to_run = [s.strip() for s in args.systems.split(',')]
+    
+    # Handle deprecated skip flags
+    if args.skip_pir_rag and 'pir-rag' in systems_to_run:
+        systems_to_run.remove('pir-rag')
+    if args.skip_graph_pir and 'graph-pir' in systems_to_run:
+        systems_to_run.remove('graph-pir')
+    
+    print(f"Running experiments for: {', '.join(systems_to_run)}")
+
     # Run experiments
     results = []
+    systems = []
+    
     try:
-        if not args.skip_pir_rag:
+        if 'pir-rag' in systems_to_run:
+            print("\n=== Running PIR-RAG Experiment ===")
             pir_rag_results = run_pir_rag_experiment(
                 embeddings, documents, args.n_clusters, args.n_queries, args.key_length, model
             )
             results.append(pir_rag_results)
+            systems.append('PIR-RAG')
 
-        if not args.skip_graph_pir:
+        if 'graph-pir' in systems_to_run:
+            print("\n=== Running Graph-PIR Experiment ===")
             graph_pir_results = run_graph_pir_experiment(
                 embeddings, documents, args.n_queries, args.top_k, model
             )
             results.append(graph_pir_results)
+            systems.append('Graph-PIR')
+            
+        if 'tiptoe' in systems_to_run:
+            print("\n=== Running Tiptoe Experiment ===")
+            tiptoe_results = run_tiptoe_experiment(
+                embeddings, documents, args.n_clusters, args.n_queries, model
+            )
+            results.append(tiptoe_results)
+            systems.append('Tiptoe')
 
-        # Compare results if both systems were run
-        if len(results) == 2:
-            compare_systems(results[0], results[1])
+        # Compare results
+        if len(results) >= 2:
+            print(f"\n=== COMPARISON RESULTS ===")
+            compare_systems(systems, results)
         elif len(results) == 1:
-            print(f"\n=== {results[0]['system']} Results Only ===")
+            print(f"\n=== {systems[0]} Results Only ===")
             print(f"Setup time: {results[0]['setup_time']:.2f}s")
             print(f"Avg query time: {results[0]['avg_query_time']:.3f}s")
             print(f"Avg communication: {results[0]['avg_upload_bytes'] + results[0]['avg_download_bytes']:,} bytes")
