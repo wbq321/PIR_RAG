@@ -328,3 +328,52 @@ class TiptoeHintSystem:
             'hint_download_bytes': hint_size * bytes_per_ciphertext,      # Server sends hint data
             'hint_generation_time': self.hint_data['generation_time']
         }
+
+
+# === Real Homomorphic Encryption for Tiptoe Ranking (Pyfhel) ===
+try:
+    from Pyfhel import Pyfhel, PyCtxt
+    _pyfhel_available = True
+except ImportError:
+    _pyfhel_available = False
+
+class TiptoeHomomorphicRanking:
+    """
+    Real homomorphic encryption for Tiptoe ranking phase using Pyfhel (CKKS or BFV).
+    """
+    def __init__(self, scheme: str = 'CKKS', n_slots: int = 128, scale: int = 2**30):
+        if not _pyfhel_available:
+            raise ImportError("Pyfhel is not installed. Please install it to use real homomorphic ranking.")
+        self.HE = Pyfhel()
+        if scheme == 'CKKS':
+            self.HE.contextGen(scheme='CKKS', n=n_slots*2, scale=scale, qi_sizes=[60,30,30,30,60])
+        else:
+            self.HE.contextGen(scheme='BFV', n=n_slots*2, t_bits=20)
+        self.HE.keyGen()
+        self.scheme = scheme
+        self.n_slots = n_slots
+        self.scale = scale
+
+    def encrypt_vector(self, vec):
+        # Encrypt a numpy vector (float or int)
+        return self.HE.encryptFrac(vec) if self.scheme == 'CKKS' else self.HE.encryptInt(vec)
+
+    def decrypt_vector(self, ctxt):
+        # Decrypt a ciphertext vector
+        return self.HE.decryptFrac(ctxt) if self.scheme == 'CKKS' else self.HE.decryptInt(ctxt)
+
+    def dot_product(self, ctxt_query, db_vecs):
+        # db_vecs: shape (n_docs, dim)
+        # ctxt_query: encrypted query vector
+        # Returns: list of encrypted dot products (one per document)
+        results = []
+        for doc_vec in db_vecs:
+            # Elementwise multiply and sum (homomorphic dot product)
+            enc_doc = self.encrypt_vector(doc_vec)
+            prod = ctxt_query * enc_doc
+            dot = prod.sum()
+            results.append(dot)
+        return results
+
+    def decrypt_scores(self, ctxt_scores):
+        return [float(self.HE.decryptFrac(ctxt)) for ctxt in ctxt_scores]

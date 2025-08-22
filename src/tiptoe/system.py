@@ -13,7 +13,7 @@ import time
 import numpy as np
 from typing import List, Dict, Any, Tuple
 
-from .crypto import LinearHomomorphicScheme, LinearHomomorphicPIR, TiptoeHintSystem
+from .crypto import LinearHomomorphicScheme, LinearHomomorphicPIR, TiptoeHintSystem, TiptoeHomomorphicRanking
 from .clustering import TiptoeClustering
 
 # Import PIR-RAG utilities for document encoding (reuse existing code)
@@ -51,6 +51,7 @@ class TiptoeSystem:
         self.crypto_scheme = None
         self.pir_system = None
         self.hint_system = None
+        self.homomorphic_ranking = None
 
         # CORRECTED: Per-cluster data storage (like Graph-PIR, not global like PIR-RAG)
         self.documents = None
@@ -94,6 +95,13 @@ class TiptoeSystem:
         self.crypto_scheme = LinearHomomorphicScheme(self.security_param)
         self.pir_system = LinearHomomorphicPIR(self.crypto_scheme)
         self.hint_system = TiptoeHintSystem(self.crypto_scheme)
+        # Add real homomorphic ranking if Pyfhel is available
+        try:
+            self.homomorphic_ranking = TiptoeHomomorphicRanking()
+            print("[Tiptoe] Using real Pyfhel homomorphic encryption for ranking phase.")
+        except ImportError:
+            self.homomorphic_ranking = None
+            print("[Tiptoe] Pyfhel not available, using simulated ranking.")
         crypto_time = time.perf_counter() - crypto_start
 
         # Phase 3: CORRECTED - Prepare per-cluster databases (like Graph-PIR)
@@ -279,7 +287,7 @@ class TiptoeSystem:
 
     def _homomorphic_ranking_service(self, query_embedding: np.ndarray, cluster_id: int, top_k: int) -> Tuple[List[int], Dict[str, Any]]:
         """
-        CORRECTED: Phase 2 Round 1 - Homomorphic ranking service.
+        Phase 2 Round 1 - Homomorphic ranking service (real if Pyfhel available).
         
         Server performs homomorphic similarity computation on the selected cluster's
         ranking matrix to find top-k document indices.
@@ -303,36 +311,33 @@ class TiptoeSystem:
         # Reduce query embedding to match ranking matrix dimension
         query_reduced = self.clustering.reduce_query_embedding(query_embedding)
         
-        # Simplified homomorphic computation (compatible with available crypto methods)
-        # In practice, this would use more sophisticated homomorphic ranking
-        scores = []
-        total_comm = 0
-        
-        for i in range(n_docs_in_cluster):
-            doc_embedding = ranking_matrix[:, i]  # Get column i (document i)
-            
-            # Compute similarity score (dot product)
-            score = np.dot(query_reduced, doc_embedding)
-            scores.append((score, i))
-            
-            # Simulate homomorphic encryption communication cost
-            # Query: encrypt each dimension of query
-            query_comm = len(query_reduced) * 64  # bytes per encrypted value
-            # Response: encrypted score
-            response_comm = 64  # bytes for encrypted score
-            total_comm += query_comm + response_comm
-        
-        # Sort by score and take top-k
-        scores.sort(reverse=True, key=lambda x: x[0])
-        top_indices = [doc_idx for score, doc_idx in scores[:top_k]]
-        
+        # Use real homomorphic encryption if available
+        if self.homomorphic_ranking is not None:
+            # Prepare database: shape (n_docs, dim)
+            db_vecs = [ranking_matrix[:, i] for i in range(n_docs_in_cluster)]
+            ctxt_query = self.homomorphic_ranking.encrypt_vector(query_reduced)
+            ctxt_scores = self.homomorphic_ranking.dot_product(ctxt_query, db_vecs)
+            scores = self.homomorphic_ranking.decrypt_scores(ctxt_scores)
+            # Communication: one query vector upload, one encrypted score per doc download
+            query_comm = len(query_reduced) * 2048  # Pyfhel ciphertexts are much larger (estimate)
+            response_comm = n_docs_in_cluster * 2048
+            total_comm = query_comm + response_comm
+        else:
+            # Fallback: plaintext simulation
+            scores = [float(np.dot(query_reduced, ranking_matrix[:, i])) for i in range(n_docs_in_cluster)]
+            query_comm = len(query_reduced) * 64
+            response_comm = n_docs_in_cluster * 64
+            total_comm = query_comm + response_comm
+
+        # Sort and select top-k
+        top_indices = np.argsort(scores)[::-1][:top_k].tolist()
         ranking_time = time.perf_counter() - ranking_start
-        
+
         return top_indices, {
             'ranking_time': ranking_time,
             'ranking_communication': total_comm,
-            'query_size': len(query_reduced) * 64,
-            'response_size': n_docs_in_cluster * 64,
+            'query_size': query_comm,
+            'response_size': response_comm,
             'documents_ranked': n_docs_in_cluster
         }
 
