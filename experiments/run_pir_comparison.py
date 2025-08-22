@@ -1,7 +1,7 @@
 """
-Communication Efficiency Comparison: PIR-RAG vs Graph-PIR
+Communication Efficiency Comparison: PIR-RAG vs Graph-PIR vs Tiptoe
 
-Compares the two systems on the same dataset to evaluate:
+Compares the three systems on the same dataset to evaluate:
 - Upload/download bytes
 - Query latency
 - Preprocessing costs
@@ -24,6 +24,7 @@ sys.path.insert(0, src_dir)
 
 from pir_rag import PIRRAGClient, PIRRAGServer
 from graph_pir import GraphPIRSystem
+from tiptoe import TiptoeSystem
 from sentence_transformers import SentenceTransformer
 
 
@@ -258,62 +259,155 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
     return avg_metrics
 
 
-def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict):
-    """Compare results between the two systems."""
+def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
+                         test_queries: List[str], n_clusters: int = 100,
+                         top_k: int = 10, model: SentenceTransformer = None) -> Dict[str, Any]:
+    """Run Tiptoe private search experiment."""
+    print(f"\n=== Tiptoe Experiment ===")
+    print(f"[Tiptoe] Setting up Tiptoe system...")
+    print(f"[Tiptoe] Documents: {len(documents)}, Embeddings: {embeddings.shape}")
+    
+    # Setup
+    tiptoe = TiptoeSystem(target_dim=192, n_clusters=n_clusters)
+    setup_start = time.perf_counter()
+    setup_metrics = tiptoe.setup(embeddings, documents)
+    setup_time = time.perf_counter() - setup_start
+    
+    print(f"Setup complete in {setup_time:.2f}s")
+    
+    # Generate test queries
+    test_queries = generate_test_queries(documents, len(test_queries))
+    print(f"Generated {len(test_queries)} queries from corpus documents")
+    
+    # Run queries
+    total_upload = 0
+    total_download = 0
+    total_query_time = 0
+    
+    for i, query_text in enumerate(test_queries):
+        # Encode query using the model
+        if model is not None:
+            query_embedding = model.encode([query_text])[0].astype(np.float32)
+        else:
+            # Fallback to random if no model (for testing only)
+            query_embedding = np.random.randn(embeddings.shape[1]).astype(np.float32)
+            print(f"Warning: Using random query embedding for query {i+1} (no model provided)")
+        
+        # Perform Tiptoe query
+        query_start = time.perf_counter()
+        retrieved_docs, query_metrics = tiptoe.query(query_embedding, top_k=top_k)
+        query_time = time.perf_counter() - query_start
+        
+        # Accumulate metrics
+        total_query_time += query_time
+        total_upload += query_metrics.get('phase1_upload_bytes', 0) + query_metrics.get('phase2_upload_bytes', 0)
+        total_download += query_metrics.get('phase1_download_bytes', 0) + query_metrics.get('phase2_download_bytes', 0)
+        
+        print(f"Query {i+1}: {query_time:.3f}s, {len(retrieved_docs)} docs, cluster {query_metrics.get('selected_cluster', 'N/A')}")
+        if i < 3:  # Show detailed breakdown for first few queries
+            print(f"  Phase 1: {query_metrics.get('phase1_time', 0):.3f}s, Phase 2: {query_metrics.get('phase2_time', 0):.3f}s")
+    
+    avg_metrics = {
+        "system": "Tiptoe",
+        "setup_time": setup_time,
+        "avg_query_time": total_query_time / len(test_queries),
+        "avg_upload_bytes": total_upload / len(test_queries),
+        "avg_download_bytes": total_download / len(test_queries),
+        "total_upload_bytes": total_upload,
+        "total_download_bytes": total_download,
+        "n_queries": len(test_queries),
+        "setup_metrics": setup_metrics
+    }
+    
+    print(f"Tiptoe Results:")
+    print(f"  Avg query time: {avg_metrics['avg_query_time']:.3f}s")
+    print(f"  Avg upload: {avg_metrics['avg_upload_bytes']:,} bytes")
+    print(f"  Avg download: {avg_metrics['avg_download_bytes']:,} bytes")
+    
+    return avg_metrics
+
+
+def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict, tiptoe_results: Dict = None):
+    """Compare results between the three systems."""
     print(f"\n=== COMPARISON SUMMARY ===")
+    
+    systems = ["PIR-RAG", "Graph-PIR"]
+    results = [pir_rag_results, graph_pir_results]
+    
+    if tiptoe_results is not None:
+        systems.append("Tiptoe")
+        results.append(tiptoe_results)
 
     # Setup time comparison
-    pir_setup = pir_rag_results["setup_time"]
-    graph_setup = graph_pir_results["setup_time"]
     print(f"Setup Time:")
-    print(f"  PIR-RAG: {pir_setup:.2f}s")
-    print(f"  Graph-PIR: {graph_setup:.2f}s")
-    print(f"  Ratio (Graph/PIR): {graph_setup/pir_setup:.2f}x")
+    for i, (system, result) in enumerate(zip(systems, results)):
+        print(f"  {system}: {result['setup_time']:.2f}s")
+    
+    if len(results) >= 2:
+        print(f"  Ratio (Graph/PIR): {results[1]['setup_time']/results[0]['setup_time']:.2f}x")
+    if len(results) >= 3:
+        print(f"  Ratio (Tiptoe/PIR): {results[2]['setup_time']/results[0]['setup_time']:.2f}x")
 
     # Query time comparison
-    pir_query = pir_rag_results["avg_query_time"]
-    graph_query = graph_pir_results["avg_query_time"]
     print(f"\nAverage Query Time:")
-    print(f"  PIR-RAG: {pir_query:.3f}s")
-    print(f"  Graph-PIR: {graph_query:.3f}s")
-    print(f"  Ratio (Graph/PIR): {graph_query/pir_query:.2f}x")
+    for system, result in zip(systems, results):
+        print(f"  {system}: {result['avg_query_time']:.3f}s")
+    
+    if len(results) >= 2:
+        print(f"  Ratio (Graph/PIR): {results[1]['avg_query_time']/results[0]['avg_query_time']:.2f}x")
+    if len(results) >= 3:
+        print(f"  Ratio (Tiptoe/PIR): {results[2]['avg_query_time']/results[0]['avg_query_time']:.2f}x")
 
     # Communication cost comparison
-    pir_total_comm = pir_rag_results["avg_upload_bytes"] + pir_rag_results["avg_download_bytes"]
-    graph_total_comm = graph_pir_results["avg_upload_bytes"] + graph_pir_results["avg_download_bytes"]
-
     print(f"\nCommunication Costs (per query):")
-    print(f"  PIR-RAG:")
-    print(f"    Upload: {pir_rag_results['avg_upload_bytes']:,} bytes")
-    print(f"    Download: {pir_rag_results['avg_download_bytes']:,} bytes")
-    print(f"    Total: {pir_total_comm:,} bytes")
-    print(f"  Graph-PIR:")
-    print(f"    Upload: {graph_pir_results['avg_upload_bytes']:,} bytes")
-    print(f"    Download: {graph_pir_results['avg_download_bytes']:,} bytes")
-    print(f"    Total: {graph_total_comm:,} bytes")
-    print(f"  Communication Ratio (Graph/PIR): {graph_total_comm/pir_total_comm:.2f}x")
+    for system, result in zip(systems, results):
+        total_comm = result["avg_upload_bytes"] + result["avg_download_bytes"]
+        print(f"  {system}:")
+        print(f"    Upload: {result['avg_upload_bytes']:,} bytes")
+        print(f"    Download: {result['avg_download_bytes']:,} bytes")
+        print(f"    Total: {total_comm:,} bytes")
+    
+    if len(results) >= 2:
+        pir_total = results[0]["avg_upload_bytes"] + results[0]["avg_download_bytes"]
+        graph_total = results[1]["avg_upload_bytes"] + results[1]["avg_download_bytes"]
+        print(f"  Communication Ratio (Graph/PIR): {graph_total/pir_total:.2f}x")
+    
+    if len(results) >= 3:
+        tiptoe_total = results[2]["avg_upload_bytes"] + results[2]["avg_download_bytes"]
+        print(f"  Communication Ratio (Tiptoe/PIR): {tiptoe_total/pir_total:.2f}x")
 
     # Summary
     print(f"\n=== KEY INSIGHTS ===")
-    if graph_setup < pir_setup:
-        print(f"✓ Graph-PIR has {pir_setup/graph_setup:.1f}x faster setup")
-    else:
-        print(f"✓ PIR-RAG has {graph_setup/pir_setup:.1f}x faster setup")
+    if len(results) >= 2:
+        if results[1]["setup_time"] < results[0]["setup_time"]:
+            print(f"✓ Graph-PIR has {results[0]['setup_time']/results[1]['setup_time']:.1f}x faster setup")
+        else:
+            print(f"✓ PIR-RAG has {results[1]['setup_time']/results[0]['setup_time']:.1f}x faster setup")
 
-    if graph_query < pir_query:
-        print(f"✓ Graph-PIR has {pir_query/graph_query:.1f}x faster queries")
-    else:
-        print(f"✓ PIR-RAG has {graph_query/pir_query:.1f}x faster queries")
+        if results[1]["avg_query_time"] < results[0]["avg_query_time"]:
+            print(f"✓ Graph-PIR has {results[0]['avg_query_time']/results[1]['avg_query_time']:.1f}x faster queries")
+        else:
+            print(f"✓ PIR-RAG has {results[1]['avg_query_time']/results[0]['avg_query_time']:.1f}x faster queries")
 
-    if graph_total_comm < pir_total_comm:
-        print(f"✓ Graph-PIR has {pir_total_comm/graph_total_comm:.1f}x lower communication cost")
-    else:
-        print(f"✓ PIR-RAG has {graph_total_comm/pir_total_comm:.1f}x lower communication cost")
+        if graph_total < pir_total:
+            print(f"✓ Graph-PIR has {pir_total/graph_total:.1f}x lower communication cost")
+        else:
+            print(f"✓ PIR-RAG has {graph_total/pir_total:.1f}x lower communication cost")
+    
+    if len(results) >= 3:
+        print(f"\n=== THREE-WAY COMPARISON ===")
+        setup_times = [(systems[i], results[i]['setup_time']) for i in range(len(results))]
+        setup_times.sort(key=lambda x: x[1])
+        print(f"Setup time ranking: {' < '.join([f'{name} ({time:.2f}s)' for name, time in setup_times])}")
+        
+        query_times = [(systems[i], results[i]['avg_query_time']) for i in range(len(results))]
+        query_times.sort(key=lambda x: x[1])
+        print(f"Query time ranking: {' < '.join([f'{name} ({time:.3f}s)' for name, time in query_times])}")
 
 
 def main():
     """Main experiment runner with command-line arguments."""
-    parser = argparse.ArgumentParser(description='Compare PIR-RAG vs Graph-PIR communication efficiency')
+    parser = argparse.ArgumentParser(description='Compare PIR-RAG vs Graph-PIR vs Tiptoe communication efficiency')
 
     # Data arguments
     parser.add_argument('--embeddings_path', type=str, default=None,
