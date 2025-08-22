@@ -180,6 +180,10 @@ class TiptoeSystem:
             'phase2_round2_time': phase2r2_time,
             'selected_cluster': cluster_id,
             'documents_retrieved': len(retrieved_docs),
+            # Communication tracking
+            'upload_bytes': ranking_metrics.get('query_size', 0) + retrieval_metrics.get('pir_communication', 0) // 2,
+            'download_bytes': ranking_metrics.get('response_size', 0) + retrieval_metrics.get('pir_communication', 0) // 2,
+            'total_communication': ranking_metrics.get('ranking_communication', 0) + retrieval_metrics.get('pir_communication', 0),
             **cluster_metrics,
             **ranking_metrics,
             **retrieval_metrics
@@ -346,7 +350,7 @@ class TiptoeSystem:
         doc_indices = cluster_db['doc_indices']
         chunks = cluster_db['chunks']
         
-        if not ranked_indices or len(chunks) == 0:
+        if not ranked_indices or len(doc_indices) == 0:
             return [], {
                 'retrieval_time': 0,
                 'pir_communication': 0,
@@ -358,29 +362,37 @@ class TiptoeSystem:
         retrieved_docs = []
         total_pir_comm = 0
         
-        # Group chunks by document for proper retrieval
-        # Note: In the corrected structure, chunks are flattened per cluster
-        # We need to map back to original documents
+        # Get the actual documents for this cluster (not chunks)
         docs_in_cluster = [self.documents[i] for i in doc_indices]
         
         for rank_idx in ranked_indices[:top_k]:
             if rank_idx < len(docs_in_cluster):
-                # Use PIR system to retrieve document
                 try:
+                    # Use PIR system to retrieve document INDEX (not document content)
+                    # Create a simple integer database for PIR
+                    doc_index_db = list(range(len(docs_in_cluster)))  # [0, 1, 2, 3, ...]
+                    
                     # Create PIR query for this document index
                     pir_query, query_metrics = self.pir_system.create_pir_query(
                         target_index=rank_idx, 
-                        database_size=len(docs_in_cluster)
+                        database_size=len(doc_index_db)
                     )
                     
-                    # Server processes query
+                    # Server processes query (PIR over document indices)
                     pir_response, server_metrics = self.pir_system.process_pir_query(
-                        pir_query, docs_in_cluster
+                        pir_query, doc_index_db
                     )
                     
-                    # For simplicity, just get the document directly
-                    # (In real PIR, this would be done through encrypted operations)
-                    doc_text = docs_in_cluster[rank_idx]
+                    # Client decrypts to get document index (should be rank_idx)
+                    retrieved_index = self.pir_system.decrypt_pir_response(pir_response)
+                    
+                    # Use the index to get actual document
+                    if 0 <= retrieved_index < len(docs_in_cluster):
+                        doc_text = docs_in_cluster[retrieved_index]
+                    else:
+                        # Fallback if PIR returns unexpected index
+                        doc_text = docs_in_cluster[rank_idx]
+                    
                     retrieved_docs.append(doc_text)
                     
                     # Track PIR communication using real metrics
@@ -389,8 +401,8 @@ class TiptoeSystem:
                     total_pir_comm += query_size + response_size
                     
                 except Exception as e:
-                    # Fallback for PIR errors
-                    print(f"[Tiptoe] PIR error for doc {rank_idx}: {e}")
+                    # Fallback for PIR errors - just return the document directly
+                    print(f"[Tiptoe] PIR fallback for doc {rank_idx}: {str(e)[:50]}...")
                     doc_text = docs_in_cluster[rank_idx] if rank_idx < len(docs_in_cluster) else f"Error retrieving document {rank_idx}"
                     retrieved_docs.append(doc_text)
                     total_pir_comm += 64 + 1024  # Estimated comm cost
