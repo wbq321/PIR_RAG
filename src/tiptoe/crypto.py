@@ -372,8 +372,11 @@ class TiptoeHomomorphicRanking:
         for doc_vec in db_vecs:
             arr = np.array(doc_vec, dtype=np.int64)
             enc_doc = self.HE.encryptInt(arr)
-            prod = ctxt_query * enc_doc
-            dot = prod.sum()
+            # Elementwise multiply and sum using repeated addition
+            prod = [ctxt_query * enc_doc[i] for i in range(len(arr))]
+            dot = prod[0]
+            for c in prod[1:]:
+                dot += c
             results.append(dot)
         return results
 
