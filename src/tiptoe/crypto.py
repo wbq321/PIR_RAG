@@ -339,20 +339,21 @@ except ImportError:
 
 class TiptoeHomomorphicRanking:
     """
-    Real homomorphic encryption for Tiptoe ranking phase using Pyfhel (CKKS or BFV).
+    Real homomorphic encryption for Tiptoe ranking phase using Pyfhel (BFV).
     """
-    def __init__(self, scheme: str = 'CKKS', n_slots: int = 128, scale: int = 2**30):
+    def __init__(self, scheme: str = 'BFV', n_slots: int = 16384, t_bits: int = 20):
         if not _pyfhel_available:
             raise ImportError("Pyfhel is not installed. Please install it to use real homomorphic ranking.")
         self.HE = Pyfhel()
-        if scheme == 'CKKS':
-            self.HE.contextGen(scheme='CKKS', n=n_slots*2, scale=scale, qi_sizes=[60,30,30,30,60])
-        else:
-            self.HE.contextGen(scheme='BFV', n=n_slots*2, t_bits=20)
-        self.HE.keyGen()
-        self.scheme = scheme
+        try:
+            # Use robust, recommended parameters for BFV
+            self.HE.contextGen(scheme='BFV', n=n_slots, t_bits=t_bits)
+            self.HE.keyGen()
+        except Exception as e:
+            raise RuntimeError(f"Pyfhel context/key generation failed: {e}")
+        self.scheme = 'BFV'
         self.n_slots = n_slots
-        self.scale = scale
+        self.t_bits = t_bits
 
     def encrypt_vector(self, vec):
         # Encrypt a numpy vector (float or int)

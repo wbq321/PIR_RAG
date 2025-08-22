@@ -97,8 +97,8 @@ class TiptoeSystem:
         self.hint_system = TiptoeHintSystem(self.crypto_scheme)
         # Add real homomorphic ranking if Pyfhel is available
         try:
-            self.homomorphic_ranking = TiptoeHomomorphicRanking()
-            print("[Tiptoe] Using real Pyfhel homomorphic encryption for ranking phase.")
+            self.homomorphic_ranking = TiptoeHomomorphicRanking(scheme='BFV')
+            print("[Tiptoe] Using real Pyfhel BFV homomorphic encryption for ranking phase.")
         except ImportError:
             self.homomorphic_ranking = None
             print("[Tiptoe] Pyfhel not available, using simulated ranking.")
