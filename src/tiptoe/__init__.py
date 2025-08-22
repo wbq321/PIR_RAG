@@ -16,7 +16,7 @@ from .clustering import TiptoeClustering
 
 __all__ = [
     'TiptoeSystem',
-    'LinearHomomorphicPIR', 
+    'LinearHomomorphicPIR',
     'LinearHomomorphicScheme',
     'TiptoeClustering'
 ]

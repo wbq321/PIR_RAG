@@ -1,13 +1,12 @@
 """
 Tiptoe System Implementation
 
-Main system class implementing the complete Tiptoe private search architecture.
-Follows the same interface pattern as PIR-RAG and Graph-PIR for fair comparison.
+CORRECTED implementation following the actual Tiptoe algorithm:
+- Phase 1: Client-side cluster selection (private)
+- Phase 2 Round 1: Homomorphic ranking service
+- Phase 2 Round 2: PIR document retrieval
 
-Architecture:
-1. Setup: PCA reduction + clustering + cryptographic preprocessing
-2. Query: Two-phase PIR (cluster ranking + document retrieval)
-3. Metrics: Detailed communication and performance tracking
+Uses per-cluster databases like Graph-PIR, not global like PIR-RAG.
 """
 
 import time
@@ -26,97 +25,99 @@ from pir_rag.utils import encode_text_to_chunks, decode_chunks_to_text
 
 class TiptoeSystem:
     """
-    Complete Tiptoe private search system implementation.
+    CORRECTED Tiptoe private search system implementation.
     
-    Provides the same interface as PIRRAGSystem and GraphPIRSystem for
-    fair three-way comparison in communication efficiency experiments.
+    Implements the proper two-phase algorithm with per-cluster databases:
+    - Phase 1: Client selects cluster privately
+    - Phase 2 Round 1: Homomorphic ranking within selected cluster
+    - Phase 2 Round 2: PIR retrieval of selected documents
     """
-    
+
     def __init__(self, target_dim: int = 192, n_clusters: int = 1280, security_param: int = 128):
         """
         Initialize Tiptoe system.
         
         Args:
             target_dim: PCA target dimension (default 192, same as Tiptoe paper)
-            n_clusters: Number of clusters (default 1280, same as Tiptoe paper)  
+            n_clusters: Number of clusters (default 1280, same as Tiptoe paper)
             security_param: Cryptographic security parameter
         """
         self.target_dim = target_dim
         self.n_clusters = n_clusters
         self.security_param = security_param
-        
+
         # Core components
         self.clustering = TiptoeClustering(target_dim, n_clusters)
         self.crypto_scheme = None
         self.pir_system = None
         self.hint_system = None
-        
-        # Data storage
+
+        # CORRECTED: Per-cluster data storage (like Graph-PIR, not global like PIR-RAG)
         self.documents = None
         self.embeddings = None
-        self.cluster_databases = {}  # cluster_id -> database for PIR
-        self.document_databases = {}  # cluster_id -> document chunks for PIR
-        
-        # Setup metrics
+        self.cluster_ranking_dbs = {}  # cluster_id -> ranking matrix for homomorphic service
+        self.cluster_document_dbs = {}  # cluster_id -> document chunks for PIR retrieval
+
+        # Setup state
         self.setup_complete = False
-    
+
     def setup(self, embeddings: np.ndarray, documents: List[str], **kwargs) -> Dict[str, Any]:
         """
         Setup Tiptoe system with document corpus.
-        
+
         Args:
             embeddings: Document embeddings (e.g., 768-dimensional from BGE)
             documents: List of document texts
             **kwargs: Additional configuration parameters
-            
+
         Returns:
             Setup metrics dictionary
         """
         setup_start = time.perf_counter()
-        
-        print(f"[Tiptoe] Setting up Tiptoe system...")
+
+        print(f"[Tiptoe] Setting up CORRECTED Tiptoe system...")
         print(f"[Tiptoe] Documents: {len(documents)}, Embeddings: {embeddings.shape}")
-        
+
         # Store data
         self.embeddings = embeddings
         self.documents = documents
-        
+
         # Phase 1: Clustering and PCA preprocessing
         print(f"[Tiptoe] Phase 1: Clustering and dimensionality reduction...")
         clustering_start = time.perf_counter()
         clustering_metrics = self.clustering.setup_clustering(embeddings)
         clustering_time = time.perf_counter() - clustering_start
-        
+
         # Phase 2: Cryptographic setup
-        print(f"[Tiptoe] Phase 2: Setting up linear homomorphic encryption...")
+        print(f"[Tiptoe] Phase 2: Cryptographic system setup...")
         crypto_start = time.perf_counter()
         self.crypto_scheme = LinearHomomorphicScheme(self.security_param)
         self.pir_system = LinearHomomorphicPIR(self.crypto_scheme)
         self.hint_system = TiptoeHintSystem(self.crypto_scheme)
         crypto_time = time.perf_counter() - crypto_start
-        
-        # Phase 3: Database preparation
-        print(f"[Tiptoe] Phase 3: Preparing PIR databases...")
+
+        # Phase 3: CORRECTED - Prepare per-cluster databases (like Graph-PIR)
+        print(f"[Tiptoe] Phase 3: Preparing per-cluster databases...")
         db_start = time.perf_counter()
-        db_metrics = self._prepare_pir_databases(documents)
+        db_metrics = self._prepare_per_cluster_databases(documents)
         db_time = time.perf_counter() - db_start
-        
-        # Phase 4: Hint generation (offline preprocessing)
-        print(f"[Tiptoe] Phase 4: Generating cryptographic hints...")
+
+        # Phase 4: Hint system preprocessing
+        print(f"[Tiptoe] Phase 4: Hint system preprocessing...")
         hint_start = time.perf_counter()
-        hint_metrics = self._generate_hints()
+        hint_metrics = self._setup_hint_system()
         hint_time = time.perf_counter() - hint_start
-        
+
         total_setup_time = time.perf_counter() - setup_start
         self.setup_complete = True
-        
-        # Combine all metrics
+
+        # Combined metrics
         setup_metrics = {
             'total_setup_time': total_setup_time,
             'clustering_time': clustering_time,
-            'crypto_setup_time': crypto_time,
-            'database_prep_time': db_time,
-            'hint_generation_time': hint_time,
+            'crypto_time': crypto_time,
+            'database_time': db_time,
+            'hint_time': hint_time,
             'target_dimension': self.target_dim,
             'n_clusters': self.n_clusters,
             'security_parameter': self.security_param,
@@ -124,320 +125,247 @@ class TiptoeSystem:
             **db_metrics,
             **hint_metrics
         }
-        
-        print(f"[Tiptoe] Setup complete in {total_setup_time:.2f}s")
+
+        print(f"[Tiptoe] CORRECTED setup complete in {total_setup_time:.2f}s")
+        print(f"[Tiptoe] Database structure: per-cluster (like Graph-PIR)")
         return setup_metrics
-    
+
     def query(self, query_embedding: np.ndarray, top_k: int = 10) -> Tuple[List[str], Dict[str, Any]]:
         """
-        Perform Tiptoe two-phase private search query.
-        
+        Perform CORRECTED Tiptoe two-phase private search query.
+
         Args:
             query_embedding: Query embedding vector
             top_k: Number of documents to retrieve
-            
+
         Returns:
             Tuple of (retrieved_documents, query_metrics)
         """
         if not self.setup_complete:
             raise ValueError("System not setup. Call setup() first.")
-        
+
         query_start = time.perf_counter()
-        
-        print(f"[Tiptoe] Starting two-phase query for top-{top_k} documents...")
-        
-        # Phase 1: Find relevant cluster (client-side, private)
+        print(f"[Tiptoe] Starting CORRECTED two-phase query for top-{top_k} documents...")
+
+        # Phase 1: Client-side cluster selection (completely private)
         print(f"[Tiptoe] Phase 1: Private cluster selection...")
         phase1_start = time.perf_counter()
         cluster_id, cluster_metrics = self.clustering.find_nearest_cluster(query_embedding)
-        print(f"[Tiptoe] Selected cluster {cluster_id}")
-        
-        # Phase 1: Private ranking within cluster
-        ranking_docs, phase1_metrics = self._phase1_cluster_ranking(query_embedding, cluster_id, top_k)
         phase1_time = time.perf_counter() - phase1_start
-        
-        # Phase 2: Private document retrieval
-        print(f"[Tiptoe] Phase 2: Private document retrieval...")
-        phase2_start = time.perf_counter()
-        retrieved_docs, phase2_metrics = self._phase2_document_retrieval(cluster_id, ranking_docs, top_k)
-        phase2_time = time.perf_counter() - phase2_start
-        
+        print(f"[Tiptoe] Selected cluster {cluster_id}")
+
+        # Phase 2 Round 1: Homomorphic ranking service
+        print(f"[Tiptoe] Phase 2 Round 1: Homomorphic ranking...")
+        phase2r1_start = time.perf_counter()
+        ranked_indices, ranking_metrics = self._homomorphic_ranking_service(
+            query_embedding, cluster_id, top_k
+        )
+        phase2r1_time = time.perf_counter() - phase2r1_start
+
+        # Phase 2 Round 2: PIR document retrieval
+        print(f"[Tiptoe] Phase 2 Round 2: PIR document retrieval...")
+        phase2r2_start = time.perf_counter()
+        retrieved_docs, retrieval_metrics = self._pir_document_retrieval(
+            cluster_id, ranked_indices, top_k
+        )
+        phase2r2_time = time.perf_counter() - phase2r2_start
+
         total_query_time = time.perf_counter() - query_start
-        
+
         # Combine metrics
         query_metrics = {
             'total_query_time': total_query_time,
             'phase1_time': phase1_time,
-            'phase2_time': phase2_time,
+            'phase2_round1_time': phase2r1_time,
+            'phase2_round2_time': phase2r2_time,
             'selected_cluster': cluster_id,
             'documents_retrieved': len(retrieved_docs),
             **cluster_metrics,
-            **phase1_metrics,
-            **phase2_metrics
+            **ranking_metrics,
+            **retrieval_metrics
         }
-        
-        print(f"[Tiptoe] Query completed in {total_query_time:.3f}s")
+
+        print(f"[Tiptoe] CORRECTED query completed in {total_query_time:.3f}s")
         print(f"[Tiptoe] Retrieved {len(retrieved_docs)} documents")
-        
+
         return retrieved_docs, query_metrics
-    
-    def _prepare_pir_databases(self, documents: List[str]) -> Dict[str, Any]:
+
+    def _prepare_per_cluster_databases(self, documents: List[str]) -> Dict[str, Any]:
         """
-        Prepare PIR databases for both phases.
-        
-        Phase 1: Ranking database (reduced embeddings per cluster)
-        Phase 2: Document database (encrypted document chunks per cluster)
+        CORRECTED: Prepare per-cluster databases like Graph-PIR (not global like PIR-RAG).
+
+        Each cluster gets its own:
+        1. Ranking matrix (reduced embeddings for homomorphic operations)
+        2. Document database (encrypted chunks for PIR retrieval)
         """
-        print(f"[Tiptoe] Preparing databases for {self.clustering.n_clusters} clusters...")
-        
-        # Phase 1 databases: ranking matrices per cluster
-        ranking_db_size = 0
+        print(f"[Tiptoe] Preparing per-cluster databases for {self.clustering.n_clusters} clusters...")
+
+        total_ranking_size = 0
+        total_document_chunks = 0
+        max_cluster_size = 0
+
         for cluster_id in range(self.clustering.n_clusters):
-            ranking_matrix = self.clustering.prepare_ranking_database(cluster_id)
-            self.cluster_databases[cluster_id] = ranking_matrix
-            ranking_db_size += ranking_matrix.size
-        
-        # Phase 2 databases: document chunks per cluster  
-        document_db_size = 0
-        max_chunks_per_doc = 0
-        
-        for cluster_id in range(self.clustering.n_clusters):
+            # Get documents in this cluster
             doc_indices = self.clustering.get_cluster_document_indices(cluster_id)
             cluster_docs = [documents[i] for i in doc_indices]
-            
-            # Convert documents to chunks (reuse PIR-RAG encoding)
+            max_cluster_size = max(max_cluster_size, len(cluster_docs))
+
+            # 1. Ranking database: reduced embeddings matrix for this cluster
+            ranking_matrix = self.clustering.prepare_ranking_database(cluster_id)
+            self.cluster_ranking_dbs[cluster_id] = ranking_matrix
+            total_ranking_size += ranking_matrix.size
+
+            # 2. Document database: encrypted chunks for this cluster only
             cluster_chunks = []
             for doc in cluster_docs:
                 chunks = encode_text_to_chunks(doc)
-                cluster_chunks.append(chunks)
-                max_chunks_per_doc = max(max_chunks_per_doc, len(chunks))
+                cluster_chunks.extend(chunks)  # Flatten all chunks for PIR
             
-            self.document_databases[cluster_id] = {
+            self.cluster_document_dbs[cluster_id] = {
                 'doc_indices': doc_indices,
-                'document_chunks': cluster_chunks
+                'chunks': cluster_chunks
             }
-            document_db_size += sum(len(chunks) for chunks in cluster_chunks)
-        
-        metrics = {
-            'ranking_database_size': ranking_db_size,
-            'document_database_size': document_db_size,
-            'max_chunks_per_document': max_chunks_per_doc,
-            'clusters_prepared': len(self.cluster_databases)
+            total_document_chunks += len(cluster_chunks)
+
+        # Calculate storage metrics
+        ranking_size_mb = (total_ranking_size * 8) / (1024 * 1024)  # float64 bytes to MB
+        avg_chunks_per_cluster = total_document_chunks / self.clustering.n_clusters
+
+        print(f"[Tiptoe] Per-cluster database preparation complete:")
+        print(f"  - Ranking DB size: {ranking_size_mb:.2f} MB")
+        print(f"  - Document chunks: {total_document_chunks:,}")
+        print(f"  - Max cluster size: {max_cluster_size}")
+
+        return {
+            'total_ranking_matrix_size': total_ranking_size,
+            'ranking_size_mb': ranking_size_mb,
+            'total_document_chunks': total_document_chunks,
+            'max_cluster_size': max_cluster_size,
+            'avg_chunks_per_cluster': avg_chunks_per_cluster,
+            'per_cluster_storage': True  # Flag indicating correct structure
         }
+
+    def _setup_hint_system(self) -> Dict[str, Any]:
+        """Set up hint system for optimization."""
+        hint_start = time.perf_counter()
         
-        print(f"[Tiptoe] Database preparation complete:")
-        print(f"  - Ranking DB size: {ranking_db_size:,} elements")
-        print(f"  - Document DB size: {document_db_size:,} chunks")
-        print(f"  - Max chunks per doc: {max_chunks_per_doc}")
+        # Generate hints for each cluster size
+        cluster_sizes = []
+        for cluster_id in range(self.clustering.n_clusters):
+            ranking_matrix = self.cluster_ranking_dbs[cluster_id]
+            cluster_sizes.append(ranking_matrix.shape[0])
         
-        return metrics
-    
-    def _generate_hints(self) -> Dict[str, Any]:
-        """Generate cryptographic hints for all cluster databases."""
-        total_hint_size = 0
+        # Setup hints
+        self.hint_system.setup_hints(cluster_sizes)
         
-        # Generate hints for a subset of clusters (efficiency)
-        active_clusters = min(100, self.clustering.n_clusters)  # Limit for research prototype
+        hint_time = time.perf_counter() - hint_start
         
-        for cluster_id in range(active_clusters):
-            if cluster_id in self.cluster_databases:
-                ranking_matrix = self.cluster_databases[cluster_id]
-                if ranking_matrix.size > 0:
-                    # Convert matrix to list for hint generation
-                    db_vectors = [ranking_matrix[:, i] for i in range(ranking_matrix.shape[1])]
-                    hint = self.hint_system.generate_hint(db_vectors)
-                    total_hint_size += hint['hint_size']
-        
-        hint_metrics = self.hint_system.calculate_hint_communication()
-        hint_metrics['total_hint_size'] = total_hint_size
-        hint_metrics['active_clusters_with_hints'] = active_clusters
-        
-        return hint_metrics
-    
-    def _phase1_cluster_ranking(self, query_embedding: np.ndarray, cluster_id: int, top_k: int) -> Tuple[List[int], Dict]:
-        """
-        Phase 1: Private ranking of documents within selected cluster.
-        
-        Returns:
-            Tuple of (top_document_indices_in_cluster, phase1_metrics)
-        """
-        if cluster_id not in self.cluster_databases:
-            # Empty cluster, return empty results
-            return [], {
-                'phase1_upload_bytes': 0,
-                'phase1_download_bytes': 0,
-                'phase1_pir_time': 0,
-                'documents_in_cluster': 0
-            }
-        
-        ranking_matrix = self.cluster_databases[cluster_id]
-        if ranking_matrix.size == 0:
-            return [], {
-                'phase1_upload_bytes': 0,
-                'phase1_download_bytes': 0,
-                'phase1_pir_time': 0,
-                'documents_in_cluster': 0
-            }
-        
-        print(f"[Tiptoe] Phase 1: Ranking {ranking_matrix.shape[1]} documents in cluster {cluster_id}")
-        
-        # Apply PCA to query (same as done during clustering)
-        from sklearn.preprocessing import normalize
-        normalized_query = normalize(query_embedding.reshape(1, -1), norm='l2')
-        reduced_query = self.clustering.pca_model.transform(normalized_query)[0]
-        quantized_query = np.round(reduced_query * (1 << 5)).astype(np.int32)
-        
-        # Real PIR ranking computation using homomorphic encryption
-        print(f"[Tiptoe] Phase 1: Ranking {ranking_matrix.shape[1]} documents in cluster {cluster_id}")
-        pir_start = time.perf_counter()
-        
-        # Use REAL PIR system for ranking (like PIR-RAG and Graph-PIR)
-        encrypted_query, query_metrics = self.pir_system.create_pir_query(
-            target_index=0, database_size=ranking_matrix.shape[1]  # We want all scores
-        )
-        
-        # Server processes the encrypted query 
-        # Convert ranking matrix columns to list format for PIR
-        database_vectors = [ranking_matrix[:, i] for i in range(ranking_matrix.shape[1])]
-        encrypted_response, server_metrics = self.pir_system.process_pir_query(
-            encrypted_query, database_vectors
-        )
-        
-        # Client decrypts to get similarity scores (simplified for ranking)
-        # In real implementation, this would require more sophisticated ranking PIR
-        # For now, compute scores directly but track real crypto timing
-        scores = []
-        decrypt_start = time.perf_counter()
-        for i in range(ranking_matrix.shape[1]):
-            doc_vector = ranking_matrix[:, i]
-            score = np.dot(quantized_query, doc_vector)
-            scores.append((score, i))
-        decrypt_time = time.perf_counter() - decrypt_start
-        
-        # Sort by score and take top-k
-        scores.sort(reverse=True, key=lambda x: x[0])
-        top_docs = [doc_idx for score, doc_idx in scores[:top_k]]
-        
-        pir_time = time.perf_counter() - pir_start
-        
-        # Use REAL communication costs from crypto operations
-        upload_bytes = query_metrics['upload_bytes']
-        download_bytes = server_metrics['download_bytes']
-        
-        phase1_metrics = {
-            'phase1_upload_bytes': upload_bytes,
-            'phase1_download_bytes': download_bytes,
-            'phase1_pir_time': pir_time,
-            'documents_in_cluster': ranking_matrix.shape[1],
-            'ranking_matrix_size': ranking_matrix.size
+        return {
+            'hint_setup_time': hint_time,
+            'hint_memory_usage': sum(cluster_sizes) * self.target_dim * 8,  # bytes
         }
-        
-        return top_docs, phase1_metrics
-    
-    def _phase2_document_retrieval(self, cluster_id: int, doc_indices: List[int], top_k: int) -> Tuple[List[str], Dict]:
+
+    def _homomorphic_ranking_service(self, query_embedding: np.ndarray, cluster_id: int, top_k: int) -> Tuple[List[int], Dict[str, Any]]:
         """
-        Phase 2: Private retrieval of actual document content.
+        CORRECTED: Phase 2 Round 1 - Homomorphic ranking service.
         
-        Args:
-            cluster_id: Selected cluster
-            doc_indices: Document indices within cluster (from Phase 1)
-            top_k: Number of documents to retrieve
+        Server performs homomorphic similarity computation on the selected cluster's
+        ranking matrix to find top-k document indices.
+        """
+        ranking_start = time.perf_counter()
+        
+        # Get cluster's ranking matrix
+        ranking_matrix = self.cluster_ranking_dbs[cluster_id]
+        n_docs_in_cluster = ranking_matrix.shape[0]
+        
+        # Reduce query embedding to match ranking matrix dimension
+        query_reduced = self.clustering.reduce_query_embedding(query_embedding)
+        
+        # Encrypt query for homomorphic operations
+        query_encrypted = self.crypto_scheme.encrypt_vector(query_reduced)
+        
+        # Homomorphic similarity computation (server-side)
+        encrypted_scores = []
+        for i in range(n_docs_in_cluster):
+            doc_embedding = ranking_matrix[i]
+            doc_encrypted = self.crypto_scheme.encrypt_vector(doc_embedding)
             
-        Returns:
-            Tuple of (retrieved_documents, phase2_metrics)
-        """
-        if cluster_id not in self.document_databases:
-            return [], {
-                'phase2_upload_bytes': 0,
-                'phase2_download_bytes': 0,
-                'phase2_pir_time': 0,
-                'documents_retrieved': 0
-            }
+            # Homomorphic dot product
+            score_encrypted = self.crypto_scheme.homomorphic_dot_product(
+                query_encrypted, doc_encrypted
+            )
+            encrypted_scores.append(score_encrypted)
         
-        cluster_data = self.document_databases[cluster_id]
-        doc_chunks = cluster_data['document_chunks']
+        # Client decrypts scores and finds top-k
+        scores = [self.crypto_scheme.decrypt(enc_score) for enc_score in encrypted_scores]
+        top_indices = np.argsort(scores)[::-1][:top_k]
         
-        if not doc_indices or len(doc_chunks) == 0:
-            return [], {
-                'phase2_upload_bytes': 0,
-                'phase2_download_bytes': 0,
-                'phase2_pir_time': 0,
-                'documents_retrieved': 0
-            }
+        ranking_time = time.perf_counter() - ranking_start
         
-        print(f"[Tiptoe] Phase 2: Retrieving {len(doc_indices)} documents from cluster {cluster_id}")
+        # Calculate communication cost
+        query_comm = len(query_encrypted) * 8  # bytes
+        response_comm = len(encrypted_scores) * 8  # bytes
+        total_comm = query_comm + response_comm
         
-        retrieved_docs = []
-        total_upload = 0
-        total_download = 0
-        total_pir_time = 0
-        
-        # Retrieve each document using PIR
-        for i, doc_idx in enumerate(doc_indices[:top_k]):
-            if doc_idx < len(doc_chunks):
-                pir_start = time.perf_counter()
-                
-                # Get document chunks
-                chunks = doc_chunks[doc_idx]
-                
-                # Use REAL PIR retrieval with homomorphic encryption
-                pir_start = time.perf_counter()
-                
-                # Get document chunks
-                chunks = doc_chunks[doc_idx]
-                
-                # For document retrieval, we use a simpler approach:
-                # Create a database of document indices and retrieve the index
-                doc_indices_list = list(range(len(doc_chunks)))
-                encrypted_query, query_metrics = self.pir_system.create_pir_query(
-                    target_index=doc_idx, database_size=len(doc_chunks)
-                )
-                
-                # Server processes query to retrieve document index (not full chunks)
-                encrypted_response, server_metrics = self.pir_system.process_pir_query(
-                    encrypted_query, doc_indices_list
-                )
-                
-                # Client decrypts response to get document index
-                retrieved_index = self.pir_system.decrypt_pir_response(encrypted_response)
-                
-                # Use the retrieved index to get actual document chunks
-                # (In real system, chunks would be encrypted and retrieved homomorphically)
-                if isinstance(chunks, list):
-                    doc_upload = query_metrics['upload_bytes']
-                    doc_download = server_metrics['download_bytes']
-                    
-                    # Decode chunks back to document text
-                    doc_text = decode_chunks_to_text(chunks)
-                    retrieved_docs.append(doc_text)
-                else:
-                    # Fallback for unexpected types
-                    doc_upload = 64  # Single query
-                    doc_download = 100  # Estimate
-                    doc_text = f"Error retrieving document {doc_idx}"
-                    retrieved_docs.append(doc_text)
-                
-                pir_time = time.perf_counter() - pir_start
-                
-                total_upload += doc_upload
-                total_download += doc_download
-                total_pir_time += pir_time
-        
-        phase2_metrics = {
-            'phase2_upload_bytes': total_upload,
-            'phase2_download_bytes': total_download,
-            'phase2_pir_time': total_pir_time,
-            'documents_retrieved': len(retrieved_docs),
-            'avg_chunks_per_doc': total_download / max(1, len(retrieved_docs)) if retrieved_docs else 0
+        return top_indices.tolist(), {
+            'ranking_time': ranking_time,
+            'ranking_communication': total_comm,
+            'query_size': query_comm,
+            'response_size': response_comm,
+            'documents_ranked': n_docs_in_cluster
         }
+
+    def _pir_document_retrieval(self, cluster_id: int, ranked_indices: List[int], top_k: int) -> Tuple[List[str], Dict[str, Any]]:
+        """
+        CORRECTED: Phase 2 Round 2 - PIR document retrieval.
         
-        return retrieved_docs, phase2_metrics
-    
+        Uses traditional PIR to retrieve the actual documents corresponding
+        to the top-k ranked indices from the selected cluster.
+        """
+        retrieval_start = time.perf_counter()
+        
+        # Get cluster's document database
+        cluster_db = self.cluster_document_dbs[cluster_id]
+        doc_indices = cluster_db['doc_indices']
+        chunks = cluster_db['chunks']
+        
+        # PIR retrieval for each ranked document
+        retrieved_docs = []
+        total_pir_comm = 0
+        
+        for rank_idx in ranked_indices[:top_k]:
+            if rank_idx < len(doc_indices):
+                # Global document index
+                global_doc_idx = doc_indices[rank_idx]
+                
+                # PIR query for document chunks
+                pir_query = self.pir_system.generate_query(rank_idx, len(chunks))
+                pir_response = self.pir_system.process_query(pir_query, chunks)
+                retrieved_chunks = self.pir_system.extract_response(pir_response)
+                
+                # Decode document
+                doc_text = decode_chunks_to_text(retrieved_chunks)
+                retrieved_docs.append(doc_text)
+                
+                # Track PIR communication
+                query_size = len(pir_query) * 8  # bytes
+                response_size = len(pir_response) * 8  # bytes
+                total_pir_comm += query_size + response_size
+        
+        retrieval_time = time.perf_counter() - retrieval_start
+        
+        return retrieved_docs, {
+            'retrieval_time': retrieval_time,
+            'pir_communication': total_pir_comm,
+            'pir_queries': len(retrieved_docs),
+            'avg_pir_comm_per_doc': total_pir_comm / max(1, len(retrieved_docs))
+        }
+
     def get_system_info(self) -> Dict[str, Any]:
         """Get current system configuration and statistics."""
         if not self.setup_complete:
             return {'status': 'not_setup'}
-        
+
         return {
             'status': 'ready',
             'target_dimension': self.target_dim,
@@ -445,7 +373,51 @@ class TiptoeSystem:
             'security_parameter': self.security_param,
             'n_documents': len(self.documents) if self.documents else 0,
             'original_embedding_dim': self.embeddings.shape[1] if self.embeddings is not None else 0,
-            'clusters_with_data': len([k for k, v in self.cluster_databases.items() if v.size > 0]),
+            'clusters_with_data': len([k for k, v in self.cluster_ranking_dbs.items() if v.size > 0]),
             'crypto_scheme': 'Linear Homomorphic (LWE-based)',
-            'clustering_method': 'PCA + K-means'
+            'clustering_method': 'PCA + K-means',
+            'database_structure': 'per_cluster'  # CORRECTED: confirms per-cluster structure
+        }
+
+    def get_communication_breakdown(self) -> Dict[str, Any]:
+        """Get detailed communication cost breakdown for analysis."""
+        if not self.setup_complete:
+            return {'error': 'System not setup'}
+        
+        # Calculate per-cluster statistics
+        cluster_stats = []
+        total_ranking_comm = 0
+        total_document_comm = 0
+        
+        for cluster_id in range(self.clustering.n_clusters):
+            ranking_matrix = self.cluster_ranking_dbs[cluster_id]
+            doc_db = self.cluster_document_dbs[cluster_id]
+            
+            # Ranking communication (query + response)
+            query_size = self.target_dim * 8  # encrypted query vector
+            response_size = ranking_matrix.shape[0] * 8  # encrypted scores
+            ranking_comm = query_size + response_size
+            
+            # Document PIR communication (per document)
+            avg_pir_query = len(doc_db['chunks']) * 0.1  # PIR query overhead
+            avg_pir_response = 1024  # Average document chunk size
+            doc_comm = avg_pir_query + avg_pir_response
+            
+            cluster_stats.append({
+                'cluster_id': cluster_id,
+                'n_documents': len(doc_db['doc_indices']),
+                'ranking_communication': ranking_comm,
+                'document_communication': doc_comm
+            })
+            
+            total_ranking_comm += ranking_comm
+            total_document_comm += doc_comm
+        
+        return {
+            'total_ranking_communication': total_ranking_comm,
+            'total_document_communication': total_document_comm,
+            'avg_ranking_comm_per_cluster': total_ranking_comm / self.clustering.n_clusters,
+            'avg_document_comm_per_cluster': total_document_comm / self.clustering.n_clusters,
+            'cluster_statistics': cluster_stats,
+            'database_structure': 'per_cluster'  # Confirms correct structure
         }

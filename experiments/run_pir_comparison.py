@@ -260,40 +260,40 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
 
 
 def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
-                         n_clusters: int, n_queries: int, 
+                         n_clusters: int, n_queries: int,
                          top_k: int = 10, model: SentenceTransformer = None) -> Dict[str, Any]:
     """Run Tiptoe private search experiment."""
     print(f"\n=== Tiptoe Experiment ===")
     print(f"[Tiptoe] Setting up Tiptoe system...")
     print(f"[Tiptoe] Documents: {len(documents)}, Embeddings: {embeddings.shape}")
-    
+
     # Adjust parameters for small datasets
     n_docs = len(documents)
     actual_target_dim = min(192, n_docs - 1)  # Can't exceed n_samples - 1
     actual_n_clusters = min(n_clusters, n_docs)  # Can't have more clusters than documents
-    
+
     if actual_target_dim != 192:
         print(f"[Tiptoe] Adjusting target dimension from 192 to {actual_target_dim} for small dataset")
     if actual_n_clusters != n_clusters:
         print(f"[Tiptoe] Adjusting clusters from {n_clusters} to {actual_n_clusters} for small dataset")
-    
+
     # Setup
     tiptoe = TiptoeSystem(target_dim=actual_target_dim, n_clusters=actual_n_clusters)
     setup_start = time.perf_counter()
     setup_metrics = tiptoe.setup(embeddings, documents)
     setup_time = time.perf_counter() - setup_start
-    
+
     print(f"Setup complete in {setup_time:.2f}s")
-    
+
     # Generate test queries
     generated_queries = generate_test_queries(documents, n_queries)
     print(f"Generated {len(generated_queries)} queries from corpus documents")
-    
+
     # Run queries
     total_upload = 0
     total_download = 0
     total_query_time = 0
-    
+
     for i, query_text in enumerate(generated_queries):
         # Encode query using the model
         if model is not None:
@@ -302,21 +302,21 @@ def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
             # Fallback to random if no model (for testing only)
             query_embedding = np.random.randn(embeddings.shape[1]).astype(np.float32)
             print(f"Warning: Using random query embedding for query {i+1} (no model provided)")
-        
+
         # Perform Tiptoe query
         query_start = time.perf_counter()
         retrieved_docs, query_metrics = tiptoe.query(query_embedding, top_k=top_k)
         query_time = time.perf_counter() - query_start
-        
+
         # Accumulate metrics
         total_query_time += query_time
         total_upload += query_metrics.get('phase1_upload_bytes', 0) + query_metrics.get('phase2_upload_bytes', 0)
         total_download += query_metrics.get('phase1_download_bytes', 0) + query_metrics.get('phase2_download_bytes', 0)
-        
+
         print(f"Query {i+1}: {query_time:.3f}s, {len(retrieved_docs)} docs, cluster {query_metrics.get('selected_cluster', 'N/A')}")
         if i < 3:  # Show detailed breakdown for first few queries
             print(f"  Phase 1: {query_metrics.get('phase1_time', 0):.3f}s, Phase 2: {query_metrics.get('phase2_time', 0):.3f}s")
-    
+
     avg_metrics = {
         "system": "Tiptoe",
         "setup_time": setup_time,
@@ -328,22 +328,22 @@ def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
         "n_queries": len(generated_queries),
         "setup_metrics": setup_metrics
     }
-    
+
     print(f"Tiptoe Results:")
     print(f"  Avg query time: {avg_metrics['avg_query_time']:.3f}s")
     print(f"  Avg upload: {avg_metrics['avg_upload_bytes']:,} bytes")
     print(f"  Avg download: {avg_metrics['avg_download_bytes']:,} bytes")
-    
+
     return avg_metrics
 
 
 def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict, tiptoe_results: Dict = None):
     """Compare results between the three systems."""
     print(f"\n=== COMPARISON SUMMARY ===")
-    
+
     systems = ["PIR-RAG", "Graph-PIR"]
     results = [pir_rag_results, graph_pir_results]
-    
+
     if tiptoe_results is not None:
         systems.append("Tiptoe")
         results.append(tiptoe_results)
@@ -352,7 +352,7 @@ def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict, tiptoe_resul
     print(f"Setup Time:")
     for i, (system, result) in enumerate(zip(systems, results)):
         print(f"  {system}: {result['setup_time']:.2f}s")
-    
+
     if len(results) >= 2:
         print(f"  Ratio (Graph/PIR): {results[1]['setup_time']/results[0]['setup_time']:.2f}x")
     if len(results) >= 3:
@@ -362,7 +362,7 @@ def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict, tiptoe_resul
     print(f"\nAverage Query Time:")
     for system, result in zip(systems, results):
         print(f"  {system}: {result['avg_query_time']:.3f}s")
-    
+
     if len(results) >= 2:
         print(f"  Ratio (Graph/PIR): {results[1]['avg_query_time']/results[0]['avg_query_time']:.2f}x")
     if len(results) >= 3:
@@ -376,12 +376,12 @@ def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict, tiptoe_resul
         print(f"    Upload: {result['avg_upload_bytes']:,} bytes")
         print(f"    Download: {result['avg_download_bytes']:,} bytes")
         print(f"    Total: {total_comm:,} bytes")
-    
+
     if len(results) >= 2:
         pir_total = results[0]["avg_upload_bytes"] + results[0]["avg_download_bytes"]
         graph_total = results[1]["avg_upload_bytes"] + results[1]["avg_download_bytes"]
         print(f"  Communication Ratio (Graph/PIR): {graph_total/pir_total:.2f}x")
-    
+
     if len(results) >= 3:
         tiptoe_total = results[2]["avg_upload_bytes"] + results[2]["avg_download_bytes"]
         print(f"  Communication Ratio (Tiptoe/PIR): {tiptoe_total/pir_total:.2f}x")
@@ -403,13 +403,13 @@ def compare_systems(pir_rag_results: Dict, graph_pir_results: Dict, tiptoe_resul
             print(f"✓ Graph-PIR has {pir_total/graph_total:.1f}x lower communication cost")
         else:
             print(f"✓ PIR-RAG has {graph_total/pir_total:.1f}x lower communication cost")
-    
+
     if len(results) >= 3:
         print(f"\n=== THREE-WAY COMPARISON ===")
         setup_times = [(systems[i], results[i]['setup_time']) for i in range(len(results))]
         setup_times.sort(key=lambda x: x[1])
         print(f"Setup time ranking: {' < '.join([f'{name} ({time:.2f}s)' for name, time in setup_times])}")
-        
+
         query_times = [(systems[i], results[i]['avg_query_time']) for i in range(len(results))]
         query_times.sort(key=lambda x: x[1])
         print(f"Query time ranking: {' < '.join([f'{name} ({time:.3f}s)' for name, time in query_times])}")
@@ -491,19 +491,19 @@ def main():
         systems_to_run = ['pir-rag', 'graph-pir', 'tiptoe']
     else:
         systems_to_run = [s.strip() for s in args.systems.split(',')]
-    
+
     # Handle deprecated skip flags
     if args.skip_pir_rag and 'pir-rag' in systems_to_run:
         systems_to_run.remove('pir-rag')
     if args.skip_graph_pir and 'graph-pir' in systems_to_run:
         systems_to_run.remove('graph-pir')
-    
+
     print(f"Running experiments for: {', '.join(systems_to_run)}")
 
     # Run experiments
     results = []
     systems = []
-    
+
     try:
         if 'pir-rag' in systems_to_run:
             print("\n=== Running PIR-RAG Experiment ===")
@@ -520,7 +520,7 @@ def main():
             )
             results.append(graph_pir_results)
             systems.append('Graph-PIR')
-            
+
         if 'tiptoe' in systems_to_run:
             print("\n=== Running Tiptoe Experiment ===")
             tiptoe_results = run_tiptoe_experiment(
