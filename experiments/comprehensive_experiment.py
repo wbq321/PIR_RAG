@@ -366,8 +366,8 @@ class PIRExperimentRunner:
         if pir_rag_params is None:
             pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated per doc size
         if graph_pir_params is None:
-            graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16,
-                               'max_iterations': 5, 'parallel': 2, 'ef_search': 30}
+            graph_pir_params = {'k_neighbors': 16, 'ef_construction': 100, 'max_connections': 16,
+                               'max_iterations': 5, 'parallel': 1, 'ef_search': 30}
         if tiptoe_params is None:
             tiptoe_params = {'k_clusters': None, 'use_real_crypto': True}  # None will be calculated per doc size
 
@@ -454,8 +454,8 @@ class PIRExperimentRunner:
         if base_pir_rag_params is None:
             base_pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated based on n_docs
         if base_graph_pir_params is None:
-            base_graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16,
-                                   'max_iterations': 5, 'parallel': 2, 'ef_search': 30}
+            base_graph_pir_params = {'k_neighbors': 16, 'ef_construction': 100, 'max_connections': 16,
+                                   'max_iterations': 5, 'parallel': 1, 'ef_search': 30}
 
         # Load or generate test data
         embeddings, documents = self.load_or_generate_data(
@@ -800,7 +800,7 @@ def main():
                        help="ef parameter for graph search")
     parser.add_argument("--graph-pir-max-iterations", type=int, default=5,
                        help="Maximum number of graph traversal iterations/turns (GraphANN maxStep)")
-    parser.add_argument("--graph-pir-parallel", type=int, default=2,
+    parser.add_argument("--graph-pir-parallel", type=int, default=1,
                        help="Number of parallel explorations per step (GraphANN parallel)")
 
     # Tiptoe specific arguments

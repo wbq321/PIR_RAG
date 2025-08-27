@@ -56,7 +56,7 @@ class GraphPIRSystem:
         """
         return {
             'max_iterations': 5,   # Reduced from 10 -> 5 for speed (fewer PIR rounds)
-            'parallel': 2,         # Reduced from 3 -> 2 for speed (fewer parallel queries)  
+            'parallel': 1,         # Reduced from 3 -> 1 for speed (minimal parallel queries)  
             'ef_search': 30        # Reduced from 50 -> 30 for speed (smaller search space)
         }
 
@@ -135,7 +135,7 @@ class GraphPIRSystem:
                 'ef_construction': 100,  # Reduced from 200 -> 100 for speed (faster graph build)
                 'max_connections': 16,   # Reduced from 32 -> 16 for speed (sparser graph)
                 'max_iterations': 5,     # GraphANN maxStep (reduced for speed)
-                'parallel': 2,           # GraphANN parallel (reduced for speed)  
+                'parallel': 1,           # GraphANN parallel (reduced for speed)  
                 'ef_search': 30          # GraphANN ef for search (reduced for speed)
             }
 
@@ -148,7 +148,7 @@ class GraphPIRSystem:
 
         # Store traversal parameters - use GraphANN SearchKNN parameters
         self.max_iterations = graph_params.get('max_iterations', 5)   # maxStep in GraphANN
-        self.parallel = graph_params.get('parallel', 2)              # parallel in GraphANN
+        self.parallel = graph_params.get('parallel', 1)              # parallel in GraphANN
         self.ef_search = graph_params.get('ef_search', 30)           # ef for search
         self.k_neighbors = graph_params.get('k_neighbors', 16)       # neighbors per vertex
 
@@ -192,21 +192,16 @@ class GraphPIRSystem:
 
         vector_pir_time = time.perf_counter() - vector_pir_start
 
-        # 3. Set up document PIR database (just store documents, no separate PIR client)
-        print("[GraphPIR] Setting up document PIR...")
+        # 3. Skip heavy document PIR setup - Phase 2 uses fast URL PIR instead
+        print("[GraphPIR] Phase 2 will use fast URL PIR (no heavy document database needed)...")
         doc_pir_start = time.perf_counter()
-        self.doc_pir_server = DocumentPIRServer()
-
-        # Convert documents to PIR database format
-        doc_setup_metrics = self.doc_pir_server.setup_database(documents)
-
-        # 4. Generate Paillier keys for document retrieval (same as PIR-RAG approach)
-        print("[GraphPIR] Generating Paillier keys...")
-        from phe import paillier
-        key_start = time.perf_counter()
-        self.paillier_public_key, self.paillier_private_key = paillier.generate_paillier_keypair(n_length=1024)
-        key_gen_time = time.perf_counter() - key_start
-        print(f"[GraphPIR] Paillier key generation completed in {key_gen_time:.2f}s")
+        
+        # Store documents for URL generation (lightweight)
+        self.doc_pir_server = None  # No heavy PIR server needed
+        
+        # No Paillier keys needed - Phase 2 uses Tiptoe's SimpleLinearHomomorphicPIR
+        print("[GraphPIR] Skipping Paillier key generation (using fast URL PIR instead)...")
+        key_gen_time = 0.0
 
         doc_pir_time = time.perf_counter() - doc_pir_start
 
@@ -221,7 +216,8 @@ class GraphPIRSystem:
             "n_documents": len(documents),
             "embedding_dim": embeddings.shape[1],
             "graph_params": graph_params,
-            **doc_setup_metrics
+            "doc_pir_method": "fast_url_pir",  # Indicates Phase 2 method
+            "setup_optimized": True  # Indicates optimized setup (no heavy PIR)
         }
 
         print(f"[GraphPIR] Setup complete in {total_setup_time:.2f}s")
@@ -794,8 +790,13 @@ class GraphPIRSystem:
 
 class DocumentPIRServer:
     """
-    PIR server for document retrieval.
-    Similar to PIR-RAG but for individual documents instead of clusters.
+    [DEPRECATED] Heavy PIR server for full document retrieval.
+    
+    NO LONGER USED: Graph-PIR now uses fast URL PIR in Phase 2 instead of 
+    expensive full document PIR for fair comparison with PIR-RAG.
+    
+    This class remains for compatibility but is not instantiated in the
+    optimized Graph-PIR implementation.
     """
 
     def __init__(self):

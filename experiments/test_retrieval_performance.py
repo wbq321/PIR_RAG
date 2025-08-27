@@ -159,7 +159,7 @@ class RetrievalPerformanceTester:
     def _simulate_graph_pir_search(self, query_embedding: np.ndarray,
                                   documents: List[str], embeddings: np.ndarray,
                                   k_neighbors: int = 16, max_iterations: int = 5,
-                                  parallel: int = 2, **kwargs) -> List[int]:
+                                  parallel: int = 1, **kwargs) -> List[int]:
         """
         Simulate Graph-PIR search using the GraphANN SearchKNN algorithm (UPDATED implementation).
         
