@@ -358,14 +358,13 @@ class TiptoeHomomorphicRanking:
         self.t_bits = t_bits
 
     def encrypt_vector(self, vec):
-        # For BFV, encrypt each element as a single integer
-        # Keep values in reasonable range to prevent overflow
+        # For BFV, encrypt each element using numpy arrays (required for Pyfhel 3.4.3)
         encrypted_vec = []
         for x in vec:
             # Clamp values to prevent overflow
             val = max(-100, min(100, int(x)))
-            # Encrypt as a single integer (Pyfhel 3.4.3 style)
-            ctxt = self.HE.encryptInt(val)
+            # Encrypt as numpy array (Pyfhel 3.4.3 requirement)
+            ctxt = self.HE.encryptInt(np.array([val], dtype=np.int64))
             encrypted_vec.append(ctxt)
         
         return encrypted_vec
@@ -393,7 +392,7 @@ class TiptoeHomomorphicRanking:
             
             if not products:
                 # All zeros, create a zero ciphertext
-                zero_ctxt = self.HE.encryptInt(0)
+                zero_ctxt = self.HE.encryptInt(np.array([0], dtype=np.int64))
                 results.append(zero_ctxt)
                 continue
             
@@ -412,8 +411,11 @@ class TiptoeHomomorphicRanking:
             try:
                 # For Pyfhel 3.4.3 BFV scheme, use decryptInt
                 decrypted = self.HE.decryptInt(ctxt)
-                # decryptInt should return a single integer for single-slot encryption
-                results.append(float(decrypted))
+                # decryptInt returns numpy array, extract first element
+                if isinstance(decrypted, np.ndarray):
+                    results.append(float(decrypted[0]))
+                else:
+                    results.append(float(decrypted))
             except Exception as e:
                 print(f"Decryption failed for ciphertext {i}: {e}")
                 results.append(0.0)  # Default to 0 if decryption fails

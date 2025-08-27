@@ -24,9 +24,9 @@ def test_basic_pyfhel():
         
         print("✓ Pyfhel context and keys generated")
         
-        # Test basic encryption/decryption with single integers
+        # Test basic encryption/decryption with numpy arrays (required for Pyfhel 3.4.3)
         value = 5
-        ctxt = HE.encryptInt(value)  # Encrypt single integer
+        ctxt = HE.encryptInt(np.array([value], dtype=np.int64))
         decrypted = HE.decryptInt(ctxt)
         print(f"Basic encrypt/decrypt: {value} -> {decrypted}")
         
@@ -37,7 +37,7 @@ def test_basic_pyfhel():
         print(f"Multiply by plaintext: {value} * {multiplier} = {decrypted_mult}")
         
         # Test addition
-        ctxt2 = HE.encryptInt(2)
+        ctxt2 = HE.encryptInt(np.array([2], dtype=np.int64))
         ctxt_sum = ctxt + ctxt2
         decrypted_sum = HE.decryptInt(ctxt_sum)
         print(f"Addition: {value} + 2 = {decrypted_sum}")
@@ -46,8 +46,8 @@ def test_basic_pyfhel():
         query = [1, 2, 3]
         doc = [4, 5, 6]
         
-        # Encrypt query (each element separately)
-        ctxt_query = [HE.encryptInt(x) for x in query]
+        # Encrypt query (each element separately as numpy array)
+        ctxt_query = [HE.encryptInt(np.array([x], dtype=np.int64)) for x in query]
         
         # Compute dot product
         products = []
@@ -65,6 +65,10 @@ def test_basic_pyfhel():
         expected = sum(query[i] * doc[i] for i in range(len(query)))
         
         print(f"Dot product: {query} · {doc} = {dot_product} (expected: {expected})")
+        
+        # Handle numpy array result
+        if isinstance(dot_product, np.ndarray):
+            dot_product = dot_product[0]
         
         if abs(dot_product - expected) < 1:
             print("✓ Dot product test passed!")
