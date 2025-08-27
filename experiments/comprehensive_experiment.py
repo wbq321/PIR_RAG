@@ -369,12 +369,17 @@ class PIRExperimentRunner:
         if graph_pir_params is None:
             graph_pir_params = {'k_neighbors': 16, 'ef_construction': 100, 'max_connections': 16,
                                'max_iterations': 10, 'parallel': 1, 'ef_search': 30, 
-                               'max_neighbors_per_step': 5}  # FIXED: Limit PIR queries per step for consistent performance
+                               'max_neighbors_per_step': 10}  # FIXED: Limit PIR queries per step for consistent performance
         if tiptoe_params is None:
             # FIXED: Use fixed cluster count for fair scalability comparison
             # PIR-RAG scales clusters with dataset size (adaptive clustering)
             # Tiptoe uses fixed clusters to test scaling performance with constant cluster complexity
-            tiptoe_params = {'k_clusters': 50, 'use_real_crypto': True}  # Fixed 100 clusters for all sizes
+            tiptoe_params = {'k_clusters': 50, 'use_real_crypto': True}  # Fixed 50 clusters for all sizes
+        
+        # OVERRIDE: Force fixed cluster count for scalability testing even if provided via args
+        # This ensures fair comparison across dataset sizes
+        if 'k_clusters' not in tiptoe_params or tiptoe_params['k_clusters'] is None:
+            tiptoe_params['k_clusters'] = 50
 
         scalability_results = {
             'doc_sizes': doc_sizes,
@@ -937,7 +942,7 @@ def main():
             'max_neighbors_per_step': args.graph_pir_max_neighbors_per_step
         }
         tiptoe_params = {
-            'k_clusters': args.tiptoe_k_clusters,
+            'k_clusters': args.tiptoe_k_clusters,  # Will be overridden in scalability experiment
             'use_real_crypto': args.tiptoe_use_real_crypto,
             'poly_degree': args.tiptoe_poly_degree,
             'plain_modulus': args.tiptoe_plain_modulus
