@@ -37,14 +37,14 @@ except ImportError:
     print("⚠️  Retrieval performance testing not available. Install required dependencies.")
 
 
-def generate_test_queries(documents: List[str], n_queries: int = 10) -> List[str]:
+def generate_test_queries(documents: List[str], n_queries: int = 10, seed: int = 42) -> List[str]:
     """Generate realistic test queries by sampling from corpus documents."""
     if len(documents) == 0:
         raise ValueError("Cannot generate queries from empty document list")
 
-    # Sample random documents to use as queries
-    np.random.seed(42)  # For reproducible results
-    query_indices = np.random.choice(len(documents), size=min(n_queries, len(documents)), replace=False)
+    # Sample random documents to use as queries with local random generator
+    rng = np.random.RandomState(seed)  # Use local generator to avoid state conflicts
+    query_indices = rng.choice(len(documents), size=min(n_queries, len(documents)), replace=False)
 
     selected_queries = []
     for idx in query_indices:
@@ -123,9 +123,10 @@ class PIRExperimentRunner:
         return self.generate_test_data(n_docs, embed_dim, seed)
 
     def generate_test_data(self, n_docs: int, embed_dim: int = 384, seed: int = 42) -> Tuple[np.ndarray, List[str]]:
-        """Generate synthetic test data."""
-        np.random.seed(seed)
-        embeddings = np.random.randn(n_docs, embed_dim).astype(np.float32)
+        """Generate synthetic test data using local random generator to avoid state conflicts."""
+        # Use local random generator to avoid affecting global random state
+        rng = np.random.RandomState(seed)
+        embeddings = rng.randn(n_docs, embed_dim).astype(np.float32)
         documents = [
             f"Document {i}: This is test document {i} with content about topic {i % 10}. "
             f"It contains information relevant to research area {(i // 10) % 5}. "
@@ -378,6 +379,25 @@ class PIRExperimentRunner:
             'tiptoe_results': []
         }
 
+        # FIXED: For real data, generate realistic queries from actual embeddings
+        # First load a sample of embeddings to generate realistic queries
+        if embeddings_path and corpus_path and os.path.exists(embeddings_path):
+            print("Using real dataset - generating realistic queries from actual embeddings...")
+            sample_embeddings = np.load(embeddings_path)[:max(doc_sizes)]  # Load largest needed size
+            sample_documents = pd.read_csv(corpus_path)['text'].iloc[:max(doc_sizes)].tolist()
+            
+            # Generate realistic queries by sampling from actual embeddings
+            np.random.seed(12345)  # Fixed seed for consistency
+            query_indices = np.random.choice(len(sample_embeddings), size=n_queries, replace=False)
+            test_queries = [sample_embeddings[i] for i in query_indices]
+            print(f"Generated {len(test_queries)} realistic queries from dataset (indices: {query_indices})")
+        else:
+            # Fallback to synthetic queries for synthetic data
+            print("Using synthetic data - generating synthetic queries...")
+            np.random.seed(12345)  # Different seed from data generation to avoid conflicts
+            test_queries = [np.random.randn(embed_dim).astype(np.float32) for _ in range(n_queries)]
+            print(f"Generated {len(test_queries)} synthetic test queries (seed=12345)")
+
         for n_docs in doc_sizes:
             print(f"\n=== Testing with {n_docs} documents ===")
 
@@ -385,7 +405,8 @@ class PIRExperimentRunner:
             embeddings, documents = self.load_or_generate_data(
                 embeddings_path, corpus_path, n_docs, embed_dim
             )
-            queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(n_queries)]
+            # Use the pre-generated consistent queries
+            queries = test_queries
 
             # Test each system
             try:
@@ -465,6 +486,9 @@ class PIRExperimentRunner:
         # Calculate default k_clusters if not provided
         if base_pir_rag_params['k_clusters'] is None:
             base_pir_rag_params['k_clusters'] = self.get_default_k_clusters(n_docs, None)
+            
+        # Generate consistent test queries with fixed seed
+        np.random.seed(54321)  # Fixed seed for parameter sensitivity testing
         queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(n_queries)]
 
         sensitivity_results = {}
@@ -537,8 +561,8 @@ class PIRExperimentRunner:
         # Create retrieval performance tester
         tester = RetrievalPerformanceTester()
 
-        # Generate queries for testing
-        np.random.seed(42)
+        # Generate queries for testing with fixed seed for consistency
+        np.random.seed(67890)  # Fixed seed for retrieval performance testing
         queries = tester.generate_realistic_queries(embeddings, n_queries)
 
         # Test each system individually and collect results
@@ -829,6 +853,9 @@ def main():
             n_docs=args.n_docs,
             embed_dim=args.embed_dim
         )
+        
+        # Generate consistent test queries with fixed seed
+        np.random.seed(98765)  # Fixed seed for main experiment testing
         queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(args.n_queries)]
 
         # Run all three systems with configured parameters

@@ -163,6 +163,21 @@ class GraphPIRSystem:
         self.graph_search.build_graph(embeddings, **build_params)
         graph_setup_time = time.perf_counter() - graph_setup_time
 
+        # ADDED: Log graph statistics for analysis
+        if hasattr(self.graph_search, 'graph'):
+            graph_dict = self.graph_search.graph
+            total_edges = sum(len(neighbors) for neighbors in graph_dict.values())
+            avg_degree = total_edges / len(graph_dict) if len(graph_dict) > 0 else 0
+            print(f"[GraphPIR] GRAPH STATS: nodes={len(graph_dict)}, total_edges={total_edges}, avg_degree={avg_degree:.2f}")
+            
+            # Log degree distribution
+            degrees = [len(neighbors) for neighbors in graph_dict.values()]
+            if degrees:
+                min_deg, max_deg = min(degrees), max(degrees)
+                print(f"[GraphPIR] DEGREE RANGE: min={min_deg}, max={max_deg}, target_k={self.k_neighbors}")
+        else:
+            print(f"[GraphPIR] WARNING: Graph not properly initialized")
+
         # 2. Set up vector PIR for graph traversal
         print("[GraphPIR] Setting up vector PIR...")
         vector_pir_start = time.perf_counter()
@@ -430,6 +445,8 @@ class GraphPIRSystem:
 
         print(f"[GraphPIR] GraphANN SearchKNN complete: {pir_query_count} PIR queries, {len(known_vertices)} nodes explored")
         print(f"[GraphPIR] PERFORMANCE DEBUG: dataset_size={n_docs}, pir_operations={pir_query_count}, steps_completed={step+1}/{self.max_iterations}")
+        print(f"[GraphPIR] GRAPH ANALYSIS: total_nodes={n_docs}, explored_ratio={len(known_vertices)/n_docs:.3f}, avg_neighbors_per_node={self.k_neighbors}")
+        print(f"[GraphPIR] QUERY ANALYSIS: final_candidates={len(candidate_indices)}, search_efficiency={len(candidate_indices)/len(known_vertices) if len(known_vertices) > 0 else 0:.3f}")
 
         return candidate_indices, phase1_metrics
 
