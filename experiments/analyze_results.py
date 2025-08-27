@@ -19,6 +19,13 @@ import matplotlib.patches as mpatches
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
 
+# Import retrieval analysis
+try:
+    from analyze_retrieval_performance import RetrievalAnalyzer
+    RETRIEVAL_ANALYSIS_AVAILABLE = True
+except ImportError:
+    RETRIEVAL_ANALYSIS_AVAILABLE = False
+
 
 class PIRAnalyzer:
     """Analyzer for PIR experiment results."""
@@ -466,6 +473,12 @@ def main():
             print(f"Analyzing sensitivity: {args.sensitivity_file}")
             results = analyzer.load_json_results(args.sensitivity_file)
             analyzer.plot_parameter_sensitivity(results)
+        
+        # Add retrieval performance analysis
+        if args.generate_all and RETRIEVAL_ANALYSIS_AVAILABLE:
+            print("Analyzing retrieval performance results...")
+            retrieval_analyzer = RetrievalAnalyzer(args.results_dir)
+            retrieval_analyzer.generate_all_retrieval_plots(analyzer.figures_dir)
     
     print("Analysis complete! Check the 'figures' directory for plots.")
 

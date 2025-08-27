@@ -27,6 +27,14 @@ from graph_pir import GraphPIRSystem
 from tiptoe import TiptoeSystem
 from sentence_transformers import SentenceTransformer
 
+# Import retrieval performance testing
+try:
+    from test_retrieval_performance import RetrievalPerformanceTester
+    RETRIEVAL_TESTING_AVAILABLE = True
+except ImportError:
+    RETRIEVAL_TESTING_AVAILABLE = False
+    print("⚠️  Retrieval performance testing not available. Install required dependencies.")
+
 
 class PIRExperimentRunner:
     """Comprehensive experiment runner for all PIR systems."""
@@ -380,6 +388,47 @@ class PIRExperimentRunner:
         
         return sensitivity_results
     
+    def run_retrieval_performance_experiment(self, n_docs: int = 1000, n_queries: int = 50, 
+                                           embeddings_path: str = None, corpus_path: str = None,
+                                           embed_dim: int = 384, top_k: int = 10) -> Dict[str, Any]:
+        """Run retrieval performance experiments measuring IR quality metrics."""
+        if not RETRIEVAL_TESTING_AVAILABLE:
+            print("❌ Retrieval performance testing not available")
+            return {}
+            
+        print(f"\n{'='*60}")
+        print(f"Running Retrieval Performance Experiment")
+        print(f"Documents: {n_docs}, Queries: {n_queries}, Top-K: {top_k}")
+        print(f"{'='*60}")
+        
+        # Load or generate data
+        embeddings, documents = self.load_or_generate_data(
+            embeddings_path, corpus_path, n_docs, embed_dim
+        )
+        
+        # Create retrieval performance tester
+        tester = RetrievalPerformanceTester()
+        
+        # Run comprehensive retrieval tests
+        retrieval_results = tester.run_comprehensive_test(
+            embeddings=embeddings,
+            documents=documents,
+            n_queries=n_queries,
+            top_k=top_k
+        )
+        
+        # Add experiment metadata
+        retrieval_results['experiment_info'] = {
+            'timestamp': self.timestamp,
+            'n_docs': n_docs,
+            'n_queries': n_queries,
+            'top_k': top_k,
+            'embed_dim': embeddings.shape[1],
+            'data_type': 'real' if embeddings_path else 'synthetic'
+        }
+        
+        return retrieval_results
+    
     def save_results(self, results: Dict[str, Any], experiment_name: str):
         """Save experiment results to files."""
         
@@ -442,7 +491,7 @@ class PIRExperimentRunner:
 def main():
     """Main experiment runner."""
     parser = argparse.ArgumentParser(description="Comprehensive PIR Experiments")
-    parser.add_argument("--experiment", choices=["single", "scalability", "sensitivity", "all"], 
+    parser.add_argument("--experiment", choices=["single", "scalability", "sensitivity", "retrieval", "all"], 
                        default="all", help="Type of experiment to run")
     parser.add_argument("--output-dir", default="results", help="Output directory for results")
     parser.add_argument("--n-docs", type=int, default=1000, help="Number of documents for single experiment")
@@ -452,6 +501,7 @@ def main():
                        help="Path to embeddings file (.npy format)")
     parser.add_argument("--corpus-path", type=str, default=None,
                        help="Path to corpus file (.csv format with 'text' column)")
+    parser.add_argument("--top-k", type=int, default=10, help="Top-K for retrieval evaluation")
     
     args = parser.parse_args()
     
@@ -509,6 +559,19 @@ def main():
             corpus_path=args.corpus_path
         )
         runner.save_results(sensitivity_results, "parameter_sensitivity")
+    
+    if args.experiment in ["retrieval", "all"]:
+        print("Running retrieval performance experiments...")
+        retrieval_results = runner.run_retrieval_performance_experiment(
+            n_docs=args.n_docs,
+            n_queries=args.n_queries * 5,  # More queries for retrieval eval
+            embeddings_path=args.embeddings_path,
+            corpus_path=args.corpus_path,
+            embed_dim=args.embed_dim,
+            top_k=args.top_k
+        )
+        if retrieval_results:
+            runner.save_results(retrieval_results, "retrieval_performance")
     
     print("All experiments completed!")
 

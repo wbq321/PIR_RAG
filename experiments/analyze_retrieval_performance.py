@@ -1,0 +1,389 @@
+#!/usr/bin/env python3
+"""
+Retrieval Performance Analysis Script
+
+This script analyzes retrieval quality results from test_retrieval_performance.py
+and generates comprehensive plots and reports for IR metrics.
+"""
+
+import json
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
+from typing import Dict, Any, List
+import argparse
+from datetime import datetime
+
+class RetrievalAnalyzer:
+    """Analyzer for retrieval performance results."""
+    
+    def __init__(self, results_dir: str = "results"):
+        self.results_dir = Path(results_dir)
+        plt.style.use('seaborn-v0_8')
+        sns.set_palette("husl")
+        
+    def load_retrieval_results(self, pattern: str = "*retrieval_performance*.json") -> List[Dict[str, Any]]:
+        """Load retrieval performance results from JSON files."""
+        results = []
+        result_files = list(self.results_dir.glob(pattern))
+        
+        if not result_files:
+            print(f"No retrieval results found in {self.results_dir}")
+            return results
+            
+        for file_path in result_files:
+            try:
+                with open(file_path, 'r') as f:
+                    data = json.load(f)
+                    data['source_file'] = file_path.name
+                    results.append(data)
+                    print(f"Loaded: {file_path.name}")
+            except Exception as e:
+                print(f"Error loading {file_path}: {e}")
+                
+        return results
+    
+    def plot_retrieval_quality_comparison(self, results: List[Dict], save_path: str = None):
+        """Plot retrieval quality metrics comparison across systems."""
+        if not results:
+            print("No results to plot")
+            return
+            
+        # Extract metrics for each system
+        systems_data = {}
+        
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                    
+                if system_name not in systems_data:
+                    systems_data[system_name] = {
+                        'precision': [],
+                        'recall': [],
+                        'ndcg': [],
+                        'query_time': [],
+                        'qps': []
+                    }
+                
+                if 'avg_precision_at_k' in system_data:
+                    systems_data[system_name]['precision'].append(system_data['avg_precision_at_k'])
+                    systems_data[system_name]['recall'].append(system_data['avg_recall_at_k'])
+                    systems_data[system_name]['ndcg'].append(system_data['avg_ndcg_at_k'])
+                    systems_data[system_name]['query_time'].append(system_data['avg_query_time'])
+                    systems_data[system_name]['qps'].append(system_data['queries_per_second'])
+        
+        if not systems_data:
+            print("No valid system data found")
+            return
+            
+        # Create subplots
+        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+        fig.suptitle('Retrieval Performance Comparison', fontsize=16, fontweight='bold')
+        
+        metrics = ['precision', 'recall', 'ndcg', 'query_time', 'qps']
+        metric_names = ['Precision@K', 'Recall@K', 'NDCG@K', 'Query Time (s)', 'Queries/Second']
+        
+        for i, (metric, title) in enumerate(zip(metrics, metric_names)):
+            ax = axes[i // 3, i % 3]
+            
+            systems = list(systems_data.keys())
+            values = [np.mean(systems_data[sys][metric]) if systems_data[sys][metric] else 0 
+                     for sys in systems]
+            errors = [np.std(systems_data[sys][metric]) if len(systems_data[sys][metric]) > 1 else 0 
+                     for sys in systems]
+            
+            bars = ax.bar(systems, values, yerr=errors, capsize=5, alpha=0.7)
+            ax.set_title(title, fontweight='bold')
+            ax.set_ylabel(title)
+            
+            # Add value labels on bars
+            for bar, value in zip(bars, values):
+                if value > 0:
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + bar.get_height()*0.01,
+                           f'{value:.3f}', ha='center', va='bottom', fontweight='bold')
+            
+            # Rotate x-axis labels for better readability
+            ax.tick_params(axis='x', rotation=45)
+        
+        # Remove empty subplot
+        if len(metrics) < 6:
+            axes[1, 2].remove()
+        
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Retrieval quality plot saved to: {save_path}")
+        else:
+            plt.show()
+    
+    def plot_precision_recall_curves(self, results: List[Dict], save_path: str = None):
+        """Plot precision-recall curves for different systems."""
+        if not results:
+            return
+            
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                    
+                if 'quality_metrics' in system_data:
+                    # Extract precision and recall for each query
+                    precisions = [q['precision_at_k'] for q in system_data['quality_metrics']]
+                    recalls = [q['recall_at_k'] for q in system_data['quality_metrics']]
+                    
+                    # Plot scatter points
+                    ax.scatter(recalls, precisions, label=system_name, alpha=0.6, s=50)
+                    
+                    # Plot average point
+                    avg_precision = np.mean(precisions)
+                    avg_recall = np.mean(recalls)
+                    ax.scatter(avg_recall, avg_precision, 
+                             label=f'{system_name} (avg)', 
+                             s=200, marker='*', edgecolors='black', linewidth=2)
+        
+        ax.set_xlabel('Recall@K', fontweight='bold')
+        ax.set_ylabel('Precision@K', fontweight='bold')
+        ax.set_title('Precision-Recall Analysis', fontsize=14, fontweight='bold')
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Precision-recall plot saved to: {save_path}")
+        else:
+            plt.show()
+    
+    def plot_query_distribution(self, results: List[Dict], save_path: str = None):
+        """Plot query performance distribution across systems."""
+        if not results:
+            return
+            
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        fig.suptitle('Query Performance Distribution', fontsize=16, fontweight='bold')
+        
+        metrics = ['precision_at_k', 'recall_at_k', 'ndcg_at_k']
+        titles = ['Precision@K Distribution', 'Recall@K Distribution', 'NDCG@K Distribution']
+        
+        for i, (metric, title) in enumerate(zip(metrics, titles)):
+            ax = axes[i]
+            
+            for result in results:
+                for system_name, system_data in result.items():
+                    if system_name in ['source_file', 'experiment_info']:
+                        continue
+                        
+                    if 'quality_metrics' in system_data:
+                        values = [q[metric] for q in system_data['quality_metrics']]
+                        ax.hist(values, bins=15, alpha=0.6, label=system_name, density=True)
+            
+            ax.set_title(title, fontweight='bold')
+            ax.set_xlabel(metric.replace('_', ' ').title())
+            ax.set_ylabel('Density')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Query distribution plot saved to: {save_path}")
+        else:
+            plt.show()
+    
+    def generate_retrieval_summary_report(self, results: List[Dict], save_path: str = None) -> str:
+        """Generate a comprehensive text summary of retrieval performance."""
+        if not results:
+            return "No results to analyze."
+            
+        report = []
+        report.append("="*80)
+        report.append("RETRIEVAL PERFORMANCE ANALYSIS REPORT")
+        report.append("="*80)
+        report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report.append(f"Total result files analyzed: {len(results)}")
+        report.append("")
+        
+        # Aggregate results by system
+        system_stats = {}
+        
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                    
+                if system_name not in system_stats:
+                    system_stats[system_name] = {
+                        'precision_scores': [],
+                        'recall_scores': [],
+                        'ndcg_scores': [],
+                        'query_times': [],
+                        'qps_scores': [],
+                        'total_queries': 0
+                    }
+                
+                if 'avg_precision_at_k' in system_data:
+                    system_stats[system_name]['precision_scores'].append(system_data['avg_precision_at_k'])
+                    system_stats[system_name]['recall_scores'].append(system_data['avg_recall_at_k'])
+                    system_stats[system_name]['ndcg_scores'].append(system_data['avg_ndcg_at_k'])
+                    system_stats[system_name]['query_times'].append(system_data['avg_query_time'])
+                    system_stats[system_name]['qps_scores'].append(system_data['queries_per_second'])
+                    system_stats[system_name]['total_queries'] += len(system_data.get('quality_metrics', []))
+        
+        # Generate system comparison
+        report.append("SYSTEM PERFORMANCE SUMMARY")
+        report.append("-" * 40)
+        
+        for system_name, stats in system_stats.items():
+            if not stats['precision_scores']:
+                continue
+                
+            report.append(f"\n📊 {system_name.upper()}")
+            report.append(f"   Precision@K:  {np.mean(stats['precision_scores']):.4f} ± {np.std(stats['precision_scores']):.4f}")
+            report.append(f"   Recall@K:     {np.mean(stats['recall_scores']):.4f} ± {np.std(stats['recall_scores']):.4f}")
+            report.append(f"   NDCG@K:       {np.mean(stats['ndcg_scores']):.4f} ± {np.std(stats['ndcg_scores']):.4f}")
+            report.append(f"   Query Time:   {np.mean(stats['query_times']):.4f}s ± {np.std(stats['query_times']):.4f}s")
+            report.append(f"   Throughput:   {np.mean(stats['qps_scores']):.2f} queries/sec")
+            report.append(f"   Total Queries: {stats['total_queries']}")
+        
+        # Best performing system analysis
+        if system_stats:
+            report.append("\n" + "="*50)
+            report.append("BEST PERFORMING SYSTEMS")
+            report.append("="*50)
+            
+            metrics = {
+                'Precision@K': ('precision_scores', 'higher'),
+                'Recall@K': ('recall_scores', 'higher'),
+                'NDCG@K': ('ndcg_scores', 'higher'),
+                'Query Speed': ('query_times', 'lower'),
+                'Throughput': ('qps_scores', 'higher')
+            }
+            
+            for metric_name, (metric_key, direction) in metrics.items():
+                best_system = None
+                best_value = None
+                
+                for system_name, stats in system_stats.items():
+                    if not stats[metric_key]:
+                        continue
+                        
+                    avg_value = np.mean(stats[metric_key])
+                    
+                    if best_system is None:
+                        best_system = system_name
+                        best_value = avg_value
+                    elif direction == 'higher' and avg_value > best_value:
+                        best_system = system_name
+                        best_value = avg_value
+                    elif direction == 'lower' and avg_value < best_value:
+                        best_system = system_name
+                        best_value = avg_value
+                
+                if best_system:
+                    unit = "s" if "Time" in metric_name else ("queries/sec" if "Throughput" in metric_name else "")
+                    report.append(f"🏆 Best {metric_name}: {best_system} ({best_value:.4f}{unit})")
+        
+        report.append("\n" + "="*80)
+        
+        report_text = "\n".join(report)
+        
+        if save_path:
+            with open(save_path, 'w') as f:
+                f.write(report_text)
+            print(f"Retrieval summary report saved to: {save_path}")
+        
+        return report_text
+    
+    def generate_all_retrieval_plots(self, output_dir: str = None):
+        """Generate all retrieval performance plots and reports."""
+        if output_dir is None:
+            output_dir = self.results_dir / "retrieval_analysis"
+        else:
+            output_dir = Path(output_dir)
+        
+        output_dir.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Load results
+        results = self.load_retrieval_results()
+        
+        if not results:
+            print("❌ No retrieval results found to analyze")
+            return
+        
+        print(f"📊 Generating retrieval performance analysis...")
+        
+        # Generate plots
+        self.plot_retrieval_quality_comparison(
+            results, 
+            output_dir / f"retrieval_quality_comparison_{timestamp}.png"
+        )
+        
+        self.plot_precision_recall_curves(
+            results,
+            output_dir / f"precision_recall_curves_{timestamp}.png"
+        )
+        
+        self.plot_query_distribution(
+            results,
+            output_dir / f"query_distribution_{timestamp}.png"
+        )
+        
+        # Generate report
+        report = self.generate_retrieval_summary_report(
+            results,
+            output_dir / f"retrieval_summary_report_{timestamp}.txt"
+        )
+        
+        print(f"\n✅ Retrieval analysis complete!")
+        print(f"📁 Results saved to: {output_dir}")
+        print(f"📈 Plots: retrieval_quality_comparison, precision_recall_curves, query_distribution")
+        print(f"📄 Report: retrieval_summary_report_{timestamp}.txt")
+        
+        return report
+
+
+def main():
+    """Main analysis runner."""
+    parser = argparse.ArgumentParser(description="Analyze retrieval performance results")
+    parser.add_argument("--results-dir", default="results", help="Directory containing result files")
+    parser.add_argument("--output-dir", default=None, help="Output directory for analysis")
+    parser.add_argument("--generate-all", action="store_true", help="Generate all plots and reports")
+    parser.add_argument("--generate-comparison", action="store_true", help="Generate quality comparison plot")
+    parser.add_argument("--generate-curves", action="store_true", help="Generate precision-recall curves")
+    parser.add_argument("--generate-distribution", action="store_true", help="Generate query distribution plots")
+    parser.add_argument("--generate-report", action="store_true", help="Generate summary report")
+    
+    args = parser.parse_args()
+    
+    analyzer = RetrievalAnalyzer(args.results_dir)
+    
+    if args.generate_all:
+        analyzer.generate_all_retrieval_plots(args.output_dir)
+    else:
+        results = analyzer.load_retrieval_results()
+        
+        if args.generate_comparison:
+            analyzer.plot_retrieval_quality_comparison(results)
+        
+        if args.generate_curves:
+            analyzer.plot_precision_recall_curves(results)
+            
+        if args.generate_distribution:
+            analyzer.plot_query_distribution(results)
+            
+        if args.generate_report:
+            report = analyzer.generate_retrieval_summary_report(results)
+            print(report)
+
+
+if __name__ == "__main__":
+    main()
