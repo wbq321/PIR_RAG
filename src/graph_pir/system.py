@@ -53,11 +53,13 @@ class GraphPIRSystem:
         - max_iterations: Maximum search steps (reduced for speed)
         - parallel: Number of parallel explorations per step (reduced for speed)
         - ef_search: Search width parameter (reduced for speed)
+        - max_neighbors_per_step: Limit neighbors queried per step for consistent PIR load
         """
         return {
-            'max_iterations': 5,   # Reduced from 10 -> 5 for speed (fewer PIR rounds)
-            'parallel': 1,         # Reduced from 3 -> 1 for speed (minimal parallel queries)  
-            'ef_search': 30        # Reduced from 50 -> 30 for speed (smaller search space)
+            'max_iterations': 10,           # Keep higher iterations but limit per-step load
+            'parallel': 1,                  # Reduced from 3 -> 1 for speed (minimal parallel queries)  
+            'ef_search': 30,                # Reduced from 50 -> 30 for speed (smaller search space)
+            'max_neighbors_per_step': 5     # FIXED: Limit neighbors queried per step for consistent PIR load
         }
 
     def _prepare_vector_database(self, vector_db: np.ndarray, embedding_dim: int,
@@ -147,10 +149,11 @@ class GraphPIRSystem:
         self.documents = documents
 
         # Store traversal parameters - use GraphANN SearchKNN parameters
-        self.max_iterations = graph_params.get('max_iterations', 5)   # maxStep in GraphANN
-        self.parallel = graph_params.get('parallel', 1)              # parallel in GraphANN
-        self.ef_search = graph_params.get('ef_search', 30)           # ef for search
-        self.k_neighbors = graph_params.get('k_neighbors', 16)       # neighbors per vertex
+        self.max_iterations = graph_params.get('max_iterations', 10)          # maxStep in GraphANN
+        self.parallel = graph_params.get('parallel', 1)                      # parallel in GraphANN
+        self.ef_search = graph_params.get('ef_search', 30)                   # ef for search
+        self.k_neighbors = graph_params.get('k_neighbors', 16)               # neighbors per vertex
+        self.max_neighbors_per_step = graph_params.get('max_neighbors_per_step', 5)  # PIR query limit per step
 
         # 1. Set up graph-based search
         print("[GraphPIR] Building graph structure...")
@@ -363,7 +366,7 @@ class GraphPIRSystem:
                 reach_step[vertex_id] = 0
                 heapq.heappush(to_be_explored, (dist, vertex_id))
 
-        # Step 3: Main GraphANN SearchKNN loop
+        # Step 3: Main GraphANN SearchKNN loop with controlled PIR load per step
         for step in range(self.max_iterations):
             # Collect batch queries for this step
             batch_queries = []
@@ -373,24 +376,26 @@ class GraphPIRSystem:
                 if len(to_be_explored) == 0:
                     # Fallback: make random queries if no vertices to explore
                     print(f"[GraphPIR] WARNING: Step {step} using random fallback (search got stuck)")
-                    batch_queries.extend([np.random.randint(0, n_docs) for _ in range(m)])
+                    batch_queries.extend([np.random.randint(0, n_docs) for _ in range(self.max_neighbors_per_step)])
                 else:
-                    # Pop closest vertex and add ALL its neighbors to batch (GraphANN approach)
+                    # Pop closest vertex and add LIMITED neighbors to batch for consistent PIR load
                     current_dist, current_vertex_id = heapq.heappop(to_be_explored)
                     if current_vertex_id in known_vertices:
                         _, neighbors = known_vertices[current_vertex_id]
-                        batch_queries.extend(neighbors)  # Add ALL neighbors to batch
+                        # FIXED: Limit to max_neighbors_per_step instead of all neighbors
+                        limited_neighbors = neighbors[:self.max_neighbors_per_step]
+                        batch_queries.extend(limited_neighbors)  # Add LIMITED neighbors to batch
             
             if not batch_queries:
                 break
                 
-            print(f"[GraphPIR] Step {step}: PIR batch querying {len(batch_queries)} neighbors")
+            print(f"[GraphPIR] Step {step}: PIR batch querying {len(batch_queries)} neighbors (limited to {self.max_neighbors_per_step} per vertex)")
             
             # Step 4: PIR batch query neighbors (GetVertexInfo equivalent)
             # Remove duplicates and invalid indices
             unique_queries = list(set([q for q in batch_queries if 0 <= q < n_docs]))
             
-            print(f"[GraphPIR] Step {step}: unique_queries={len(unique_queries)}, to_be_explored={len(to_be_explored)}")
+            print(f"[GraphPIR] Step {step}: unique_queries={len(unique_queries)}, to_be_explored={len(to_be_explored)}, max_per_step={self.max_neighbors_per_step}")
             
             if unique_queries:
                 # Use REAL PIR to retrieve (embeddings + neighbors) for these nodes

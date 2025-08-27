@@ -368,9 +368,13 @@ class PIRExperimentRunner:
             pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated per doc size
         if graph_pir_params is None:
             graph_pir_params = {'k_neighbors': 16, 'ef_construction': 100, 'max_connections': 16,
-                               'max_iterations': 5, 'parallel': 1, 'ef_search': 30}
+                               'max_iterations': 10, 'parallel': 1, 'ef_search': 30, 
+                               'max_neighbors_per_step': 5}  # FIXED: Limit PIR queries per step for consistent performance
         if tiptoe_params is None:
-            tiptoe_params = {'k_clusters': None, 'use_real_crypto': True}  # None will be calculated per doc size
+            # FIXED: Use fixed cluster count for fair scalability comparison
+            # PIR-RAG scales clusters with dataset size (adaptive clustering)
+            # Tiptoe uses fixed clusters to test scaling performance with constant cluster complexity
+            tiptoe_params = {'k_clusters': 50, 'use_real_crypto': True}  # Fixed 100 clusters for all sizes
 
         scalability_results = {
             'doc_sizes': doc_sizes,
@@ -445,10 +449,10 @@ class PIRExperimentRunner:
 
             try:
                 print(f"  Running Tiptoe with {n_docs} documents...")
-                # Adjust cluster numbers for dataset size
+                # FIXED: Keep cluster count fixed for fair comparison across dataset sizes
                 adjusted_tiptoe_params = tiptoe_params.copy()
-                adjusted_tiptoe_params['k_clusters'] = self.get_default_k_clusters(n_docs, adjusted_tiptoe_params['k_clusters'])
-                print(f"  Tiptoe using {adjusted_tiptoe_params['k_clusters']} clusters")
+                # Don't adjust cluster count - use fixed value for all dataset sizes
+                print(f"  Tiptoe using FIXED {adjusted_tiptoe_params['k_clusters']} clusters (consistent across all sizes)")
 
                 tiptoe_result = self.run_tiptoe_experiment(
                     embeddings, documents, queries,
@@ -826,6 +830,8 @@ def main():
                        help="Maximum number of graph traversal iterations/turns (GraphANN maxStep)")
     parser.add_argument("--graph-pir-parallel", type=int, default=1,
                        help="Number of parallel explorations per step (GraphANN parallel)")
+    parser.add_argument("--graph-pir-max-neighbors-per-step", type=int, default=5,
+                       help="Maximum neighbors to PIR query per step for consistent performance")
 
     # Tiptoe specific arguments
     parser.add_argument("--tiptoe-k-clusters", type=int, default=None,
@@ -882,7 +888,8 @@ def main():
                 'max_connections': args.graph_pir_max_connections,
                 'ef_search': args.graph_pir_ef_search,
                 'max_iterations': args.graph_pir_max_iterations,
-                'parallel': args.graph_pir_parallel
+                'parallel': args.graph_pir_parallel,
+                'max_neighbors_per_step': args.graph_pir_max_neighbors_per_step
             }
             results['graph_pir'] = runner.run_graph_pir_experiment(
                 embeddings, documents, queries,
@@ -926,7 +933,8 @@ def main():
             'max_connections': args.graph_pir_max_connections,
             'ef_search': args.graph_pir_ef_search,
             'max_iterations': args.graph_pir_max_iterations,
-            'parallel': args.graph_pir_parallel
+            'parallel': args.graph_pir_parallel,
+            'max_neighbors_per_step': args.graph_pir_max_neighbors_per_step
         }
         tiptoe_params = {
             'k_clusters': args.tiptoe_k_clusters,
