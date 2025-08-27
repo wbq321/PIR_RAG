@@ -76,8 +76,17 @@ class TiptoeSystem:
         """
         setup_start = time.perf_counter()
 
+        # Handle k_clusters parameter if provided
+        if 'k_clusters' in kwargs:
+            k_clusters = kwargs['k_clusters']
+            print(f"[Tiptoe] Overriding default clusters: {self.n_clusters} -> {k_clusters}")
+            self.n_clusters = k_clusters
+            # Update clustering component with new cluster count
+            self.clustering = TiptoeClustering(self.target_dim, k_clusters)
+
         print(f"[Tiptoe] Setting up CORRECTED Tiptoe system...")
         print(f"[Tiptoe] Documents: {len(documents)}, Embeddings: {embeddings.shape}")
+        print(f"[Tiptoe] Using {self.n_clusters} clusters")
 
         # Store data
         self.embeddings = embeddings
