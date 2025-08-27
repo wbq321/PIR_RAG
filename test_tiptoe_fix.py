@@ -101,8 +101,14 @@ def test_tiptoe_system():
         system = TiptoeSystem(target_dim=16, n_clusters=2, security_param=128)
         print("✓ Successfully initialized TiptoeSystem")
         
+        # Create dummy embeddings for the documents
+        # In real usage, these would come from a sentence transformer
+        import numpy as np
+        embeddings = np.random.rand(len(documents), 384).astype(np.float32)  # BGE-base dimension
+        print(f"Created dummy embeddings: {embeddings.shape}")
+        
         # Setup the system
-        setup_metrics = system.setup(documents)
+        setup_metrics = system.setup(embeddings, documents)
         print(f"✓ Setup completed: {setup_metrics}")
         
         # Test a query

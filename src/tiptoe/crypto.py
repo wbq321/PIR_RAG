@@ -341,13 +341,12 @@ class TiptoeHomomorphicRanking:
     """
     Real homomorphic encryption for Tiptoe ranking phase using Pyfhel (BFV).
     """
-    def __init__(self, scheme: str = 'BFV', n_slots: int = 8192, t_bits: int = 30):
+    def __init__(self, scheme: str = 'BFV', n_slots: int = 8192, t_bits: int = 20):
         if not _pyfhel_available:
             raise ImportError("Pyfhel is not installed. Please install it to use real homomorphic ranking.")
         self.HE = Pyfhel()
         try:
-            # Use more conservative parameters for BFV to avoid overflow
-            # Larger t_bits provides more room for computation
+            # Use parameters compatible with Pyfhel 3.4.3
             self.HE.contextGen(scheme='BFV', n=n_slots, t_bits=t_bits, sec=128)
             self.HE.keyGen()
             # Generate relinearization keys for multiplication
@@ -359,14 +358,14 @@ class TiptoeHomomorphicRanking:
         self.t_bits = t_bits
 
     def encrypt_vector(self, vec):
-        # For BFV, encrypt each element as a 1-element np.int64 array
-        # Normalize and clamp values to prevent overflow
-        arr = np.array(vec, dtype=np.int64)
-        arr = np.clip(arr, -127, 127)  # Keep in safe range for BFV
-        
+        # For BFV, encrypt each element as a single integer
+        # Keep values in reasonable range to prevent overflow
         encrypted_vec = []
-        for x in arr:
-            ctxt = self.HE.encryptInt(np.array([int(x)], dtype=np.int64))
+        for x in vec:
+            # Clamp values to prevent overflow
+            val = max(-100, min(100, int(x)))
+            # Encrypt as a single integer (Pyfhel 3.4.3 style)
+            ctxt = self.HE.encryptInt(val)
             encrypted_vec.append(ctxt)
         
         return encrypted_vec
@@ -377,51 +376,44 @@ class TiptoeHomomorphicRanking:
 
     def dot_product(self, ctxt_query, db_vecs):
         # ctxt_query: list of encrypted query elements (PyCtxt)
-        # db_vecs: list of np.int64 document vectors
+        # db_vecs: list of document vectors (plain integers)
         results = []
+        
         for doc_vec in db_vecs:
-            arr = np.array(doc_vec, dtype=np.int64)
-            
-            # Ensure we don't multiply by zero (which can cause issues)
-            # Also clamp values to prevent overflow
-            arr = np.clip(arr, -127, 127)  # Keep values in safe range for BFV
+            # Clamp document values to prevent overflow
+            doc_vec_clamped = [max(-100, min(100, int(x))) for x in doc_vec]
             
             # Multiply each encrypted query element by corresponding doc value
-            prod_terms = []
-            for j in range(len(arr)):
-                if arr[j] != 0:  # Skip zero multiplications
-                    term = ctxt_query[j] * int(arr[j])
-                    prod_terms.append(term)
+            products = []
+            for j in range(len(doc_vec_clamped)):
+                if doc_vec_clamped[j] != 0:  # Skip zero multiplications
+                    # For Pyfhel 3.4.3, multiplication should work directly
+                    prod = ctxt_query[j] * doc_vec_clamped[j]
+                    products.append(prod)
             
-            if not prod_terms:
+            if not products:
                 # All zeros, create a zero ciphertext
-                zero_ctxt = self.HE.encryptInt(np.array([0], dtype=np.int64))
+                zero_ctxt = self.HE.encryptInt(0)
                 results.append(zero_ctxt)
                 continue
+            
+            # Sum all products
+            result = products[0].copy()
+            for prod in products[1:]:
+                result += prod
                 
-            # Sum all terms
-            dot = prod_terms[0].copy()
-            for term in prod_terms[1:]:
-                dot += term
-                
-            results.append(dot)
+            results.append(result)
+            
         return results
 
     def decrypt_scores(self, ctxt_scores):
         results = []
         for i, ctxt in enumerate(ctxt_scores):
             try:
-                # Check noise budget before decryption
-                noise_budget = self.HE.noiseLevel(ctxt)
-                if noise_budget < 10:  # Arbitrary threshold
-                    print(f"Warning: Low noise budget ({noise_budget}) for ciphertext {i}")
-                
-                # Use decryptInt for BFV scheme
+                # For Pyfhel 3.4.3 BFV scheme, use decryptInt
                 decrypted = self.HE.decryptInt(ctxt)
-                if isinstance(decrypted, np.ndarray):
-                    results.append(float(decrypted[0]))
-                else:
-                    results.append(float(decrypted))
+                # decryptInt should return a single integer for single-slot encryption
+                results.append(float(decrypted))
             except Exception as e:
                 print(f"Decryption failed for ciphertext {i}: {e}")
                 results.append(0.0)  # Default to 0 if decryption fails
@@ -429,7 +421,16 @@ class TiptoeHomomorphicRanking:
 
     def get_noise_budget(self, ctxt):
         """Get the remaining noise budget of a ciphertext."""
+        # For Pyfhel 3.4.3, noise budget methods may have different names
         try:
-            return self.HE.noiseLevel(ctxt)
+            # Try different possible method names
+            if hasattr(self.HE, 'noise_level'):
+                return self.HE.noise_level(ctxt)
+            elif hasattr(self.HE, 'noiseLevel'):
+                return self.HE.noiseLevel(ctxt)
+            elif hasattr(ctxt, 'noise_budget'):
+                return ctxt.noise_budget()
+            else:
+                return -1  # Method not available
         except:
             return -1  # Error getting noise level
