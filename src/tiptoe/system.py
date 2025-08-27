@@ -422,20 +422,37 @@ class TiptoeSystem:
                         crypto_verified = False
                         print(f"[Tiptoe] WARNING: PIR query may not be properly encrypted!")
                     
-                    # Server processes query (PIR over URL indices)
+                    # Server processes query (PIR over actual URL content, not indices)
                     url_database = [f"https://example.com/doc_{doc_indices[i]}" for i in range(len(cluster_docs))]
+                    
+                    # Convert URLs to numerical representation for PIR (encode as bytes)
+                    url_bytes_db = []
+                    for url in url_database:
+                        # Convert URL string to bytes, then to integers for PIR
+                        url_bytes = url.encode('utf-8')
+                        # Pad to fixed length and convert to integers
+                        padded_bytes = url_bytes.ljust(64, b'\x00')[:64]  # 64-byte URLs
+                        url_integers = [int(b) for b in padded_bytes]
+                        url_bytes_db.append(url_integers)
+                    
                     pir_response, server_metrics = pir_system.process_pir_query(
-                        pir_query, list(range(len(url_database)))  # Index database for URLs
+                        pir_query, url_bytes_db  # PIR over actual URL bytes, not indices
                     )
                     
-                    # Client decrypts to get URL index
-                    retrieved_index = pir_system.decrypt_pir_response(pir_response)
+                    # Client decrypts to get actual URL bytes
+                    retrieved_url_bytes = pir_system.decrypt_pir_response(pir_response)
                     
-                    # Use the index to get actual URL
-                    if 0 <= retrieved_index < len(url_database):
-                        retrieved_url = url_database[retrieved_index]
+                    # Convert bytes back to URL string
+                    if isinstance(retrieved_url_bytes, list):
+                        # Handle case where we get a list of byte values
+                        try:
+                            byte_values = [max(0, min(255, int(b))) for b in retrieved_url_bytes]
+                            url_bytes = bytes(byte_values)
+                            retrieved_url = url_bytes.rstrip(b'\x00').decode('utf-8', errors='ignore')
+                        except:
+                            retrieved_url = synthetic_url
                     else:
-                        # Fallback if PIR returns unexpected index
+                        # Single integer response - fallback
                         retrieved_url = synthetic_url
                     
                     retrieved_urls.append(retrieved_url)

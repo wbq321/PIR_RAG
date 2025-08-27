@@ -215,26 +215,43 @@ class LinearHomomorphicPIR:
             raise ValueError(f"Query length {len(encrypted_query)} != database size {len(database)}")
 
         # Initialize result as encryption of zero
-        result = self.crypto.encrypt(0)
-
-        # Homomorphic inner product computation
-        for i, (query_enc, db_item) in enumerate(zip(encrypted_query, database)):
-            # For vectors: compute encrypted query[i] * db_item[j] for each dimension
-            if isinstance(db_item, np.ndarray):
-                # Handle vector database (Phase 1: embeddings)
-                for j, db_value in enumerate(db_item):
-                    # Homomorphic scalar multiplication: query[i] * db_item[j]
-                    term = self.crypto.scalar_multiply(query_enc, int(db_value))
+        if len(database) > 0 and isinstance(database[0], list):
+            # For URL bytes: need to return multiple encrypted values (one per byte position)
+            url_length = len(database[0])
+            result = [self.crypto.encrypt(0) for _ in range(url_length)]
+            
+            # Homomorphic computation for each byte position
+            for i, (query_enc, db_item) in enumerate(zip(encrypted_query, database)):
+                if isinstance(db_item, list):
+                    # db_item is a list of bytes for the URL
+                    for j, byte_value in enumerate(db_item):
+                        term = self.crypto.scalar_multiply(query_enc, int(byte_value))
+                        result[j] = self.crypto.add_encrypted(result[j], term)
+        else:
+            # Original single-value result
+            result = self.crypto.encrypt(0)
+            
+            # Homomorphic inner product computation
+            for i, (query_enc, db_item) in enumerate(zip(encrypted_query, database)):
+                # For vectors: compute encrypted query[i] * db_item[j] for each dimension
+                if isinstance(db_item, np.ndarray):
+                    # Handle vector database (Phase 1: embeddings)
+                    for j, db_value in enumerate(db_item):
+                        # Homomorphic scalar multiplication: query[i] * db_item[j]
+                        term = self.crypto.scalar_multiply(query_enc, int(db_value))
+                        result = self.crypto.add_encrypted(result, term)
+                else:
+                    # Handle scalar database (Phase 2: document indices - legacy)
+                    term = self.crypto.scalar_multiply(query_enc, int(db_item))
                     result = self.crypto.add_encrypted(result, term)
-            else:
-                # Handle scalar database (Phase 2: document indices)
-                term = self.crypto.scalar_multiply(query_enc, int(db_item))
-                result = self.crypto.add_encrypted(result, term)
 
         processing_time = time.perf_counter() - start_time
 
         # Calculate communication cost (download)
-        download_bytes = self._calculate_response_size(result)
+        if isinstance(result, list):
+            download_bytes = sum(self._calculate_response_size(r) for r in result)
+        else:
+            download_bytes = self._calculate_response_size(result)
 
         metrics = {
             'server_processing_time': processing_time,
@@ -244,17 +261,22 @@ class LinearHomomorphicPIR:
 
         return result, metrics
 
-    def decrypt_pir_response(self, encrypted_response: Dict) -> int:
+    def decrypt_pir_response(self, encrypted_response) -> any:
         """
         Client decrypts PIR response to get the retrieved item.
 
         Args:
-            encrypted_response: Encrypted response from server
+            encrypted_response: Encrypted response from server (single ciphertext or list)
 
         Returns:
-            Decrypted value/index
+            Decrypted value/values (int for single value, list for URL bytes)
         """
-        return self.crypto.decrypt(encrypted_response)
+        if isinstance(encrypted_response, list):
+            # Decrypt each element for URL bytes
+            return [self.crypto.decrypt(enc) for enc in encrypted_response]
+        else:
+            # Single value decryption
+            return self.crypto.decrypt(encrypted_response)
 
     def _calculate_query_size(self, encrypted_query: List[Dict]) -> int:
         """Calculate size of encrypted query in bytes."""
@@ -341,16 +363,14 @@ class TiptoeHomomorphicRanking:
     """
     Real homomorphic encryption for Tiptoe ranking phase using Pyfhel (BFV).
     """
-    def __init__(self, scheme: str = 'BFV', n_slots: int = 8192, t_bits: int = 20):
+    def __init__(self, scheme: str = 'BFV', n_slots: int = 16384, t_bits: int = 20):
         if not _pyfhel_available:
             raise ImportError("Pyfhel is not installed. Please install it to use real homomorphic ranking.")
         self.HE = Pyfhel()
         try:
-            # Use parameters compatible with Pyfhel 3.4.3
-            self.HE.contextGen(scheme='BFV', n=n_slots, t_bits=t_bits, sec=128)
+            # Use robust, recommended parameters for BFV
+            self.HE.contextGen(scheme='BFV', n=n_slots, t_bits=t_bits)
             self.HE.keyGen()
-            # Generate relinearization keys for multiplication
-            self.HE.relinKeyGen()
         except Exception as e:
             raise RuntimeError(f"Pyfhel context/key generation failed: {e}")
         self.scheme = 'BFV'
@@ -358,16 +378,9 @@ class TiptoeHomomorphicRanking:
         self.t_bits = t_bits
 
     def encrypt_vector(self, vec):
-        # For BFV, encrypt each element using numpy arrays (required for Pyfhel 3.4.3)
-        encrypted_vec = []
-        for x in vec:
-            # Clamp values to prevent overflow
-            val = max(-100, min(100, int(x)))
-            # Encrypt as numpy array (Pyfhel 3.4.3 requirement)
-            ctxt = self.HE.encryptInt(np.array([val], dtype=np.int64))
-            encrypted_vec.append(ctxt)
-        
-        return encrypted_vec
+        # For BFV, encrypt each element as a 1-element np.int64 array
+        arr = np.array(vec, dtype=np.int64)
+        return [self.HE.encryptInt(np.array([int(x)], dtype=np.int64)) for x in arr]
 
     def decrypt_vector(self, ctxt):
         # Decrypt a ciphertext vector
@@ -375,64 +388,17 @@ class TiptoeHomomorphicRanking:
 
     def dot_product(self, ctxt_query, db_vecs):
         # ctxt_query: list of encrypted query elements (PyCtxt)
-        # db_vecs: list of document vectors (plain integers)
+        # db_vecs: list of np.int64 document vectors
         results = []
-        
         for doc_vec in db_vecs:
-            # Clamp document values to prevent overflow
-            doc_vec_clamped = [max(-100, min(100, int(x))) for x in doc_vec]
-            
+            arr = np.array(doc_vec, dtype=np.int64)
             # Multiply each encrypted query element by corresponding doc value
-            products = []
-            for j in range(len(doc_vec_clamped)):
-                if doc_vec_clamped[j] != 0:  # Skip zero multiplications
-                    # For Pyfhel 3.4.3, multiplication should work directly
-                    prod = ctxt_query[j] * doc_vec_clamped[j]
-                    products.append(prod)
-            
-            if not products:
-                # All zeros, create a zero ciphertext
-                zero_ctxt = self.HE.encryptInt(np.array([0], dtype=np.int64))
-                results.append(zero_ctxt)
-                continue
-            
-            # Sum all products
-            result = products[0].copy()
-            for prod in products[1:]:
-                result += prod
-                
-            results.append(result)
-            
+            prod = [ctxt_query[j] * int(arr[j]) for j in range(len(arr))]
+            dot = prod[0].copy()  # Use copy to avoid transparent ciphertext
+            for c in prod[1:]:
+                dot += c
+            results.append(dot)
         return results
 
     def decrypt_scores(self, ctxt_scores):
-        results = []
-        for i, ctxt in enumerate(ctxt_scores):
-            try:
-                # For Pyfhel 3.4.3 BFV scheme, use decryptInt
-                decrypted = self.HE.decryptInt(ctxt)
-                # decryptInt returns numpy array, extract first element
-                if isinstance(decrypted, np.ndarray):
-                    results.append(float(decrypted[0]))
-                else:
-                    results.append(float(decrypted))
-            except Exception as e:
-                print(f"Decryption failed for ciphertext {i}: {e}")
-                results.append(0.0)  # Default to 0 if decryption fails
-        return results
-
-    def get_noise_budget(self, ctxt):
-        """Get the remaining noise budget of a ciphertext."""
-        # For Pyfhel 3.4.3, noise budget methods may have different names
-        try:
-            # Try different possible method names
-            if hasattr(self.HE, 'noise_level'):
-                return self.HE.noise_level(ctxt)
-            elif hasattr(self.HE, 'noiseLevel'):
-                return self.HE.noiseLevel(ctxt)
-            elif hasattr(ctxt, 'noise_budget'):
-                return ctxt.noise_budget()
-            else:
-                return -1  # Method not available
-        except:
-            return -1  # Error getting noise level
+        return [float(self.HE.decryptFrac(ctxt)) for ctxt in ctxt_scores]
