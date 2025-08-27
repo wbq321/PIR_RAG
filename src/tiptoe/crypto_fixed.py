@@ -234,8 +234,6 @@ class FixedTiptoeHomomorphicRanking:
         results = []
         
         for doc_idx, doc_vec in enumerate(db_vecs):
-            print(f"[BFV] Processing document {doc_idx + 1}/{len(db_vecs)}")
-            
             # Ensure doc_vec is int64
             doc_arr = np.array(doc_vec, dtype=np.int64)
             

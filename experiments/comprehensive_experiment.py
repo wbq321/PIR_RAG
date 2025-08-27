@@ -652,6 +652,65 @@ class PIRExperimentRunner:
 
             pd.DataFrame(scalability_data).to_csv(csv_path, index=False)
 
+        elif experiment_name == "retrieval_performance":
+            # Create retrieval performance summary CSV
+            retrieval_data = []
+            
+            # Extract experiment info
+            exp_info = results.get('experiment_info', {})
+            base_row = {
+                'n_documents': exp_info.get('n_docs', 'N/A'),
+                'n_queries': exp_info.get('n_queries', 'N/A'),
+                'top_k': exp_info.get('top_k', 'N/A'),
+                'embed_dim': exp_info.get('embed_dim', 'N/A'),
+                'data_type': exp_info.get('data_type', 'N/A')
+            }
+            
+            # Process each system's results
+            for system_key, system_name in [('pir_rag', 'PIR-RAG'), 
+                                          ('graph_pir', 'Graph-PIR'), 
+                                          ('tiptoe', 'Tiptoe')]:
+                row = base_row.copy()
+                row['system'] = system_name
+                
+                system_results = results.get(system_key)
+                if system_results is not None:
+                    row.update({
+                        'setup_time': system_results.get('setup_time', 'N/A'),
+                        'avg_query_time': system_results.get('avg_query_time', 'N/A'),
+                        'std_query_time': system_results.get('std_query_time', 'N/A'),
+                        'avg_upload_bytes': system_results.get('avg_upload_bytes', 'N/A'),
+                        'avg_download_bytes': system_results.get('avg_download_bytes', 'N/A'),
+                        'recall_at_1': system_results.get('recall_at_1', 'N/A'),
+                        'recall_at_5': system_results.get('recall_at_5', 'N/A'),
+                        'recall_at_10': system_results.get('recall_at_10', 'N/A'),
+                        'precision_at_1': system_results.get('precision_at_1', 'N/A'),
+                        'precision_at_5': system_results.get('precision_at_5', 'N/A'),
+                        'precision_at_10': system_results.get('precision_at_10', 'N/A'),
+                        'ndcg_at_10': system_results.get('ndcg_at_10', 'N/A'),
+                        'mrr': system_results.get('mrr', 'N/A')
+                    })
+                else:
+                    row.update({
+                        'setup_time': 'Error',
+                        'avg_query_time': 'Error',
+                        'std_query_time': 'Error',
+                        'avg_upload_bytes': 'Error',
+                        'avg_download_bytes': 'Error',
+                        'recall_at_1': 'Error',
+                        'recall_at_5': 'Error',
+                        'recall_at_10': 'Error',
+                        'precision_at_1': 'Error',
+                        'precision_at_5': 'Error',
+                        'precision_at_10': 'Error',
+                        'ndcg_at_10': 'Error',
+                        'mrr': 'Error'
+                    })
+                
+                retrieval_data.append(row)
+            
+            pd.DataFrame(retrieval_data).to_csv(csv_path, index=False)
+
         print(f"Results saved to:")
         print(f"  JSON: {json_path}")
         print(f"  CSV: {csv_path}")
