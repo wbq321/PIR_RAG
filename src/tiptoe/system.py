@@ -102,11 +102,17 @@ class TiptoeSystem:
         self.hint_system = TiptoeHintSystem(self.crypto_scheme)
         # Add real homomorphic ranking if Pyfhel is available
         try:
-            self.homomorphic_ranking = TiptoeHomomorphicRanking(scheme='BFV')
-            print("[Tiptoe] Using real Pyfhel BFV homomorphic encryption for ranking phase.")
-        except ImportError:
-            self.homomorphic_ranking = None
-            print("[Tiptoe] Pyfhel not available, using simulated ranking.")
+            from .crypto_fixed import FixedTiptoeHomomorphicRanking
+            self.homomorphic_ranking = FixedTiptoeHomomorphicRanking()
+            print("[Tiptoe] Using FIXED real Pyfhel BFV homomorphic encryption for ranking phase.")
+        except Exception as e:
+            print(f"[Tiptoe] Failed to initialize FIXED BFV: {e}")
+            try:
+                self.homomorphic_ranking = TiptoeHomomorphicRanking(scheme='BFV')
+                print("[Tiptoe] Using original Pyfhel BFV homomorphic encryption for ranking phase.")
+            except ImportError:
+                self.homomorphic_ranking = None
+                print("[Tiptoe] Pyfhel not available, using simulated ranking.")
         crypto_time = time.perf_counter() - crypto_start
 
         # Phase 3: CORRECTED - Prepare per-cluster databases (like Graph-PIR)
