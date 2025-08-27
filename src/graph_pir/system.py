@@ -44,6 +44,22 @@ class GraphPIRSystem:
         self.paillier_public_key = None
         self.paillier_private_key = None
 
+    @property
+    def graph_params(self):
+        """
+        GraphANN SearchKNN parameters (updated to match private-search-temp implementation).
+        
+        Returns GraphANN SearchKNN algorithm parameters:
+        - max_iterations: Maximum search steps (GraphANN maxStep)
+        - parallel: Number of parallel explorations per step (GraphANN parallel)
+        - ef_search: Search width parameter (GraphANN ef parameter)
+        """
+        return {
+            'max_iterations': 10,  # GraphANN maxStep (was 20 in old implementation)
+            'parallel': 3,         # GraphANN parallel explorations per step (was nodes_per_step=5)  
+            'ef_search': 50        # GraphANN ef search width parameter (new)
+        }
+
     def _prepare_vector_database(self, vector_db: np.ndarray, embedding_dim: int,
                                 graph_dict: Dict) -> List[int]:
         """
