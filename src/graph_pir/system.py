@@ -362,9 +362,9 @@ class GraphPIRSystem:
         import sys
         import os
         sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-        from tiptoe.crypto_fixed import SimpleLinearHomomorphicScheme
+        from tiptoe.crypto_fixed import SimpleLinearHomomorphicPIR
         
-        url_pir_scheme = SimpleLinearHomomorphicScheme()
+        url_pir_scheme = SimpleLinearHomomorphicPIR(url_mode=True)
         
         upload_bytes = 0
         download_bytes = 0
@@ -374,42 +374,45 @@ class GraphPIRSystem:
 
         retrieved_urls = []
 
-        # Prepare all URLs for PIR database (like Tiptoe)
+        # Prepare all URLs for PIR database (convert to byte arrays like Tiptoe)
         all_urls = [f"https://example.com/doc_{i}" for i in range(len(self.documents))]
-        
-        # Setup PIR database with URLs
-        setup_start = time.perf_counter()
-        url_pir_scheme.setup_database(all_urls)
-        setup_time = time.perf_counter() - setup_start
-        server_time += setup_time
+        url_database = []
+        for url in all_urls:
+            # Convert URL to byte array (like Tiptoe's URL PIR)
+            url_bytes = [ord(c) for c in url.ljust(50)[:50]]  # Pad/truncate to 50 chars
+            url_database.append(url_bytes)
 
         # Retrieve each URL using fast PIR (much faster than per-document Paillier)
         for doc_idx in candidate_indices:
             # Generate PIR query (much faster than Paillier)
             query_start = time.perf_counter()
-            pir_query = url_pir_scheme.generate_query(doc_idx)
+            pir_query, query_metrics = url_pir_scheme.create_pir_query(doc_idx, len(url_database))
             query_gen_time = time.perf_counter() - query_start
             encryption_time += query_gen_time
 
-            # Calculate upload size (much smaller than Paillier queries)
-            query_upload = len(str(pir_query))
-            upload_bytes += query_upload
+            # Add query metrics
+            upload_bytes += query_metrics['upload_bytes']
 
             # Server processes PIR query (much faster than homomorphic operations)
             server_start = time.perf_counter()
-            encrypted_response = url_pir_scheme.process_query(pir_query)
+            encrypted_response, response_metrics = url_pir_scheme.process_pir_query(pir_query, url_database)
             server_processing_time = time.perf_counter() - server_start
             server_time += server_processing_time
 
-            # Calculate download size (much smaller than Paillier responses)
-            response_download = len(str(encrypted_response))
-            download_bytes += response_download
+            # Add response metrics
+            download_bytes += response_metrics['download_bytes']
 
             # Client decrypts response to get URL (much faster than Paillier)
             decrypt_start = time.perf_counter()
-            url_text = url_pir_scheme.decrypt_response(encrypted_response)
+            url_bytes = url_pir_scheme.decrypt_pir_response(encrypted_response)
             decrypt_time = time.perf_counter() - decrypt_start
             decryption_time += decrypt_time
+
+            # Convert bytes back to URL string
+            if isinstance(url_bytes, list):
+                url_text = ''.join(chr(b) for b in url_bytes if 0 <= b <= 127).strip()
+            else:
+                url_text = f"https://example.com/doc_{doc_idx}"
 
             # Fallback URL if decryption fails
             if not url_text or not url_text.strip():
