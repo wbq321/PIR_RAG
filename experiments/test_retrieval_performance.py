@@ -155,7 +155,7 @@ class RetrievalPerformanceTester:
                 pir_time = time.perf_counter() - pir_start
                 
                 rerank_start = time.perf_counter()
-                final_results = client.rerank_documents(query_embedding, doc_tuples, top_k=top_k)
+                final_results = client.rerank_documents(query_tensor, doc_tuples, top_k=top_k)
                 rerank_time = time.perf_counter() - rerank_start
                 
                 # Extract document indices from URLs (assuming format https://example.com/doc_{idx})

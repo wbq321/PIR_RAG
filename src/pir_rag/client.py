@@ -318,12 +318,39 @@ class PIRRAGClient:
         urls = [doc[0] for doc in doc_tuples]
         embeddings = [doc[1] for doc in doc_tuples]
         
-        # Convert embeddings to torch tensor
-        doc_embeddings = torch.tensor(np.array(embeddings), dtype=torch.float32)
+        print(f"[PIR-RAG] DEBUG: Query embedding type: {type(query_embedding)}")
+        print(f"[PIR-RAG] DEBUG: First embedding type: {type(embeddings[0]) if embeddings else 'No embeddings'}")
         
-        # Normalize embeddings
-        query_embedding = query_embedding / torch.norm(query_embedding)
-        doc_embeddings = doc_embeddings / torch.norm(doc_embeddings, dim=1, keepdim=True)
+        # Convert embeddings to torch tensor with error handling
+        try:
+            # Ensure all embeddings are numpy arrays
+            embeddings_array = []
+            for i, emb in enumerate(embeddings):
+                if isinstance(emb, torch.Tensor):
+                    embeddings_array.append(emb.detach().cpu().numpy())
+                elif isinstance(emb, np.ndarray):
+                    embeddings_array.append(emb)
+                else:
+                    print(f"[PIR-RAG] DEBUG: Converting embedding {i} from {type(emb)} to numpy")
+                    embeddings_array.append(np.array(emb))
+            
+            doc_embeddings = torch.tensor(np.array(embeddings_array), dtype=torch.float32)
+            print(f"[PIR-RAG] DEBUG: Doc embeddings shape: {doc_embeddings.shape}")
+        except Exception as e:
+            print(f"[PIR-RAG] ERROR: Failed to convert embeddings to tensor: {e}")
+            raise
+        
+        # Normalize embeddings with error handling
+        try:
+            print(f"[PIR-RAG] DEBUG: Query embedding shape: {query_embedding.shape}")
+            query_embedding = query_embedding / torch.norm(query_embedding)
+            doc_embeddings = doc_embeddings / torch.norm(doc_embeddings, dim=1, keepdim=True)
+            print(f"[PIR-RAG] DEBUG: Normalization successful")
+        except Exception as e:
+            print(f"[PIR-RAG] ERROR: Failed to normalize embeddings: {e}")
+            print(f"[PIR-RAG] DEBUG: Query embedding type: {type(query_embedding)}")
+            print(f"[PIR-RAG] DEBUG: Doc embeddings type: {type(doc_embeddings)}")
+            raise
         
         # Compute similarities and get top-k
         similarities = torch.mm(query_embedding.unsqueeze(0), doc_embeddings.T)[0]
