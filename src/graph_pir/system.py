@@ -115,9 +115,11 @@ class GraphPIRSystem:
 
         if graph_params is None:
             graph_params = {
-                'k_neighbors': 16,
+                'k_neighbors': 32,
                 'ef_construction': 200,
-                'max_connections': 16
+                'max_connections': 32,
+                'max_iterations': 20,
+                'nodes_per_step': 5
             }
 
         print("[GraphPIR] Setting up Graph-PIR system...")
@@ -126,6 +128,10 @@ class GraphPIRSystem:
         # Store data
         self.embeddings = embeddings
         self.documents = documents
+
+        # Store traversal parameters
+        self.max_iterations = graph_params.get('max_iterations', 10)
+        self.nodes_per_step = graph_params.get('nodes_per_step', 5)
 
         # 1. Set up graph-based search
         print("[GraphPIR] Building graph structure...")
@@ -295,8 +301,9 @@ class GraphPIRSystem:
             dist = self._calculate_distance(query_embedding, self.embeddings[node])
             candidates.append((node, dist))
 
-        max_iterations = 10  # Limit graph traversal steps
-        nodes_per_step = 5   # Number of neighbors to explore per step
+        # Use configurable traversal parameters
+        max_iterations = self.max_iterations
+        nodes_per_step = self.nodes_per_step
 
         for iteration in range(max_iterations):
             if len(candidates) >= num_candidates:
@@ -367,20 +374,20 @@ class GraphPIRSystem:
     def _pir_query_graph_nodes(self, node_indices: List[int]) -> List[Tuple[np.ndarray, List[int]]]:
         """
         REAL PIR query that returns (embedding, neighbors) for each node using actual encryption.
-        
+
         Uses the PianoPIR system with real cryptographic operations like private-search-temp.
-        
+
         Args:
             node_indices: List of node IDs to query
-            
+
         Returns:
             List of (embedding, neighbors) tuples retrieved via encrypted PIR
         """
         if not self.vector_pir_client or not self.vector_pir_server:
             raise ValueError("Vector PIR not properly initialized")
-        
+
         retrieved_data = []
-        
+
         # Use REAL PIR to query each node
         for node_id in node_indices:
             try:
@@ -388,19 +395,19 @@ class GraphPIRSystem:
                 pir_query_start = time.perf_counter()
                 offsets, encrypted_query = self.vector_pir_client.create_query(node_id)
                 query_gen_time = time.perf_counter() - pir_query_start
-                
+
                 # Server processes the encrypted query using homomorphic operations
                 server_start = time.perf_counter()
                 encrypted_response = self.vector_pir_server.private_query(offsets)
                 server_time = time.perf_counter() - server_start
-                
+
                 # Client decrypts the response to get (embedding + neighbors)
                 decrypt_start = time.perf_counter()
                 decrypted_data = self.vector_pir_client.decrypt_response(
                     encrypted_response, encrypted_query, node_id
                 )
                 decrypt_time = time.perf_counter() - decrypt_start
-                
+
                 # Parse the decrypted data into embedding and neighbors
                 if decrypted_data and len(decrypted_data) > 0:
                     embedding, neighbors = self._parse_pir_response(decrypted_data)
@@ -410,26 +417,26 @@ class GraphPIRSystem:
                     zero_embedding = np.zeros(len(self.embeddings[0]))
                     empty_neighbors = [-1] * 16
                     retrieved_data.append((zero_embedding, empty_neighbors))
-                    
+
             except Exception as e:
                 print(f"[GraphPIR] PIR query failed for node {node_id}: {e}")
                 # Fallback for failed PIR
                 zero_embedding = np.zeros(len(self.embeddings[0]))
                 empty_neighbors = [-1] * 16
                 retrieved_data.append((zero_embedding, empty_neighbors))
-        
+
         return retrieved_data
-    
+
     def _parse_pir_response(self, decrypted_data) -> Tuple[np.ndarray, List[int]]:
         """
         Parse PIR response data into embedding vector and neighbor list.
-        
+
         Expected format: [embedding_bytes][neighbor_bytes]
-        - Embedding: float32 array (embedding_dim * 4 bytes)  
+        - Embedding: float32 array (embedding_dim * 4 bytes)
         - Neighbors: int32 array (16 * 4 bytes)
         """
         import struct
-        
+
         try:
             # Convert decrypted data to bytes if needed
             if isinstance(decrypted_data, list):
@@ -439,28 +446,28 @@ class GraphPIRSystem:
                     byte_data += struct.pack('<Q', uint64_val)
             else:
                 byte_data = decrypted_data
-            
+
             embedding_dim = len(self.embeddings[0])
             embedding_bytes = embedding_dim * 4  # 4 bytes per float32
             neighbor_bytes = 16 * 4  # 16 neighbors * 4 bytes per int32
-            
+
             # Extract embedding
             emb_data = byte_data[:embedding_bytes]
             embedding = np.frombuffer(emb_data, dtype=np.float32)
-            
-            # Extract neighbors  
+
+            # Extract neighbors
             neighbor_data = byte_data[embedding_bytes:embedding_bytes + neighbor_bytes]
             neighbors_array = np.frombuffer(neighbor_data, dtype=np.int32)
             neighbors = neighbors_array.tolist()
-            
+
             # Ensure we have exactly the right dimensions
             if len(embedding) != embedding_dim:
                 embedding = np.zeros(embedding_dim, dtype=np.float32)
             if len(neighbors) != 16:
                 neighbors = [-1] * 16
-                
+
             return embedding, neighbors
-            
+
         except Exception as e:
             print(f"[GraphPIR] Failed to parse PIR response: {e}")
             # Return fallback data

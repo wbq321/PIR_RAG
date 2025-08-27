@@ -224,7 +224,8 @@ class PIRExperimentRunner:
         print(f"Running Graph-PIR experiment with {len(documents)} docs")
 
         if graph_params is None:
-            graph_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16}
+            graph_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16,
+                           'max_iterations': 10, 'nodes_per_step': 5}
 
         print(f"  Graph params: {graph_params}")
 
@@ -353,7 +354,7 @@ class PIRExperimentRunner:
             'embedding_dim': embeddings.shape[1]
         }
 
-    def run_scalability_experiment(self, doc_sizes: List[int] = [1000, 2000, 3000, 4000, 5000],
+    def run_scalability_experiment(self, doc_sizes: List[int] = [1000, 2000, 3000, 4000],
                                   n_queries: int = 5, embed_dim: int = 384,
                                   embeddings_path: str = None, corpus_path: str = None,
                                   pir_rag_params: Dict = None, graph_pir_params: Dict = None,
@@ -452,7 +453,8 @@ class PIRExperimentRunner:
         if base_pir_rag_params is None:
             base_pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated based on n_docs
         if base_graph_pir_params is None:
-            base_graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16}
+            base_graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16,
+                                   'max_iterations': 10, 'nodes_per_step': 5}
 
         # Load or generate test data
         embeddings, documents = self.load_or_generate_data(
@@ -685,6 +687,10 @@ def main():
                        help="Maximum connections per node in HNSW graph")
     parser.add_argument("--graph-pir-ef-search", type=int, default=50,
                        help="ef parameter for graph search")
+    parser.add_argument("--graph-pir-max-iterations", type=int, default=10,
+                       help="Maximum number of graph traversal iterations/turns")
+    parser.add_argument("--graph-pir-nodes-per-step", type=int, default=5,
+                       help="Number of neighbors to explore per iteration step")
 
     # Tiptoe specific arguments
     parser.add_argument("--tiptoe-k-clusters", type=int, default=None,
@@ -735,7 +741,9 @@ def main():
             graph_params = {
                 'k_neighbors': args.graph_pir_k_neighbors,
                 'ef_construction': args.graph_pir_ef_construction,
-                'max_connections': args.graph_pir_max_connections
+                'max_connections': args.graph_pir_max_connections,
+                'max_iterations': args.graph_pir_max_iterations,
+                'nodes_per_step': args.graph_pir_nodes_per_step
             }
             results['graph_pir'] = runner.run_graph_pir_experiment(
                 embeddings, documents, queries,
@@ -776,7 +784,9 @@ def main():
         graph_pir_params = {
             'k_neighbors': args.graph_pir_k_neighbors,
             'ef_construction': args.graph_pir_ef_construction,
-            'max_connections': args.graph_pir_max_connections
+            'max_connections': args.graph_pir_max_connections,
+            'max_iterations': args.graph_pir_max_iterations,
+            'nodes_per_step': args.graph_pir_nodes_per_step
         }
         tiptoe_params = {
             'k_clusters': args.tiptoe_k_clusters,
@@ -786,7 +796,6 @@ def main():
         }
 
         scalability_results = runner.run_scalability_experiment(
-            doc_sizes=[100, 500, 1000, 2000],
             n_queries=5,
             embed_dim=args.embed_dim,
             embeddings_path=args.embeddings_path,
@@ -808,7 +817,9 @@ def main():
         base_graph_pir_params = {
             'k_neighbors': args.graph_pir_k_neighbors,
             'ef_construction': args.graph_pir_ef_construction,
-            'max_connections': args.graph_pir_max_connections
+            'max_connections': args.graph_pir_max_connections,
+            'max_iterations': args.graph_pir_max_iterations,
+            'nodes_per_step': args.graph_pir_nodes_per_step
         }
 
         sensitivity_results = runner.run_parameter_sensitivity_experiment(
