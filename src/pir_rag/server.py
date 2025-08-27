@@ -44,6 +44,10 @@ class PIRRAGServer:
         labels = kmeans.fit_predict(embeddings)
         self.centroids = torch.tensor(kmeans.cluster_centers_, dtype=torch.float32)
 
+        # Store original embeddings and URLs for semantic ranking
+        self.document_embeddings = embeddings  # Keep original embeddings
+        self.document_urls = [f"https://example.com/doc_{i}" for i in range(len(documents_text))]
+        
         # Group documents by cluster but store URLs instead of document text
         clusters_urls = [[] for _ in range(n_clusters)]
         self.doc_to_cluster_map = {i: labels[i] for i in range(len(documents_text))}
@@ -99,6 +103,32 @@ class PIRRAGServer:
             encrypted_response.append(chunk_result)
         
         return encrypted_response
+    
+    def get_document_embeddings_for_urls(self, urls: List[str]) -> np.ndarray:
+        """
+        Get document embeddings for given URLs to enable semantic ranking.
+        
+        Args:
+            urls: List of document URLs
+            
+        Returns:
+            Array of document embeddings corresponding to the URLs
+        """
+        embeddings = []
+        for url in urls:
+            # Extract document index from URL (format: https://example.com/doc_X)
+            try:
+                doc_idx = int(url.split('_')[-1])
+                if 0 <= doc_idx < len(self.document_embeddings):
+                    embeddings.append(self.document_embeddings[doc_idx])
+                else:
+                    # Fallback: use zero embedding
+                    embeddings.append(np.zeros(self.document_embeddings.shape[1]))
+            except (ValueError, IndexError):
+                # Fallback: use zero embedding
+                embeddings.append(np.zeros(self.document_embeddings.shape[1]))
+        
+        return np.array(embeddings)
     
     def get_cluster_info(self) -> Dict[str, Any]:
         """Get information about the clustering setup."""

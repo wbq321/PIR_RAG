@@ -174,22 +174,36 @@ class PIRRAGClient:
         return candidate_urls, metrics
     
     def rerank_documents(self, query_embedding: torch.Tensor, urls: List[str], 
-                        model, top_k: int = 10) -> List[str]:
+                        server, top_k: int = 10) -> List[str]:
         """
-        Return top-k URLs (no semantic re-ranking possible with URLs alone).
+        Re-rank retrieved URLs using document embeddings from server.
         
         Args:
-            query_embedding: Query embedding (not used for URL ranking)
+            query_embedding: Query embedding
             urls: List of candidate URLs
-            model: SentenceTransformer model (not used for URLs)
+            server: PIRRAGServer instance to get document embeddings
             top_k: Number of top URLs to return
             
         Returns:
-            List of top-k URLs (in original retrieval order)
+            List of top-k re-ranked URLs
         """
         if not urls:
             return []
         
-        # For URLs, we can't do semantic re-ranking, so just return top-k in order
+        # Get document embeddings from server for semantic ranking
+        doc_embeddings = server.get_document_embeddings_for_urls(urls)
+        doc_embeddings = torch.tensor(doc_embeddings, dtype=torch.float32)
+        
+        # Normalize embeddings
+        query_embedding = query_embedding / torch.norm(query_embedding)
+        doc_embeddings = doc_embeddings / torch.norm(doc_embeddings, dim=1, keepdim=True)
+        
+        # Compute similarities and get top-k
+        similarities = torch.mm(query_embedding.unsqueeze(0), doc_embeddings.T)[0]
         top_k_value = min(top_k, len(urls))
+        
+        if top_k_value > 0:
+            top_k_indices = torch.topk(similarities, k=top_k_value).indices
+            return [urls[i] for i in top_k_indices]
+        
         return urls[:top_k_value]
