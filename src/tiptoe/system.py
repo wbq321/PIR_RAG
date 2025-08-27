@@ -253,8 +253,12 @@ class TiptoeSystem:
             }
             total_document_chunks += len(cluster_docs)
             
-            # 3. PIR system for this cluster
-            pir_system = LinearHomomorphicPIR(self.crypto_scheme)
+            # 3. PIR system for this cluster (use URL mode for better byte precision)
+            crypto_scheme = LinearHomomorphicScheme(
+                security_param=min(self.security_param, 64),  # Smaller for efficiency
+                url_mode=True  # Optimized for URL byte operations
+            )
+            pir_system = LinearHomomorphicPIR(crypto_scheme)
             self.pir_systems[cluster_id] = pir_system
 
         # Calculate storage metrics

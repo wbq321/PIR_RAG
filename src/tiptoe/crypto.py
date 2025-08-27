@@ -25,17 +25,25 @@ class LinearHomomorphicScheme:
     with PIR-RAG and Graph-PIR systems.
     """
 
-    def __init__(self, security_param: int = 128, modulus: int = None):
+    def __init__(self, security_param: int = 128, modulus: int = None, url_mode: bool = False):
         """
         Initialize linear homomorphic encryption scheme.
 
         Args:
             security_param: Security parameter (bit length)
             modulus: Modulus for operations (auto-calculated if None)
+            url_mode: If True, optimize parameters for URL byte operations
         """
         self.security_param = security_param
-        self.modulus = modulus or (1 << 32)  # 32-bit modulus
-        self.noise_bound = 100  # Simplified noise parameter
+        self.url_mode = url_mode
+        
+        if url_mode:
+            # For URL operations, use smaller modulus and noise for better precision
+            self.modulus = modulus or (1 << 16)  # 16-bit modulus for URL bytes
+            self.noise_bound = 10  # Much smaller noise for byte operations
+        else:
+            self.modulus = modulus or (1 << 32)  # 32-bit modulus
+            self.noise_bound = 100  # Standard noise parameter
 
         # Generate keys
         self.public_key, self.private_key = self._generate_keys()
@@ -102,9 +110,13 @@ class LinearHomomorphicScheme:
         inner_product = (ciphertext['u'] @ self.private_key['secret']) % self.modulus
         plaintext = (ciphertext['v'] - inner_product) % self.modulus
 
-        # Handle negative values (convert back from modular arithmetic)
+        # Handle negative values and ensure result is in reasonable range
         if plaintext > self.modulus // 2:
             plaintext -= self.modulus
+        
+        # For URL operations, ensure bytes are in valid range [0, 255]
+        if self.url_mode:
+            plaintext = max(0, min(255, abs(plaintext)))
 
         return int(plaintext)
 
