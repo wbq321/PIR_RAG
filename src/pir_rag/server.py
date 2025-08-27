@@ -79,27 +79,29 @@ class PIRRAGServer:
             "max_chunks": MAX_CHUNKS_HOLDER[0]
         }
     
-    def handle_pir_query(self, encrypted_query: List, public_key) -> List:
+    def handle_pir_query(self, encrypted_query: List, crypto_scheme) -> List:
         """
-        Process an encrypted PIR query and return encrypted response.
+        Process an encrypted PIR query and return encrypted response using fast linear scheme.
         
         Args:
             encrypted_query: List of encrypted query values
-            public_key: Paillier public key for homomorphic operations
+            crypto_scheme: SimpleLinearHomomorphicScheme instance for homomorphic operations
             
         Returns:
             List of encrypted chunk responses
         """
-        print(f"    [Server] Processing PIR query with {len(encrypted_query)} clusters, {MAX_CHUNKS_HOLDER[0]} chunks...")
+        print(f"    [Server] Processing PIR query with {len(encrypted_query)} clusters, {MAX_CHUNKS_HOLDER[0]} chunks (fast linear scheme)...")
         
         # Perform homomorphic computation for each chunk position
         encrypted_response = []
         for chunk_db in self.pir_db_by_chunk:
-            # Compute sum of (chunk_value * encrypted_query_bit) for all clusters
-            chunk_result = public_key.encrypt(0)  # Start with encrypted zero
+            # Compute sum of (chunk_value * encrypted_query_bit) for all clusters using fast scheme
+            chunk_result = crypto_scheme.encrypt(0)  # Start with encrypted zero
             for i, chunk_value in enumerate(chunk_db):
                 if i < len(encrypted_query):
-                    chunk_result += chunk_value * encrypted_query[i]
+                    # Fast homomorphic multiplication and addition
+                    term = crypto_scheme.scalar_multiply(encrypted_query[i], int(chunk_value))
+                    chunk_result = crypto_scheme.add_encrypted(chunk_result, term)
             encrypted_response.append(chunk_result)
         
         return encrypted_response

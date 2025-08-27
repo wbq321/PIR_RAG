@@ -169,7 +169,7 @@ class PIRRAGExperimentRunner:
             
             # 3. Re-ranking
             final_docs = client.rerank_documents(
-                query_embedding, retrieved_docs, self.model, top_k=10
+                query_embedding, retrieved_docs, server, top_k=10
             )
             
             query_latency = time.perf_counter() - query_start_time

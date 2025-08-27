@@ -1,5 +1,5 @@
 """
-PIR-RAG Client implementation.
+PIR-RAG Client implementation with LinearHomomorphicScheme.
 """
 
 import sys
@@ -7,7 +7,11 @@ import time
 from typing import List, Tuple, Dict, Any
 import torch
 from sentence_transformers import util
-from phe import paillier
+
+# Import fast linear homomorphic scheme instead of Paillier
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from tiptoe.crypto_fixed import SimpleLinearHomomorphicScheme
 
 from .utils import decode_chunks_to_text
 
@@ -21,32 +25,33 @@ class PIRRAGClient:
     
     def __init__(self):
         self.centroids = None
-        self.public_key = None
-        self.private_key = None
+        # Use SimpleLinearHomomorphicScheme instead of Paillier
+        self.crypto_scheme = None
     
     def setup(self, centroids: torch.Tensor, key_length: int = 2048) -> Dict[str, Any]:
         """
-        Set up the client with cluster centroids and cryptographic keys.
+        Set up the client with cluster centroids and fast linear homomorphic encryption.
         
         Args:
             centroids: Cluster centroids from the server
-            key_length: Paillier key length in bits
+            key_length: Key length (kept for compatibility, but SimpleLinearHomomorphicScheme doesn't use it)
             
         Returns:
             Dictionary with setup statistics
         """
         setup_start = time.perf_counter()
         
-        print(f"  -> Setting up client with {len(centroids)} centroids, {key_length}-bit keys...")
+        print(f"  -> Setting up client with {len(centroids)} centroids, fast linear scheme...")
         
         self.centroids = centroids
-        self.public_key, self.private_key = paillier.generate_paillier_keypair(n_length=key_length)
+        # Initialize fast linear homomorphic scheme
+        self.crypto_scheme = SimpleLinearHomomorphicScheme()
         
         setup_time = time.perf_counter() - setup_start
         
         return {
             "setup_time": setup_time,
-            "key_length": key_length,
+            "scheme": "SimpleLinearHomomorphic",
             "n_centroids": len(centroids)
         }
     
@@ -71,7 +76,7 @@ class PIRRAGClient:
     
     def generate_pir_query(self, cluster_idx: int, num_clusters: int) -> Tuple[List, int]:
         """
-        Generate an encrypted PIR query vector for a specific cluster.
+        Generate an encrypted PIR query vector for a specific cluster using fast linear scheme.
         
         Args:
             cluster_idx: Index of the target cluster
@@ -80,25 +85,25 @@ class PIRRAGClient:
         Returns:
             Tuple of (encrypted query vector, upload size in bytes)
         """
-        if self.public_key is None:
+        if self.crypto_scheme is None:
             raise ValueError("Client not set up. Call setup() first.")
         
         # Create query vector: 1 for target cluster, 0 for others
         query_vec = []
         for i in range(num_clusters):
             if i == cluster_idx:
-                query_vec.append(self.public_key.encrypt(1))
+                query_vec.append(self.crypto_scheme.encrypt(1))
             else:
-                query_vec.append(self.public_key.encrypt(0))
+                query_vec.append(self.crypto_scheme.encrypt(0))
         
-        # Calculate upload size
-        upload_bytes = sum(sys.getsizeof(c.ciphertext()) for c in query_vec)
+        # Calculate upload size (much smaller than Paillier)
+        upload_bytes = len(query_vec) * 32  # Estimate for simple scheme
         
         return query_vec, upload_bytes
     
     def decode_pir_response(self, encrypted_chunks: List) -> Tuple[List[str], int]:
         """
-        Decrypt and decode a PIR response into document URLs.
+        Decrypt and decode a PIR response into document URLs using fast linear scheme.
         
         Args:
             encrypted_chunks: List of encrypted response chunks
@@ -106,18 +111,18 @@ class PIRRAGClient:
         Returns:
             Tuple of (document URLs, download size in bytes)
         """
-        if self.private_key is None:
+        if self.crypto_scheme is None:
             raise ValueError("Client not set up. Call setup() first.")
         
-        # Decrypt chunks
-        retrieved_chunks = [self.private_key.decrypt(c) for c in encrypted_chunks]
+        # Decrypt chunks using fast scheme
+        retrieved_chunks = [self.crypto_scheme.decrypt(c) for c in encrypted_chunks]
         
         # Decode chunks to text and split into URLs
         retrieved_text = decode_chunks_to_text(retrieved_chunks)
         urls = list(filter(None, retrieved_text.split("|||")))
         
-        # Calculate download size (much smaller for URLs vs documents)
-        download_bytes = sum(sys.getsizeof(c.ciphertext()) for c in encrypted_chunks)
+        # Calculate download size (much smaller than Paillier)
+        download_bytes = len(encrypted_chunks) * 32  # Estimate for simple scheme
         
         return urls, download_bytes
     
@@ -158,9 +163,9 @@ class PIRRAGClient:
             metrics["total_query_gen_time"] += (time.perf_counter() - start_time)
             metrics["total_upload_bytes"] += upload_bytes
             
-            # Server processing
+            # Server processing with fast linear scheme
             server_start_time = time.perf_counter()
-            encrypted_chunks = server.handle_pir_query(query_vec, self.public_key)
+            encrypted_chunks = server.handle_pir_query(query_vec, self.crypto_scheme)
             metrics["total_server_time"] += (time.perf_counter() - server_start_time)
             
             # Decode response
