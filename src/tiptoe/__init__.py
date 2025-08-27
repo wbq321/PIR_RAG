@@ -7,16 +7,22 @@ Python implementation of Tiptoe private search system based on:
 Architecture:
 - Phase 1: Offline preprocessing with PCA + clustering + cryptographic setup
 - Phase 2: Two-phase PIR (cluster ranking + document retrieval)
-- Linearly homomorphic encryption for privacy
+- SimplePIR-like system for realistic performance
+
+Updated to use SimplePIR-inspired PIR implementation instead of Paillier.
 """
 
 from .system import TiptoeSystem
-from .crypto import LinearHomomorphicPIR, LinearHomomorphicScheme
+from .crypto import LinearHomomorphicScheme, TiptoeHomomorphicRanking
 from .clustering import TiptoeClustering
+from .simplepir import PIRServer, PIRClient, Matrix
 
 __all__ = [
     'TiptoeSystem',
-    'LinearHomomorphicPIR',
-    'LinearHomomorphicScheme',
-    'TiptoeClustering'
+    'LinearHomomorphicScheme', 
+    'TiptoeHomomorphicRanking',
+    'TiptoeClustering',
+    'PIRServer',
+    'PIRClient',
+    'Matrix'
 ]

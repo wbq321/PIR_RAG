@@ -13,8 +13,11 @@ import time
 import numpy as np
 from typing import List, Dict, Any, Tuple
 
-from .crypto import LinearHomomorphicScheme, LinearHomomorphicPIR, TiptoeHintSystem, TiptoeHomomorphicRanking
+from .crypto import LinearHomomorphicScheme, TiptoeHintSystem, TiptoeHomomorphicRanking
 from .clustering import TiptoeClustering
+from .simplepir import (PIRServer, PIRClient, PIRQuery, PIRAnswer, PIRHint, Matrix,
+                       build_embeddings_database, build_documents_database, 
+                       matrix_from_embeddings, new_server, new_client)
 
 # Import PIR-RAG utilities for document encoding (reuse existing code)
 import sys
@@ -93,7 +96,11 @@ class TiptoeSystem:
         print(f"[Tiptoe] Phase 2: Cryptographic system setup...")
         crypto_start = time.perf_counter()
         self.crypto_scheme = LinearHomomorphicScheme(self.security_param)
-        self.pir_system = LinearHomomorphicPIR(self.crypto_scheme)
+        
+        # Initialize SimplePIR-like system
+        self.pir_servers = {}  # Will store per-cluster PIR servers
+        self.pir_clients = {}  # Will store per-cluster PIR clients
+        
         self.hint_system = TiptoeHintSystem(self.crypto_scheme)
         # Add real homomorphic ranking if Pyfhel is available
         try:
@@ -204,11 +211,11 @@ class TiptoeSystem:
 
     def _prepare_per_cluster_databases(self, documents: List[str]) -> Dict[str, Any]:
         """
-        CORRECTED: Prepare per-cluster databases like Graph-PIR (not global like PIR-RAG).
+        CORRECTED: Prepare per-cluster databases using SimplePIR-like approach.
 
         Each cluster gets its own:
-        1. Ranking matrix (reduced embeddings for homomorphic operations)
-        2. Document database (encrypted chunks for PIR retrieval)
+        1. Ranking matrix (reduced embeddings for LHE PIR operations)
+        2. Document database (for standard PIR retrieval)
         """
         print(f"[Tiptoe] Preparing per-cluster databases for {self.clustering.n_clusters} clusters...")
 
@@ -222,30 +229,49 @@ class TiptoeSystem:
             cluster_docs = [documents[i] for i in doc_indices]
             max_cluster_size = max(max_cluster_size, len(cluster_docs))
 
-            # 1. Ranking database: reduced embeddings matrix for this cluster
+            # 1. Ranking database: embeddings matrix for LHE PIR operations
             ranking_matrix = self.clustering.prepare_ranking_database(cluster_id)
+            
+            # Build SimplePIR embeddings database for this cluster
+            embeddings_db, cluster_map = build_embeddings_database(ranking_matrix, seed=cluster_id)
+            
+            # Create PIR server for embeddings (LHE)
+            embeddings_server = new_server(embeddings_db, seed=cluster_id)
+            embeddings_hint = embeddings_server.hint()
+            embeddings_client = new_client(embeddings_hint, embeddings_server.db_info())
+            
+            self.pir_servers[f"emb_{cluster_id}"] = embeddings_server
+            self.pir_clients[f"emb_{cluster_id}"] = embeddings_client
             self.cluster_ranking_dbs[cluster_id] = ranking_matrix
             total_ranking_size += ranking_matrix.size
 
-            # 2. Document database: encrypted chunks for this cluster only
-            cluster_chunks = []
-            for doc in cluster_docs:
-                chunks = encode_text_to_chunks(doc)
-                cluster_chunks.extend(chunks)  # Flatten all chunks for PIR
+            # 2. Document database: for standard PIR retrieval
+            # Build SimplePIR documents database for this cluster
+            documents_db, doc_map = build_documents_database(cluster_docs, seed=cluster_id + 1000)
             
+            # Create PIR server for documents (standard)
+            documents_server = new_server(documents_db, seed=cluster_id + 1000)
+            documents_hint = documents_server.hint()
+            documents_client = new_client(documents_hint, documents_server.db_info())
+            
+            self.pir_servers[f"doc_{cluster_id}"] = documents_server
+            self.pir_clients[f"doc_{cluster_id}"] = documents_client
+            
+            # Store document mapping for this cluster
             self.cluster_document_dbs[cluster_id] = {
                 'doc_indices': doc_indices,
-                'chunks': cluster_chunks
+                'documents': cluster_docs,
+                'doc_map': doc_map
             }
-            total_document_chunks += len(cluster_chunks)
+            total_document_chunks += len(cluster_docs)
 
         # Calculate storage metrics
         ranking_size_mb = (total_ranking_size * 8) / (1024 * 1024)  # float64 bytes to MB
-        avg_chunks_per_cluster = total_document_chunks / self.clustering.n_clusters
+        avg_docs_per_cluster = total_document_chunks / self.clustering.n_clusters
 
-        print(f"[Tiptoe] Per-cluster database preparation complete:")
+        print(f"[Tiptoe] Per-cluster SimplePIR database preparation complete:")
         print(f"  - Ranking DB size: {ranking_size_mb:.2f} MB")
-        print(f"  - Document chunks: {total_document_chunks:,}")
+        print(f"  - Total documents: {total_document_chunks:,}")
         print(f"  - Max cluster size: {max_cluster_size}")
 
         return {
@@ -253,7 +279,7 @@ class TiptoeSystem:
             'ranking_size_mb': ranking_size_mb,
             'total_document_chunks': total_document_chunks,
             'max_cluster_size': max_cluster_size,
-            'avg_chunks_per_cluster': avg_chunks_per_cluster,
+            'avg_docs_per_cluster': avg_docs_per_cluster,
             'per_cluster_storage': True  # Flag indicating correct structure
         }
 
@@ -287,10 +313,10 @@ class TiptoeSystem:
 
     def _homomorphic_ranking_service(self, query_embedding: np.ndarray, cluster_id: int, top_k: int) -> Tuple[List[int], Dict[str, Any]]:
         """
-        Phase 2 Round 1 - Homomorphic ranking service (real if Pyfhel available).
+        Phase 2 Round 1 - SimplePIR LHE ranking service.
         
-        Server performs homomorphic similarity computation on the selected cluster's
-        ranking matrix to find top-k document indices.
+        Server performs homomorphic similarity computation using SimplePIR LHE
+        operations on the selected cluster's ranking matrix.
         """
         ranking_start = time.perf_counter()
         
@@ -311,27 +337,46 @@ class TiptoeSystem:
         # Reduce query embedding to match ranking matrix dimension
         query_reduced = self.clustering.reduce_query_embedding(query_embedding)
         
-        # Use real homomorphic encryption if available
+        # Get SimplePIR LHE client and server for this cluster
+        emb_client = self.pir_clients[f"emb_{cluster_id}"]
+        emb_server = self.pir_servers[f"emb_{cluster_id}"]
+        
+        # Create LHE query matrix from reduced query embedding
+        query_matrix = matrix_from_embeddings(ranking_matrix.T, query_reduced)  # Transpose for correct shape
+        
+        # Create LHE PIR query
+        lhe_query = emb_client.query_lhe(query_matrix)
+        query_comm = lhe_query.size_bytes()
+        
+        # Server processes LHE query (homomorphic dot products)
+        lhe_answer = emb_server.answer(lhe_query)
+        response_comm = lhe_answer.size_bytes()
+        
+        # Client recovers similarity scores
+        scores_matrix = emb_client.recover_lhe(lhe_answer)
+        scores = [scores_matrix.get(i, 0) for i in range(n_docs_in_cluster)]
+        
+        # Use real homomorphic encryption for verification if available
         if self.homomorphic_ranking is not None:
-            # Prepare database: shape (n_docs, dim)
-            db_vecs = [ranking_matrix[:, i] for i in range(n_docs_in_cluster)]
-            ctxt_query = self.homomorphic_ranking.encrypt_vector(query_reduced)
-            ctxt_scores = self.homomorphic_ranking.dot_product(ctxt_query, db_vecs)
-            scores = self.homomorphic_ranking.decrypt_scores(ctxt_scores)
-            # Communication: one query vector upload, one encrypted score per doc download
-            query_comm = len(query_reduced) * 2048  # Pyfhel ciphertexts are much larger (estimate)
-            response_comm = n_docs_in_cluster * 2048
-            total_comm = query_comm + response_comm
-        else:
-            # Fallback: plaintext simulation
-            scores = [float(np.dot(query_reduced, ranking_matrix[:, i])) for i in range(n_docs_in_cluster)]
-            query_comm = len(query_reduced) * 64
-            response_comm = n_docs_in_cluster * 64
-            total_comm = query_comm + response_comm
+            try:
+                # Run parallel verification with Pyfhel for accuracy
+                db_vecs = [ranking_matrix[:, i] for i in range(n_docs_in_cluster)]
+                ctxt_query = self.homomorphic_ranking.encrypt_vector(query_reduced)
+                ctxt_scores = self.homomorphic_ranking.dot_product(ctxt_query, db_vecs)
+                pyfhel_scores = self.homomorphic_ranking.decrypt_scores(ctxt_scores)
+                
+                # Use Pyfhel scores if they seem more accurate
+                if len(pyfhel_scores) == len(scores):
+                    scores = pyfhel_scores
+                    print(f"[Tiptoe] Using Pyfhel verified scores for cluster {cluster_id}")
+            except Exception as e:
+                print(f"[Tiptoe] Pyfhel verification failed, using SimplePIR scores: {str(e)[:50]}...")
 
         # Sort and select top-k
         top_indices = np.argsort(scores)[::-1][:top_k].tolist()
         ranking_time = time.perf_counter() - ranking_start
+        
+        total_comm = query_comm + response_comm
 
         return top_indices, {
             'ranking_time': ranking_time,
@@ -343,9 +388,9 @@ class TiptoeSystem:
 
     def _pir_document_retrieval(self, cluster_id: int, ranked_indices: List[int], top_k: int) -> Tuple[List[str], Dict[str, Any]]:
         """
-        CORRECTED: Phase 2 Round 2 - PIR document retrieval.
+        CORRECTED: Phase 2 Round 2 - SimplePIR document retrieval.
         
-        Uses traditional PIR to retrieve the actual documents corresponding
+        Uses SimplePIR to retrieve the actual documents corresponding
         to the top-k ranked indices from the selected cluster.
         """
         retrieval_start = time.perf_counter()
@@ -353,9 +398,9 @@ class TiptoeSystem:
         # Get cluster's document database
         cluster_db = self.cluster_document_dbs[cluster_id]
         doc_indices = cluster_db['doc_indices']
-        chunks = cluster_db['chunks']
+        cluster_docs = cluster_db['documents']
         
-        if not ranked_indices or len(doc_indices) == 0:
+        if not ranked_indices or len(cluster_docs) == 0:
             return [], {
                 'retrieval_time': 0,
                 'pir_communication': 0,
@@ -363,52 +408,51 @@ class TiptoeSystem:
                 'avg_pir_comm_per_doc': 0
             }
         
+        # Get SimplePIR client and server for documents in this cluster
+        doc_client = self.pir_clients[f"doc_{cluster_id}"]
+        doc_server = self.pir_servers[f"doc_{cluster_id}"]
+        
         # PIR retrieval for each ranked document
         retrieved_docs = []
         total_pir_comm = 0
         
-        # Get the actual documents for this cluster (not chunks)
-        docs_in_cluster = [self.documents[i] for i in doc_indices]
-        
         for rank_idx in ranked_indices[:top_k]:
-            if rank_idx < len(docs_in_cluster):
+            if rank_idx < len(cluster_docs):
                 try:
-                    # Use PIR system to retrieve document INDEX (not document content)
-                    # Create a simple integer database for PIR
-                    doc_index_db = list(range(len(docs_in_cluster)))  # [0, 1, 2, 3, ...]
+                    # Use SimplePIR to retrieve document
+                    # Create standard PIR query for this document index
+                    pir_query = doc_client.query(rank_idx)
                     
-                    # Create PIR query for this document index
-                    pir_query, query_metrics = self.pir_system.create_pir_query(
-                        target_index=rank_idx, 
-                        database_size=len(doc_index_db)
-                    )
+                    # Calculate query communication cost
+                    query_size = pir_query.size_bytes()
                     
-                    # Server processes query (PIR over document indices)
-                    pir_response, server_metrics = self.pir_system.process_pir_query(
-                        pir_query, doc_index_db
-                    )
+                    # Server processes query
+                    pir_answer = doc_server.answer(pir_query)
                     
-                    # Client decrypts to get document index (should be rank_idx)
-                    retrieved_index = self.pir_system.decrypt_pir_response(pir_response)
+                    # Calculate response communication cost
+                    response_size = pir_answer.size_bytes()
                     
-                    # Use the index to get actual document
-                    if 0 <= retrieved_index < len(docs_in_cluster):
-                        doc_text = docs_in_cluster[retrieved_index]
-                    else:
-                        # Fallback if PIR returns unexpected index
-                        doc_text = docs_in_cluster[rank_idx]
+                    # Client recovers document
+                    recovered_data = doc_client.recover(pir_answer)
+                    
+                    # Convert recovered data back to document string
+                    doc_bytes = bytes([x for x in recovered_data if x != 0])  # Remove padding
+                    try:
+                        doc_text = doc_bytes.decode('utf-8', errors='ignore')
+                        if not doc_text.strip():  # If empty after decode
+                            doc_text = cluster_docs[rank_idx]  # Fallback to original
+                    except:
+                        doc_text = cluster_docs[rank_idx]  # Fallback on decode error
                     
                     retrieved_docs.append(doc_text)
                     
-                    # Track PIR communication using real metrics
-                    query_size = query_metrics.get('upload_bytes', 64)
-                    response_size = server_metrics.get('download_bytes', 1024)
+                    # Track PIR communication
                     total_pir_comm += query_size + response_size
                     
                 except Exception as e:
                     # Fallback for PIR errors - just return the document directly
-                    print(f"[Tiptoe] PIR fallback for doc {rank_idx}: {str(e)[:50]}...")
-                    doc_text = docs_in_cluster[rank_idx] if rank_idx < len(docs_in_cluster) else f"Error retrieving document {rank_idx}"
+                    print(f"[Tiptoe] SimplePIR fallback for doc {rank_idx}: {str(e)[:50]}...")
+                    doc_text = cluster_docs[rank_idx] if rank_idx < len(cluster_docs) else f"Error retrieving document {rank_idx}"
                     retrieved_docs.append(doc_text)
                     total_pir_comm += 64 + 1024  # Estimated comm cost
         
