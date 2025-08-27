@@ -338,7 +338,8 @@ class TiptoeSystem:
                 ctxt_query = self.homomorphic_ranking.encrypt_vector(query_reduced)
                 
                 # Compute homomorphic dot products with all documents in cluster
-                db_vectors = [ranking_matrix[i, :] for i in range(n_docs_in_cluster)]
+                # ranking_matrix has shape (dimensions, n_documents), so each column is a document
+                db_vectors = [ranking_matrix[:, i] for i in range(n_docs_in_cluster)]
                 ctxt_scores = self.homomorphic_ranking.dot_product(ctxt_query, db_vectors)
                 
                 # Decrypt to get similarity scores
@@ -354,11 +355,12 @@ class TiptoeSystem:
             except Exception as e:
                 print(f"[Tiptoe] Homomorphic ranking error: {str(e)[:50]}... falling back to simulated")
                 # Fallback to simulated ranking
-                scores = np.dot(ranking_matrix, query_reduced).tolist()
+                scores = (ranking_matrix.T @ query_reduced).tolist()
                 total_ranking_comm = 1024 + 512  # Estimated comm cost
         else:
             # Simulated homomorphic ranking (direct computation for testing)
-            scores = np.dot(ranking_matrix, query_reduced).tolist()
+            # ranking_matrix @ query_reduced gives dot products for all documents
+            scores = (ranking_matrix.T @ query_reduced).tolist()  # Transpose to get (n_docs, dims) @ (dims,)
             total_ranking_comm = 1024 + 512  # Estimated comm cost
 
         # Sort and select top-k
