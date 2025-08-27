@@ -332,8 +332,8 @@ class PIRExperimentRunner:
                 'total_ranking_time': query_metrics.get('total_ranking_time', 0)
             })
             communication_costs.append({
-                'upload_bytes': query_metrics.get('total_upload_bytes', 0),
-                'download_bytes': query_metrics.get('total_download_bytes', 0),
+                'upload_bytes': query_metrics.get('upload_bytes', 0),
+                'download_bytes': query_metrics.get('download_bytes', 0),
                 'pir_communication': query_metrics.get('pir_communication', 0)
             })
 
