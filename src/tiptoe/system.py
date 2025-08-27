@@ -197,6 +197,10 @@ class TiptoeSystem:
             'upload_bytes': ranking_metrics.get('query_size', 0) + retrieval_metrics.get('pir_communication', 0) // 2,
             'download_bytes': ranking_metrics.get('response_size', 0) + retrieval_metrics.get('pir_communication', 0) // 2,
             'total_communication': ranking_metrics.get('ranking_communication', 0) + retrieval_metrics.get('pir_communication', 0),
+            # Crypto usage flags
+            'using_real_homomorphic_ranking': self.homomorphic_ranking is not None,
+            'homomorphic_ranking_available': self.homomorphic_ranking is not None,
+            'crypto_scheme': 'Real Pyfhel BFV' if self.homomorphic_ranking is not None else 'Simulated',
             **cluster_metrics,
             **ranking_metrics,
             **retrieval_metrics
