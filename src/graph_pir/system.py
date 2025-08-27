@@ -137,7 +137,11 @@ class GraphPIRSystem:
         print("[GraphPIR] Building graph structure...")
         self.graph_search = GraphSearch()
         graph_setup_time = time.perf_counter()
-        self.graph_search.build_graph(embeddings, **graph_params)
+        
+        # Filter out traversal parameters - build_graph only needs construction parameters
+        build_params = {k: v for k, v in graph_params.items() 
+                       if k in ['k_neighbors', 'ef_construction', 'max_connections']}
+        self.graph_search.build_graph(embeddings, **build_params)
         graph_setup_time = time.perf_counter() - graph_setup_time
 
         # 2. Set up vector PIR for graph traversal
