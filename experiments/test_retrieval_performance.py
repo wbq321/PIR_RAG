@@ -112,8 +112,11 @@ class RetrievalPerformanceTester:
         setup_start = time.perf_counter()
         if system_name == "PIR-RAG":
             client, server = system
-            client.setup(embeddings, documents, k_clusters=min(5, len(documents)//20))
-            server.setup(client.cluster_assignments, documents)
+            # Server does clustering first
+            k_clusters = min(5, len(documents)//20)
+            server.setup(embeddings, documents, k_clusters)
+            # Client gets centroids from server
+            client.setup(server.centroids)
         elif system_name == "Graph-PIR":
             system.setup(embeddings, documents)
         elif system_name == "Tiptoe":

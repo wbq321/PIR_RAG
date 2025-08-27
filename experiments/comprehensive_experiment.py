@@ -108,11 +108,13 @@ class PIRExperimentRunner:
         
         # Setup timing breakdown
         cluster_start = time.perf_counter()
-        client.setup(embeddings, documents, k_clusters=k_clusters)
+        # Server does clustering and setup first
+        server_setup_result = server.setup(embeddings, documents, k_clusters)
         clustering_time = time.perf_counter() - cluster_start
         
         server_setup_start = time.perf_counter()
-        server.setup(client.cluster_assignments, documents)
+        # Client setup with centroids from server
+        client_setup_result = client.setup(server.centroids)
         server_setup_time = time.perf_counter() - server_setup_start
         
         total_setup_time = time.perf_counter() - setup_start
@@ -429,6 +431,14 @@ class PIRExperimentRunner:
         try:
             pir_rag_client = PIRRAGClient()
             pir_rag_server = PIRRAGServer()
+            
+            # Setup server first (it does the clustering)
+            k_clusters = min(5, len(documents)//20)
+            server_setup_result = pir_rag_server.setup(embeddings, documents, k_clusters)
+            
+            # Setup client with centroids from server
+            client_setup_result = pir_rag_client.setup(pir_rag_server.centroids)
+            
             pir_rag_system = (pir_rag_client, pir_rag_server)
             pir_rag_results = tester.test_retrieval_performance(
                 "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k
