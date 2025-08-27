@@ -436,8 +436,8 @@ class GraphPIRSystem:
         # Generate synthetic URL for this document
         url = f"https://example.com/doc_{doc_idx}"
         
-        # Convert URL to chunks (similar to document chunking but much simpler)
-        url_chunks = encode_text_to_chunks(url, chunk_size=16)  # URLs are much smaller
+        # Convert URL to chunks (URLs are much smaller than documents)
+        url_chunks = encode_text_to_chunks(url)
         
         # Perform homomorphic computation for each chunk position
         encrypted_response = []
