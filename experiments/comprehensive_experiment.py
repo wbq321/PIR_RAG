@@ -77,6 +77,12 @@ class PIRExperimentRunner:
         self.output_dir.mkdir(exist_ok=True)
         self.timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         
+    def get_default_k_clusters(self, n_docs: int, user_value: int = None) -> int:
+        """Calculate default k_clusters value as n_docs/20, with minimum of 1."""
+        if user_value is not None:
+            return user_value
+        return max(1, n_docs // 20)
+        
     def load_or_generate_data(self, embeddings_path: str = None, corpus_path: str = None, 
                              n_docs: int = 1000, embed_dim: int = 384, seed: int = 42) -> Tuple[np.ndarray, List[str]]:
         """Load real data or generate synthetic data if paths not provided."""
@@ -130,9 +136,9 @@ class PIRExperimentRunner:
     
     def run_pir_rag_experiment(self, embeddings: np.ndarray, documents: List[str], 
                               queries: List[np.ndarray], k_clusters: int = 5, 
-                              top_k: int = 10) -> Dict[str, Any]:
+                              cluster_top_k: int = 3, top_k: int = 10) -> Dict[str, Any]:
         """Run PIR-RAG experiment with detailed timing."""
-        print(f"Running PIR-RAG experiment (k_clusters={k_clusters})")
+        print(f"Running PIR-RAG experiment (k_clusters={k_clusters}, cluster_top_k={cluster_top_k})")
         
         # Setup phase
         setup_start = time.perf_counter()
@@ -165,7 +171,7 @@ class PIRExperimentRunner:
             # Step 1: Find relevant clusters
             cluster_start = time.perf_counter()
             query_tensor = torch.tensor(query_embedding) if not isinstance(query_embedding, torch.Tensor) else query_embedding
-            relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
+            relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=cluster_top_k)
             cluster_time = time.perf_counter() - cluster_start
             
             # Step 2: PIR retrieval (now returns URLs and embeddings together)
@@ -206,7 +212,7 @@ class PIRExperimentRunner:
             'avg_upload_bytes': np.mean([c['upload_bytes'] for c in communication_costs]),
             'avg_download_bytes': np.mean([c['download_bytes'] for c in communication_costs]),
             'communication_costs': communication_costs,
-            'parameters': {'k_clusters': k_clusters, 'top_k': top_k},
+            'parameters': {'k_clusters': k_clusters, 'cluster_top_k': cluster_top_k, 'top_k': top_k},
             'n_documents': len(documents),
             'embedding_dim': embeddings.shape[1]
         }
@@ -333,9 +339,19 @@ class PIRExperimentRunner:
     
     def run_scalability_experiment(self, doc_sizes: List[int] = [100, 500, 1000, 2000], 
                                   n_queries: int = 5, embed_dim: int = 384,
-                                  embeddings_path: str = None, corpus_path: str = None) -> Dict[str, Any]:
+                                  embeddings_path: str = None, corpus_path: str = None,
+                                  pir_rag_params: Dict = None, graph_pir_params: Dict = None,
+                                  tiptoe_params: Dict = None) -> Dict[str, Any]:
         """Run scalability experiments across different dataset sizes."""
         print("Running scalability experiments...")
+        
+        # Set default parameters if not provided
+        if pir_rag_params is None:
+            pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated per doc size
+        if graph_pir_params is None:
+            graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16}
+        if tiptoe_params is None:
+            tiptoe_params = {'k_clusters': None, 'use_real_crypto': True}  # None will be calculated per doc size
         
         scalability_results = {
             'doc_sizes': doc_sizes,
@@ -355,22 +371,39 @@ class PIRExperimentRunner:
             
             # Test each system
             try:
-                pir_rag_result = self.run_pir_rag_experiment(embeddings, documents, queries, k_clusters=min(5, n_docs//20))
+                # Adjust cluster numbers for dataset size
+                adjusted_pir_rag_params = pir_rag_params.copy()
+                adjusted_pir_rag_params['k_clusters'] = self.get_default_k_clusters(n_docs, adjusted_pir_rag_params['k_clusters'])
+                
+                pir_rag_result = self.run_pir_rag_experiment(
+                    embeddings, documents, queries, 
+                    k_clusters=adjusted_pir_rag_params['k_clusters'],
+                    cluster_top_k=adjusted_pir_rag_params['cluster_top_k']
+                )
                 scalability_results['pir_rag_results'].append(pir_rag_result)
             except Exception as e:
                 print(f"PIR-RAG failed for {n_docs} docs: {e}")
                 scalability_results['pir_rag_results'].append(None)
             
             try:
-                graph_pir_result = self.run_graph_pir_experiment(embeddings, documents, queries)
+                graph_pir_result = self.run_graph_pir_experiment(
+                    embeddings, documents, queries, 
+                    graph_params=graph_pir_params
+                )
                 scalability_results['graph_pir_results'].append(graph_pir_result)
             except Exception as e:
                 print(f"Graph-PIR failed for {n_docs} docs: {e}")
                 scalability_results['graph_pir_results'].append(None)
             
             try:
-                tiptoe_result = self.run_tiptoe_experiment(embeddings, documents, queries, 
-                                                         {'k_clusters': min(5, n_docs//20), 'use_real_crypto': True})
+                # Adjust cluster numbers for dataset size
+                adjusted_tiptoe_params = tiptoe_params.copy()
+                adjusted_tiptoe_params['k_clusters'] = self.get_default_k_clusters(n_docs, adjusted_tiptoe_params['k_clusters'])
+                
+                tiptoe_result = self.run_tiptoe_experiment(
+                    embeddings, documents, queries, 
+                    tiptoe_params=adjusted_tiptoe_params
+                )
                 scalability_results['tiptoe_results'].append(tiptoe_result)
             except Exception as e:
                 print(f"Tiptoe failed for {n_docs} docs: {e}")
@@ -379,14 +412,26 @@ class PIRExperimentRunner:
         return scalability_results
     
     def run_parameter_sensitivity_experiment(self, n_docs: int = 1000, n_queries: int = 10,
-                                           embeddings_path: str = None, corpus_path: str = None) -> Dict[str, Any]:
+                                           embeddings_path: str = None, corpus_path: str = None,
+                                           base_pir_rag_params: Dict = None, 
+                                           base_graph_pir_params: Dict = None) -> Dict[str, Any]:
         """Run parameter sensitivity experiments."""
         print("Running parameter sensitivity experiments...")
+        
+        # Set default base parameters if not provided
+        if base_pir_rag_params is None:
+            base_pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated based on n_docs
+        if base_graph_pir_params is None:
+            base_graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16}
         
         # Load or generate test data
         embeddings, documents = self.load_or_generate_data(
             embeddings_path, corpus_path, n_docs
         )
+        
+        # Calculate default k_clusters if not provided
+        if base_pir_rag_params['k_clusters'] is None:
+            base_pir_rag_params['k_clusters'] = self.get_default_k_clusters(n_docs, None)
         queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(n_queries)]
         
         sensitivity_results = {}
@@ -400,7 +445,11 @@ class PIRExperimentRunner:
             if k > n_docs // 10:  # Skip if too many clusters
                 continue
             try:
-                result = self.run_pir_rag_experiment(embeddings, documents, queries[:3], k_clusters=k)
+                result = self.run_pir_rag_experiment(
+                    embeddings, documents, queries[:3], 
+                    k_clusters=k,
+                    cluster_top_k=base_pir_rag_params['cluster_top_k']
+                )
                 pir_rag_sensitivity.append(result)
             except Exception as e:
                 print(f"PIR-RAG failed for k_clusters={k}: {e}")
@@ -414,8 +463,14 @@ class PIRExperimentRunner:
         
         for k in k_neighbors_values:
             try:
-                graph_params = {'k_neighbors': k, 'ef_construction': 200, 'max_connections': k}
-                result = self.run_graph_pir_experiment(embeddings, documents, queries[:3], graph_params=graph_params)
+                graph_params = base_graph_pir_params.copy()
+                graph_params['k_neighbors'] = k
+                graph_params['max_connections'] = k  # Adjust max_connections to match k_neighbors
+                
+                result = self.run_graph_pir_experiment(
+                    embeddings, documents, queries[:3], 
+                    graph_params=graph_params
+                )
                 graph_pir_sensitivity.append(result)
             except Exception as e:
                 print(f"Graph-PIR failed for k_neighbors={k}: {e}")
@@ -426,7 +481,9 @@ class PIRExperimentRunner:
     
     def run_retrieval_performance_experiment(self, n_docs: int = 1000, n_queries: int = 50, 
                                            embeddings_path: str = None, corpus_path: str = None,
-                                           embed_dim: int = 384, top_k: int = 10) -> Dict[str, Any]:
+                                           embed_dim: int = 384, top_k: int = 10,
+                                           pir_rag_k_clusters: int = 5,
+                                           pir_rag_cluster_top_k: int = 3) -> Dict[str, Any]:
         """Run retrieval performance experiments measuring IR quality metrics."""
         if not RETRIEVAL_TESTING_AVAILABLE:
             print("❌ Retrieval performance testing not available")
@@ -467,7 +524,7 @@ class PIRExperimentRunner:
             pir_rag_server = PIRRAGServer()
             
             # Setup server first (it does the clustering)
-            k_clusters = min(5, len(documents)//20)
+            k_clusters = self.get_default_k_clusters(len(documents), pir_rag_k_clusters)
             server_setup_result = pir_rag_server.setup(embeddings, documents, k_clusters)
             
             # Setup client with centroids from server
@@ -583,6 +640,34 @@ def main():
                        help="Path to corpus file (.csv format with 'text' column)")
     parser.add_argument("--top-k", type=int, default=10, help="Top-K for retrieval evaluation")
     
+    # PIR-RAG specific arguments
+    parser.add_argument("--pir-rag-k-clusters", type=int, default=None, 
+                       help="Number of clusters for PIR-RAG (default: n_docs/20)")
+    parser.add_argument("--pir-rag-cluster-top-k", type=int, default=3,
+                       help="Number of top clusters to retrieve in PIR-RAG")
+    
+    # Graph-PIR specific arguments
+    parser.add_argument("--graph-pir-k-neighbors", type=int, default=16,
+                       help="Number of neighbors in HNSW graph for Graph-PIR")
+    parser.add_argument("--graph-pir-ef-construction", type=int, default=200,
+                       help="ef_construction parameter for HNSW graph building")
+    parser.add_argument("--graph-pir-max-connections", type=int, default=16,
+                       help="Maximum connections per node in HNSW graph")
+    parser.add_argument("--graph-pir-ef-search", type=int, default=50,
+                       help="ef parameter for graph search")
+    
+    # Tiptoe specific arguments
+    parser.add_argument("--tiptoe-k-clusters", type=int, default=None,
+                       help="Number of clusters for Tiptoe (default: n_docs/20)")
+    parser.add_argument("--tiptoe-use-real-crypto", action="store_true", default=True,
+                       help="Use real cryptography for Tiptoe (default: True)")
+    parser.add_argument("--tiptoe-no-real-crypto", dest="tiptoe_use_real_crypto", 
+                       action="store_false", help="Disable real cryptography for Tiptoe")
+    parser.add_argument("--tiptoe-poly-degree", type=int, default=8192,
+                       help="Polynomial degree for Tiptoe homomorphic encryption")
+    parser.add_argument("--tiptoe-plain-modulus", type=int, default=1024,
+                       help="Plain modulus for Tiptoe homomorphic encryption")
+    
     args = parser.parse_args()
     
     runner = PIRExperimentRunner(args.output_dir)
@@ -599,44 +684,113 @@ def main():
         )
         queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(args.n_queries)]
         
-        # Run all three systems
+        # Run all three systems with configured parameters
         results = {}
         
         try:
-            results['pir_rag'] = runner.run_pir_rag_experiment(embeddings, documents, queries)
+            # PIR-RAG with custom parameters
+            k_clusters = runner.get_default_k_clusters(args.n_docs, args.pir_rag_k_clusters)
+            results['pir_rag'] = runner.run_pir_rag_experiment(
+                embeddings, documents, queries, 
+                k_clusters=k_clusters,
+                cluster_top_k=args.pir_rag_cluster_top_k,
+                top_k=args.top_k
+            )
+            print(f"✅ PIR-RAG completed with k_clusters={k_clusters}")
         except Exception as e:
-            print(f"PIR-RAG experiment failed: {e}")
+            print(f"❌ PIR-RAG experiment failed: {e}")
             
         try:
-            results['graph_pir'] = runner.run_graph_pir_experiment(embeddings, documents, queries)
+            # Graph-PIR with custom parameters
+            graph_params = {
+                'k_neighbors': args.graph_pir_k_neighbors,
+                'ef_construction': args.graph_pir_ef_construction,
+                'max_connections': args.graph_pir_max_connections,
+                'ef_search': args.graph_pir_ef_search
+            }
+            results['graph_pir'] = runner.run_graph_pir_experiment(
+                embeddings, documents, queries,
+                graph_params=graph_params,
+                top_k=args.top_k
+            )
+            print(f"✅ Graph-PIR completed with k_neighbors={args.graph_pir_k_neighbors}")
         except Exception as e:
-            print(f"Graph-PIR experiment failed: {e}")
+            print(f"❌ Graph-PIR experiment failed: {e}")
             
         try:
-            results['tiptoe'] = runner.run_tiptoe_experiment(embeddings, documents, queries)
+            # Tiptoe with custom parameters
+            tiptoe_params = {
+                'k_clusters': runner.get_default_k_clusters(args.n_docs, args.tiptoe_k_clusters),
+                'use_real_crypto': args.tiptoe_use_real_crypto,
+                'poly_degree': args.tiptoe_poly_degree,
+                'plain_modulus': args.tiptoe_plain_modulus
+            }
+            results['tiptoe'] = runner.run_tiptoe_experiment(
+                embeddings, documents, queries,
+                tiptoe_params=tiptoe_params,
+                top_k=args.top_k
+            )
+            print(f"✅ Tiptoe completed with k_clusters={tiptoe_params['k_clusters']}, crypto={args.tiptoe_use_real_crypto}")
         except Exception as e:
-            print(f"Tiptoe experiment failed: {e}")
+            print(f"❌ Tiptoe experiment failed: {e}")
         
         runner.save_results(results, "single_experiment")
     
     if args.experiment in ["scalability", "all"]:
         print("Running scalability experiments...")
+        
+        # Create parameter dictionaries for each system
+        pir_rag_params = {
+            'k_clusters': args.pir_rag_k_clusters,
+            'cluster_top_k': args.pir_rag_cluster_top_k
+        }
+        graph_pir_params = {
+            'k_neighbors': args.graph_pir_k_neighbors,
+            'ef_construction': args.graph_pir_ef_construction,
+            'max_connections': args.graph_pir_max_connections,
+            'ef_search': args.graph_pir_ef_search
+        }
+        tiptoe_params = {
+            'k_clusters': args.tiptoe_k_clusters,
+            'use_real_crypto': args.tiptoe_use_real_crypto,
+            'poly_degree': args.tiptoe_poly_degree,
+            'plain_modulus': args.tiptoe_plain_modulus
+        }
+        
         scalability_results = runner.run_scalability_experiment(
             doc_sizes=[100, 500, 1000, 2000], 
             n_queries=5, 
             embed_dim=args.embed_dim,
             embeddings_path=args.embeddings_path,
-            corpus_path=args.corpus_path
+            corpus_path=args.corpus_path,
+            pir_rag_params=pir_rag_params,
+            graph_pir_params=graph_pir_params,
+            tiptoe_params=tiptoe_params
         )
         runner.save_results(scalability_results, "scalability")
     
     if args.experiment in ["sensitivity", "all"]:
         print("Running parameter sensitivity experiments...")
+        
+        # Use base parameters from arguments for sensitivity analysis
+        base_pir_rag_params = {
+            'k_clusters': args.pir_rag_k_clusters,
+            'cluster_top_k': args.pir_rag_cluster_top_k
+        }
+        base_graph_pir_params = {
+            'k_neighbors': args.graph_pir_k_neighbors,
+            'ef_construction': args.graph_pir_ef_construction,
+            'max_connections': args.graph_pir_max_connections,
+            'ef_search': args.graph_pir_ef_search
+        }
+        
         sensitivity_results = runner.run_parameter_sensitivity_experiment(
             n_docs=args.n_docs, 
             n_queries=5,
             embeddings_path=args.embeddings_path,
-            corpus_path=args.corpus_path
+            corpus_path=args.corpus_path,
+            base_pir_rag_params=base_pir_rag_params,
+            base_graph_pir_params=base_graph_pir_params
         )
         runner.save_results(sensitivity_results, "parameter_sensitivity")
     
@@ -648,7 +802,9 @@ def main():
             embeddings_path=args.embeddings_path,
             corpus_path=args.corpus_path,
             embed_dim=args.embed_dim,
-            top_k=args.top_k
+            top_k=args.top_k,
+            pir_rag_k_clusters=args.pir_rag_k_clusters,
+            pir_rag_cluster_top_k=args.pir_rag_cluster_top_k
         )
         if retrieval_results:
             runner.save_results(retrieval_results, "retrieval_performance")
