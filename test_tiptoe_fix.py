@@ -115,7 +115,10 @@ def test_tiptoe_system():
         query = "machine learning algorithms"
         print(f"Testing query: '{query}'")
         
-        results = system.query(query, k=2)
+        # Create a dummy query embedding (in real usage, this would come from sentence transformer)
+        query_embedding = np.random.rand(384).astype(np.float32)  # BGE-base dimension
+        
+        results = system.query(query_embedding, top_k=2)
         print(f"✓ Query completed successfully")
         print(f"Results: {results}")
         
