@@ -392,28 +392,28 @@ class GraphPIRSystem:
             print(f"[GraphPIR] Step {step}: PIR batch querying {len(batch_queries)} neighbors (limited to {self.max_neighbors_per_step} per vertex)")
             
             # Step 4: PIR batch query neighbors (GetVertexInfo equivalent)
-            # Remove duplicates and invalid indices
-            unique_queries = list(set([q for q in batch_queries if 0 <= q < n_docs]))
+            # Filter only invalid indices, but don't deduplicate to reduce per-step overhead
+            valid_queries = [q for q in batch_queries if 0 <= q < n_docs]
             
-            print(f"[GraphPIR] Step {step}: unique_queries={len(unique_queries)}, to_be_explored={len(to_be_explored)}, max_per_step={self.max_neighbors_per_step}")
+            print(f"[GraphPIR] Step {step}: valid_queries={len(valid_queries)} (no deduplication), to_be_explored={len(to_be_explored)}, max_per_step={self.max_neighbors_per_step}")
             
-            if unique_queries:
+            if valid_queries:
                 # Use REAL PIR to retrieve (embeddings + neighbors) for these nodes
                 pir_start = time.time()
-                retrieved_data = self._pir_query_graph_nodes(unique_queries)
+                retrieved_data = self._pir_query_graph_nodes(valid_queries)
                 pir_time = time.time() - pir_start
 
                 # Calculate PIR communication costs
                 bytes_per_node = len(self.embeddings[0]) * 4 + 16 * 4  # embedding + neighbors
-                query_upload = len(unique_queries) * 256  # PIR query overhead
-                query_download = len(unique_queries) * bytes_per_node
+                query_upload = len(valid_queries) * 256  # PIR query overhead
+                query_download = len(valid_queries) * bytes_per_node
 
                 total_upload_bytes += query_upload
                 total_download_bytes += query_download
                 pir_query_count += 1
 
                 # Step 5: Process PIR results (GraphANN neighbor processing)
-                for i, neighbor_id in enumerate(unique_queries):
+                for i, neighbor_id in enumerate(valid_queries):
                     if neighbor_id not in known_vertices and i < len(retrieved_data):
                         # Extract embedding and neighbors from PIR response
                         node_embedding, node_neighbors = retrieved_data[i]
