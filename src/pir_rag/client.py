@@ -98,13 +98,13 @@ class PIRRAGClient:
     
     def decode_pir_response(self, encrypted_chunks: List) -> Tuple[List[str], int]:
         """
-        Decrypt and decode a PIR response into document texts.
+        Decrypt and decode a PIR response into document URLs.
         
         Args:
             encrypted_chunks: List of encrypted response chunks
             
         Returns:
-            Tuple of (document texts, download size in bytes)
+            Tuple of (document URLs, download size in bytes)
         """
         if self.private_key is None:
             raise ValueError("Client not set up. Call setup() first.")
@@ -112,25 +112,25 @@ class PIRRAGClient:
         # Decrypt chunks
         retrieved_chunks = [self.private_key.decrypt(c) for c in encrypted_chunks]
         
-        # Decode chunks to text and split into documents
+        # Decode chunks to text and split into URLs
         retrieved_text = decode_chunks_to_text(retrieved_chunks)
-        docs = list(filter(None, retrieved_text.split("|||")))
+        urls = list(filter(None, retrieved_text.split("|||")))
         
-        # Calculate download size
+        # Calculate download size (much smaller for URLs vs documents)
         download_bytes = sum(sys.getsizeof(c.ciphertext()) for c in encrypted_chunks)
         
-        return docs, download_bytes
+        return urls, download_bytes
     
     def pir_retrieve(self, server, cluster_indices: List[int]) -> Tuple[List[str], Dict[str, Any]]:
         """
-        Perform private retrieval from multiple clusters.
+        Perform private retrieval of document URLs from multiple clusters.
         
         Args:
             server: PIRRAGServer instance
             cluster_indices: List of cluster indices to retrieve from
             
         Returns:
-            Tuple of (retrieved documents, performance metrics)
+            Tuple of (retrieved URLs, performance metrics)
         """
         if self.centroids is None:
             raise ValueError("Client not set up. Call setup() first.")
@@ -147,7 +147,7 @@ class PIRRAGClient:
             "n_clusters_queried": len(cluster_indices)
         }
         
-        candidate_docs_text = []
+        candidate_urls = []
 
         for cluster_idx in cluster_indices:
             print(f"    [Client] Processing cluster {cluster_idx}...")
@@ -165,45 +165,31 @@ class PIRRAGClient:
             
             # Decode response
             start_time = time.perf_counter()
-            docs, download_bytes = self.decode_pir_response(encrypted_chunks)
+            urls, download_bytes = self.decode_pir_response(encrypted_chunks)
             metrics["total_decode_time"] += (time.perf_counter() - start_time)
             metrics["total_download_bytes"] += download_bytes
             
-            candidate_docs_text.extend(docs)
+            candidate_urls.extend(urls)
 
-        return candidate_docs_text, metrics
+        return candidate_urls, metrics
     
-    def rerank_documents(self, query_embedding: torch.Tensor, documents: List[str], 
+    def rerank_documents(self, query_embedding: torch.Tensor, urls: List[str], 
                         model, top_k: int = 10) -> List[str]:
         """
-        Re-rank retrieved documents using semantic similarity.
+        Return top-k URLs (no semantic re-ranking possible with URLs alone).
         
         Args:
-            query_embedding: Query embedding
-            documents: List of candidate documents
-            model: SentenceTransformer model for encoding
-            top_k: Number of top documents to return
+            query_embedding: Query embedding (not used for URL ranking)
+            urls: List of candidate URLs
+            model: SentenceTransformer model (not used for URLs)
+            top_k: Number of top URLs to return
             
         Returns:
-            List of top-k re-ranked documents
+            List of top-k URLs (in original retrieval order)
         """
-        if not documents:
+        if not urls:
             return []
         
-        # Encode documents
-        doc_embeddings = model.encode(
-            documents, 
-            convert_to_tensor=True, 
-            normalize_embeddings=True, 
-            show_progress_bar=False
-        )
-        
-        # Compute similarities and get top-k
-        similarities = util.cos_sim(query_embedding, doc_embeddings)[0]
-        top_k_value = min(top_k, len(documents))
-        
-        if top_k_value > 0:
-            top_k_indices = torch.topk(similarities, k=top_k_value).indices
-            return [documents[i] for i in top_k_indices]
-        
-        return []
+        # For URLs, we can't do semantic re-ranking, so just return top-k in order
+        top_k_value = min(top_k, len(urls))
+        return urls[:top_k_value]

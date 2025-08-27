@@ -44,15 +44,17 @@ class PIRRAGServer:
         labels = kmeans.fit_predict(embeddings)
         self.centroids = torch.tensor(kmeans.cluster_centers_, dtype=torch.float32)
 
-        # Group documents by cluster
-        clusters_text = [[] for _ in range(n_clusters)]
+        # Group documents by cluster but store URLs instead of document text
+        clusters_urls = [[] for _ in range(n_clusters)]
         self.doc_to_cluster_map = {i: labels[i] for i in range(len(documents_text))}
 
+        # Generate synthetic URLs for documents (realistic web search scenario)
         for i, text in enumerate(documents_text):
-            clusters_text[labels[i]].append(text)
+            synthetic_url = f"https://example.com/doc_{i}"
+            clusters_urls[labels[i]].append(synthetic_url)
 
-        # Encode clusters for PIR
-        chunked_clusters = [encode_text_to_chunks("|||".join(c)) for c in clusters_text]
+        # Encode clusters for PIR (now containing URLs instead of documents)
+        chunked_clusters = [encode_text_to_chunks("|||".join(c)) for c in clusters_urls]
         
         MAX_CHUNKS_HOLDER[0] = max(len(c) for c in chunked_clusters if c) if any(chunked_clusters) else 0
 

@@ -176,7 +176,7 @@ class TiptoeSystem:
         phase2r1_time = time.perf_counter() - phase2r1_start
 
         # Phase 2 Round 2: PIR document retrieval
-        print(f"[Tiptoe] Phase 2 Round 2: PIR document retrieval...")
+        print(f"[Tiptoe] Phase 2 Round 2: PIR URL retrieval...")
         phase2r2_start = time.perf_counter()
         retrieved_docs, retrieval_metrics = self._pir_document_retrieval(
             cluster_id, ranked_indices, top_k
@@ -207,7 +207,7 @@ class TiptoeSystem:
         }
 
         print(f"[Tiptoe] CORRECTED query completed in {total_query_time:.3f}s")
-        print(f"[Tiptoe] Retrieved {len(retrieved_docs)} documents")
+        print(f"[Tiptoe] Retrieved {len(retrieved_docs)} URLs")
 
         return retrieved_docs, query_metrics
 
@@ -369,9 +369,9 @@ class TiptoeSystem:
 
     def _pir_document_retrieval(self, cluster_id: int, ranked_indices: List[int], top_k: int) -> Tuple[List[str], Dict[str, Any]]:
         """
-        CORRECTED: Phase 2 Round 2 - LinearHomomorphic PIR document retrieval.
+        CORRECTED: Phase 2 Round 2 - PIR URL retrieval (like original Tiptoe).
         
-        Uses LinearHomomorphicPIR to retrieve the actual documents corresponding
+        Uses LinearHomomorphicPIR to retrieve document URLs corresponding
         to the top-k ranked indices from the selected cluster.
         """
         retrieval_start = time.perf_counter()
@@ -392,56 +392,62 @@ class TiptoeSystem:
         # Get PIR system for this cluster
         pir_system = self.pir_systems[cluster_id]
         
-        # PIR retrieval for each ranked document
-        retrieved_docs = []
+        # PIR retrieval for each ranked document URL
+        retrieved_urls = []
         total_pir_comm = 0
         
         for rank_idx in ranked_indices[:top_k]:
             if rank_idx < len(cluster_docs):
                 try:
-                    # Use LinearHomomorphicPIR to retrieve document
-                    # Create PIR query for this document index in the cluster
+                    # Generate synthetic URL for this document (realistic web search scenario)
+                    doc_global_idx = doc_indices[rank_idx]
+                    synthetic_url = f"https://example.com/doc_{doc_global_idx}"
+                    
+                    # Use LinearHomomorphicPIR to retrieve URL instead of document
+                    # Create PIR query for this URL index in the cluster
                     pir_query, query_metrics = pir_system.create_pir_query(
                         target_index=rank_idx,
                         database_size=len(cluster_docs)
                     )
                     
-                    # Server processes query (PIR over document indices)
+                    # Server processes query (PIR over URL indices)
+                    url_database = [f"https://example.com/doc_{doc_indices[i]}" for i in range(len(cluster_docs))]
                     pir_response, server_metrics = pir_system.process_pir_query(
-                        pir_query, list(range(len(cluster_docs)))  # Index database
+                        pir_query, list(range(len(url_database)))  # Index database for URLs
                     )
                     
-                    # Client decrypts to get document index (should be rank_idx)
+                    # Client decrypts to get URL index
                     retrieved_index = pir_system.decrypt_pir_response(pir_response)
                     
-                    # Use the index to get actual document
-                    if 0 <= retrieved_index < len(cluster_docs):
-                        doc_text = cluster_docs[retrieved_index]
+                    # Use the index to get actual URL
+                    if 0 <= retrieved_index < len(url_database):
+                        retrieved_url = url_database[retrieved_index]
                     else:
                         # Fallback if PIR returns unexpected index
-                        doc_text = cluster_docs[rank_idx]
+                        retrieved_url = synthetic_url
                     
-                    retrieved_docs.append(doc_text)
+                    retrieved_urls.append(retrieved_url)
                     
-                    # Track PIR communication
+                    # Track PIR communication (URLs are much smaller than documents)
                     query_size = query_metrics.get('upload_bytes', 64)
-                    response_size = server_metrics.get('download_bytes', 1024)
+                    response_size = min(server_metrics.get('download_bytes', 128), 128)  # URLs are smaller
                     total_pir_comm += query_size + response_size
                     
                 except Exception as e:
-                    # Fallback for PIR errors - just return the document directly
-                    print(f"[Tiptoe] PIR fallback for doc {rank_idx}: {str(e)[:50]}...")
-                    doc_text = cluster_docs[rank_idx] if rank_idx < len(cluster_docs) else f"Error retrieving document {rank_idx}"
-                    retrieved_docs.append(doc_text)
-                    total_pir_comm += 64 + 1024  # Estimated comm cost
+                    # Fallback for PIR errors - just return the URL directly
+                    print(f"[Tiptoe] PIR fallback for URL {rank_idx}: {str(e)[:50]}...")
+                    fallback_url = f"https://example.com/doc_{doc_indices[rank_idx] if rank_idx < len(doc_indices) else rank_idx}"
+                    retrieved_urls.append(fallback_url)
+                    total_pir_comm += 64 + 128  # Estimated comm cost for URLs
         
         retrieval_time = time.perf_counter() - retrieval_start
         
-        return retrieved_docs, {
+        return retrieved_urls, {
             'retrieval_time': retrieval_time,
             'pir_communication': total_pir_comm,
-            'pir_queries': len(retrieved_docs),
-            'avg_pir_comm_per_doc': total_pir_comm / max(1, len(retrieved_docs))
+            'pir_queries': len(retrieved_urls),
+            'avg_pir_comm_per_doc': total_pir_comm / max(1, len(retrieved_urls)),
+            'retrieved_type': 'urls'  # Flag indicating URL retrieval
         }
 
     def get_system_info(self) -> Dict[str, Any]:

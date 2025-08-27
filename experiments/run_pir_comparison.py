@@ -161,7 +161,7 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
 
         # Perform PIR retrieval
         query_start = time.perf_counter()
-        retrieved_docs, query_metrics = client.pir_retrieve(server, cluster_indices)
+        retrieved_urls, query_metrics = client.pir_retrieve(server, cluster_indices)
         query_time = time.perf_counter() - query_start
 
         total_upload += query_metrics["total_upload_bytes"]
@@ -170,7 +170,8 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
 
         if i == 0:
             print(f"First query: '{query_text[:50]}...'")
-            print(f"Retrieved {len(retrieved_docs)} docs in {query_time:.3f}s")
+            print(f"Retrieved {len(retrieved_urls)} URLs in {query_time:.3f}s")
+            print(f"First URL: {retrieved_urls[0] if retrieved_urls else 'None'}")
 
     avg_metrics = {
         "system": "PIR-RAG",
@@ -227,7 +228,7 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
 
         # Perform Graph-PIR query
         query_start = time.perf_counter()
-        retrieved_docs, query_metrics = graph_pir.query(query_embedding, top_k=top_k)
+        retrieved_urls, query_metrics = graph_pir.query(query_embedding, top_k=top_k)
         query_time = time.perf_counter() - query_start
 
         total_upload += query_metrics["phase1_upload_bytes"] + query_metrics["phase2_upload_bytes"]
@@ -236,7 +237,7 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
 
         if i == 0:
             print(f"First query: '{query_text[:50]}...'")
-            print(f"Retrieved {len(retrieved_docs)} docs in {query_time:.3f}s")
+            print(f"Retrieved {len(retrieved_urls)} URLs in {query_time:.3f}s")
             print(f"  Phase 1: {query_metrics['phase1_time']:.3f}s, Phase 2: {query_metrics['phase2_time']:.3f}s")
 
     avg_metrics = {
@@ -305,7 +306,7 @@ def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
 
         # Perform Tiptoe query
         query_start = time.perf_counter()
-        retrieved_docs, query_metrics = tiptoe.query(query_embedding, top_k=top_k)
+        retrieved_urls, query_metrics = tiptoe.query(query_embedding, top_k=top_k)
         query_time = time.perf_counter() - query_start
 
         # Accumulate metrics
@@ -313,7 +314,7 @@ def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
         total_upload += query_metrics.get('phase1_upload_bytes', 0) + query_metrics.get('phase2_upload_bytes', 0)
         total_download += query_metrics.get('phase1_download_bytes', 0) + query_metrics.get('phase2_download_bytes', 0)
 
-        print(f"Query {i+1}: {query_time:.3f}s, {len(retrieved_docs)} docs, cluster {query_metrics.get('selected_cluster', 'N/A')}")
+        print(f"Query {i+1}: {query_time:.3f}s, {len(retrieved_urls)} URLs, cluster {query_metrics.get('selected_cluster', 'N/A')}")
         if i < 3:  # Show detailed breakdown for first few queries
             print(f"  Phase 1: {query_metrics.get('phase1_time', 0):.3f}s, Phase 2: {query_metrics.get('phase2_time', 0):.3f}s")
 
