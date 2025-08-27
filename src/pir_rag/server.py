@@ -57,18 +57,17 @@ class PIRRAGServer:
             synthetic_url = f"https://example.com/doc_{i}"
             clusters_urls[labels[i]].append(synthetic_url)
 
-        # Encode clusters for PIR (now containing URLs instead of documents)
-        chunked_clusters = [encode_text_to_chunks("|||".join(c)) for c in clusters_urls]
+        # FIXED: Use simple cluster-based URL storage (like Tiptoe)
+        # This avoids text encoding issues completely
+        self.clusters_urls = clusters_urls
         
-        MAX_CHUNKS_HOLDER[0] = max(len(c) for c in chunked_clusters if c) if any(chunked_clusters) else 0
-
-        # Create PIR database organized by chunk position
-        self.pir_db_by_chunk = [[] for _ in range(MAX_CHUNKS_HOLDER[0])]
-        for chunk_idx in range(MAX_CHUNKS_HOLDER[0]):
-            for cluster_chunks in chunked_clusters:
-                self.pir_db_by_chunk[chunk_idx].append(
-                    cluster_chunks[chunk_idx] if chunk_idx < len(cluster_chunks) else 0
-                )
+        # Store document indices for each cluster for easy URL generation  
+        self.cluster_doc_indices = [[] for _ in range(n_clusters)]
+        for doc_idx, cluster_idx in self.doc_to_cluster_map.items():
+            self.cluster_doc_indices[cluster_idx].append(doc_idx)
+        
+        # No chunk encoding needed - we'll use direct URL PIR
+        MAX_CHUNKS_HOLDER[0] = 1
         
         setup_time = time.perf_counter() - setup_start
         
@@ -81,30 +80,66 @@ class PIRRAGServer:
     
     def handle_pir_query(self, encrypted_query: List, crypto_scheme) -> List:
         """
-        Process an encrypted PIR query and return encrypted response using fast linear scheme.
+        Process PIR query and return encrypted URLs using homomorphic operations.
+        
+        FIXED: Return encrypted URLs that client must decrypt, preserving privacy.
         
         Args:
-            encrypted_query: List of encrypted query values
-            crypto_scheme: SimpleLinearHomomorphicScheme instance for homomorphic operations
+            encrypted_query: List of encrypted query values (one per cluster)
+            crypto_scheme: SimpleLinearHomomorphicScheme instance
             
         Returns:
-            List of encrypted chunk responses
+            List of encrypted URL data that client must decrypt
         """
-        print(f"    [Server] Processing PIR query with {len(encrypted_query)} clusters, {MAX_CHUNKS_HOLDER[0]} chunks (fast linear scheme)...")
+        print(f"[PIR-RAG] DEBUG: Server processing PIR query for {len(encrypted_query)} clusters")
+        print(f"[PIR-RAG] DEBUG: Available clusters: {len(self.clusters_urls)}")
         
-        # Perform homomorphic computation for each chunk position
-        encrypted_response = []
-        for chunk_db in self.pir_db_by_chunk:
-            # Compute sum of (chunk_value * encrypted_query_bit) for all clusters using fast scheme
-            chunk_result = crypto_scheme.encrypt(0)  # Start with encrypted zero
-            for i, chunk_value in enumerate(chunk_db):
-                if i < len(encrypted_query):
-                    # Fast homomorphic multiplication and addition
-                    term = crypto_scheme.scalar_multiply(encrypted_query[i], int(chunk_value))
-                    chunk_result = crypto_scheme.add_encrypted(chunk_result, term)
-            encrypted_response.append(chunk_result)
+        encrypted_results = []
         
-        return encrypted_response
+        # For each cluster, compute encrypted result using homomorphic operations
+        for cluster_idx in range(len(self.clusters_urls)):
+            if cluster_idx < len(encrypted_query):
+                cluster_urls = self.clusters_urls[cluster_idx]
+                print(f"[PIR-RAG] DEBUG: Cluster {cluster_idx} has {len(cluster_urls)} URLs")
+                
+                if cluster_urls:
+                    # Encode the URLs as a simple concatenated string for this cluster
+                    cluster_url_string = "|||".join(cluster_urls)
+                    print(f"[PIR-RAG] DEBUG: Cluster {cluster_idx} URL string: '{cluster_url_string[:100]}...' (first 100 chars)")
+                    
+                    # Convert to bytes and then to integers (using smaller chunks)
+                    url_bytes = cluster_url_string.encode('utf-8')
+                    print(f"[PIR-RAG] DEBUG: URL bytes length: {len(url_bytes)}")
+                    
+                    # Use 4-byte chunks to avoid overflow in linear scheme
+                    chunk_results = []
+                    for i in range(0, len(url_bytes), 4):
+                        chunk = url_bytes[i:i+4]
+                        # Pad to 4 bytes
+                        while len(chunk) < 4:
+                            chunk += b'\x00'
+                        
+                        chunk_int = int.from_bytes(chunk, 'big')
+                        
+                        # Homomorphic multiplication: encrypted_query[cluster_idx] * chunk_value
+                        if chunk_int > 0:
+                            encrypted_chunk = crypto_scheme.scalar_multiply(
+                                encrypted_query[cluster_idx], chunk_int
+                            )
+                            chunk_results.append(encrypted_chunk)
+                            if len(chunk_results) <= 3:  # Show first few for debugging
+                                print(f"[PIR-RAG] DEBUG: Chunk {i//4}: {chunk_int} -> encrypted")
+                    
+                    print(f"[PIR-RAG] DEBUG: Cluster {cluster_idx} produced {len(chunk_results)} encrypted chunks")
+                    encrypted_results.extend(chunk_results)
+                else:
+                    # Empty cluster - add encrypted zero
+                    encrypted_zero = crypto_scheme.scalar_multiply(encrypted_query[cluster_idx], 0)
+                    encrypted_results.append(encrypted_zero)
+                    print(f"[PIR-RAG] DEBUG: Cluster {cluster_idx} is empty, added encrypted zero")
+        
+        print(f"[PIR-RAG] DEBUG: Server returning {len(encrypted_results)} encrypted chunks total")
+        return encrypted_results
     
     def get_document_embeddings_for_urls(self, urls: List[str]) -> np.ndarray:
         """

@@ -14,6 +14,9 @@ def encode_text_to_chunks(text_blob: str) -> List[int]:
     """
     Encode text into fixed-size integer chunks for PIR.
     
+    For SimpleLinearHomomorphicScheme compatibility, use smaller chunks
+    to avoid overflow in modular arithmetic.
+    
     Args:
         text_blob: Text to encode
         
@@ -22,8 +25,17 @@ def encode_text_to_chunks(text_blob: str) -> List[int]:
     """
     byte_data = text_blob.encode('utf-8')
     chunks = []
-    for i in range(0, len(byte_data), CHUNK_SIZE):
-        chunks.append(int.from_bytes(byte_data[i:i+CHUNK_SIZE], 'big'))
+    
+    # Use smaller chunk size for linear homomorphic scheme to avoid overflow
+    SAFE_CHUNK_SIZE = 4  # 4 bytes = 32 bits, safe for modular arithmetic
+    
+    for i in range(0, len(byte_data), SAFE_CHUNK_SIZE):
+        chunk_bytes = byte_data[i:i+SAFE_CHUNK_SIZE]
+        # Pad with zeros if needed
+        while len(chunk_bytes) < SAFE_CHUNK_SIZE:
+            chunk_bytes += b'\x00'
+        chunks.append(int.from_bytes(chunk_bytes, 'big'))
+    
     return chunks
 
 
@@ -31,16 +43,36 @@ def decode_chunks_to_text(int_chunks: List[int]) -> str:
     """
     Decode integer chunks back to text.
     
+    Fixed version for SimpleLinearHomomorphicScheme compatibility.
+    
     Args:
         int_chunks: List of integers representing text chunks
         
     Returns:
         Decoded text string
     """
-    byte_data = b''.join(
-        c.to_bytes((c.bit_length() + 7) // 8, 'big') for c in int_chunks if c != 0
-    )
-    return byte_data.decode('utf-8', errors='ignore')
+    try:
+        byte_data = b''
+        SAFE_CHUNK_SIZE = 4  # Match encoding chunk size
+        
+        for chunk in int_chunks:
+            if chunk != 0:  # Skip zero chunks
+                # Convert back to bytes with fixed size
+                try:
+                    chunk_bytes = chunk.to_bytes(SAFE_CHUNK_SIZE, 'big')
+                    byte_data += chunk_bytes
+                except (OverflowError, ValueError):
+                    # Handle corrupted chunks gracefully
+                    continue
+        
+        # Remove null bytes and decode
+        byte_data = byte_data.rstrip(b'\x00')
+        return byte_data.decode('utf-8', errors='ignore')
+    
+    except Exception as e:
+        # Fallback for corrupted data
+        print(f"Warning: Text decoding failed: {e}")
+        return ""
 
 
 def prepare_docs_by_size(all_docs: List[str], target_byte_size: int, 

@@ -72,6 +72,9 @@ class PIRRAGClient:
         similarities = util.cos_sim(query_embedding, self.centroids)[0]
         best_cluster_indices = torch.topk(similarities, k=min(top_k, len(self.centroids))).indices.tolist()
         
+        print(f"[PIR-RAG] DEBUG: Cluster selection - similarities: {similarities[:5]}... (first 5)")
+        print(f"[PIR-RAG] DEBUG: Selected cluster indices: {best_cluster_indices}")
+        
         return best_cluster_indices
     
     def generate_pir_query(self, cluster_idx: int, num_clusters: int) -> Tuple[List, int]:
@@ -88,13 +91,20 @@ class PIRRAGClient:
         if self.crypto_scheme is None:
             raise ValueError("Client not set up. Call setup() first.")
         
+        print(f"[PIR-RAG] DEBUG: Generating PIR query for cluster {cluster_idx}/{num_clusters}")
+        
         # Create query vector: 1 for target cluster, 0 for others
         query_vec = []
         for i in range(num_clusters):
             if i == cluster_idx:
-                query_vec.append(self.crypto_scheme.encrypt(1))
+                encrypted_val = self.crypto_scheme.encrypt(1)
+                query_vec.append(encrypted_val)
             else:
-                query_vec.append(self.crypto_scheme.encrypt(0))
+                encrypted_val = self.crypto_scheme.encrypt(0)
+                query_vec.append(encrypted_val)
+        
+        print(f"[PIR-RAG] DEBUG: PIR query vector created, length: {len(query_vec)}")
+        print(f"[PIR-RAG] DEBUG: Sample encrypted values: {query_vec[0]}, {query_vec[1]}")
         
         # Calculate upload size (much smaller than Paillier)
         upload_bytes = len(query_vec) * 32  # Estimate for simple scheme
@@ -130,6 +140,8 @@ class PIRRAGClient:
         """
         Perform private retrieval of document URLs from multiple clusters.
         
+        FIXED: Client properly decrypts encrypted URL data from server.
+        
         Args:
             server: PIRRAGServer instance
             cluster_indices: List of cluster indices to retrieve from
@@ -163,20 +175,80 @@ class PIRRAGClient:
             metrics["total_query_gen_time"] += (time.perf_counter() - start_time)
             metrics["total_upload_bytes"] += upload_bytes
             
-            # Server processing with fast linear scheme
+            # Server processing returns encrypted URL data
             server_start_time = time.perf_counter()
             encrypted_chunks = server.handle_pir_query(query_vec, self.crypto_scheme)
             metrics["total_server_time"] += (time.perf_counter() - server_start_time)
             
-            # Decode response
+            # Client decrypts the encrypted URL data
             start_time = time.perf_counter()
-            urls, download_bytes = self.decode_pir_response(encrypted_chunks)
+            urls = self._decrypt_url_chunks(encrypted_chunks)
             metrics["total_decode_time"] += (time.perf_counter() - start_time)
-            metrics["total_download_bytes"] += download_bytes
+            metrics["total_download_bytes"] += len(str(encrypted_chunks).encode('utf-8'))
             
             candidate_urls.extend(urls)
 
         return candidate_urls, metrics
+    
+    def _decrypt_url_chunks(self, encrypted_chunks: List) -> List[str]:
+        """
+        Decrypt encrypted URL chunks back to URL strings.
+        
+        Args:
+            encrypted_chunks: List of encrypted URL chunk data
+            
+        Returns:
+            List of decrypted URLs
+        """
+        print(f"[PIR-RAG] DEBUG: Decrypting {len(encrypted_chunks)} URL chunks")
+        
+        try:
+            # Decrypt each chunk
+            decrypted_ints = []
+            for i, chunk in enumerate(encrypted_chunks):
+                try:
+                    decrypted_val = self.crypto_scheme.decrypt(chunk)
+                    if decrypted_val > 0:  # Skip zero/empty chunks
+                        decrypted_ints.append(decrypted_val)
+                        if i < 3:  # Show first few for debugging
+                            print(f"[PIR-RAG] DEBUG: Chunk {i}: decrypted to {decrypted_val}")
+                except Exception as e:
+                    print(f"[PIR-RAG] DEBUG: Failed to decrypt chunk {i}: {e}")
+                    continue
+            
+            print(f"[PIR-RAG] DEBUG: Successfully decrypted {len(decrypted_ints)} chunks")
+            
+            # Convert integers back to bytes and then to text
+            if not decrypted_ints:
+                print(f"[PIR-RAG] DEBUG: No valid decrypted chunks found")
+                return []
+            
+            byte_data = b''
+            for int_val in decrypted_ints:
+                try:
+                    # Convert back to 4-byte chunks
+                    chunk_bytes = int_val.to_bytes(4, 'big')
+                    byte_data += chunk_bytes
+                except (OverflowError, ValueError) as e:
+                    print(f"[PIR-RAG] DEBUG: Failed to convert int {int_val} to bytes: {e}")
+                    continue
+            
+            print(f"[PIR-RAG] DEBUG: Reconstructed {len(byte_data)} bytes")
+            
+            # Remove null bytes and decode
+            byte_data = byte_data.rstrip(b'\x00')
+            url_string = byte_data.decode('utf-8', errors='ignore')
+            print(f"[PIR-RAG] DEBUG: Decoded string: '{url_string[:100]}...' (first 100 chars)")
+            
+            # Split by separator and filter out empty strings
+            urls = [url.strip() for url in url_string.split('|||') if url.strip()]
+            print(f"[PIR-RAG] DEBUG: Final URLs: {urls}")
+            
+            return urls
+            
+        except Exception as e:
+            print(f"[PIR-RAG] WARNING: URL decryption failed: {e}")
+            return []
     
     def rerank_documents(self, query_embedding: torch.Tensor, urls: List[str], 
                         server, top_k: int = 10) -> List[str]:
