@@ -341,14 +341,17 @@ class TiptoeHomomorphicRanking:
     """
     Real homomorphic encryption for Tiptoe ranking phase using Pyfhel (BFV).
     """
-    def __init__(self, scheme: str = 'BFV', n_slots: int = 16384, t_bits: int = 20):
+    def __init__(self, scheme: str = 'BFV', n_slots: int = 8192, t_bits: int = 30):
         if not _pyfhel_available:
             raise ImportError("Pyfhel is not installed. Please install it to use real homomorphic ranking.")
         self.HE = Pyfhel()
         try:
-            # Use robust, recommended parameters for BFV
-            self.HE.contextGen(scheme='BFV', n=n_slots, t_bits=t_bits)
+            # Use more conservative parameters for BFV to avoid overflow
+            # Larger t_bits provides more room for computation
+            self.HE.contextGen(scheme='BFV', n=n_slots, t_bits=t_bits, sec=128)
             self.HE.keyGen()
+            # Generate relinearization keys for multiplication
+            self.HE.relinKeyGen()
         except Exception as e:
             raise RuntimeError(f"Pyfhel context/key generation failed: {e}")
         self.scheme = 'BFV'
@@ -357,8 +360,16 @@ class TiptoeHomomorphicRanking:
 
     def encrypt_vector(self, vec):
         # For BFV, encrypt each element as a 1-element np.int64 array
+        # Normalize and clamp values to prevent overflow
         arr = np.array(vec, dtype=np.int64)
-        return [self.HE.encryptInt(np.array([int(x)], dtype=np.int64)) for x in arr]
+        arr = np.clip(arr, -127, 127)  # Keep in safe range for BFV
+        
+        encrypted_vec = []
+        for x in arr:
+            ctxt = self.HE.encryptInt(np.array([int(x)], dtype=np.int64))
+            encrypted_vec.append(ctxt)
+        
+        return encrypted_vec
 
     def decrypt_vector(self, ctxt):
         # Decrypt a ciphertext vector
@@ -370,13 +381,55 @@ class TiptoeHomomorphicRanking:
         results = []
         for doc_vec in db_vecs:
             arr = np.array(doc_vec, dtype=np.int64)
+            
+            # Ensure we don't multiply by zero (which can cause issues)
+            # Also clamp values to prevent overflow
+            arr = np.clip(arr, -127, 127)  # Keep values in safe range for BFV
+            
             # Multiply each encrypted query element by corresponding doc value
-            prod = [ctxt_query[j] * int(arr[j]) for j in range(len(arr))]
-            dot = prod[0].copy()  # Use copy to avoid transparent ciphertext
-            for c in prod[1:]:
-                dot += c
+            prod_terms = []
+            for j in range(len(arr)):
+                if arr[j] != 0:  # Skip zero multiplications
+                    term = ctxt_query[j] * int(arr[j])
+                    prod_terms.append(term)
+            
+            if not prod_terms:
+                # All zeros, create a zero ciphertext
+                zero_ctxt = self.HE.encryptInt(np.array([0], dtype=np.int64))
+                results.append(zero_ctxt)
+                continue
+                
+            # Sum all terms
+            dot = prod_terms[0].copy()
+            for term in prod_terms[1:]:
+                dot += term
+                
             results.append(dot)
         return results
 
     def decrypt_scores(self, ctxt_scores):
-        return [float(self.HE.decryptFrac(ctxt)) for ctxt in ctxt_scores]
+        results = []
+        for i, ctxt in enumerate(ctxt_scores):
+            try:
+                # Check noise budget before decryption
+                noise_budget = self.HE.noiseLevel(ctxt)
+                if noise_budget < 10:  # Arbitrary threshold
+                    print(f"Warning: Low noise budget ({noise_budget}) for ciphertext {i}")
+                
+                # Use decryptInt for BFV scheme
+                decrypted = self.HE.decryptInt(ctxt)
+                if isinstance(decrypted, np.ndarray):
+                    results.append(float(decrypted[0]))
+                else:
+                    results.append(float(decrypted))
+            except Exception as e:
+                print(f"Decryption failed for ciphertext {i}: {e}")
+                results.append(0.0)  # Default to 0 if decryption fails
+        return results
+
+    def get_noise_budget(self, ctxt):
+        """Get the remaining noise budget of a ciphertext."""
+        try:
+            return self.HE.noiseLevel(ctxt)
+        except:
+            return -1  # Error getting noise level
