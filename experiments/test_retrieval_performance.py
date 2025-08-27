@@ -158,8 +158,8 @@ class RetrievalPerformanceTester:
 
     def _simulate_graph_pir_search(self, query_embedding: np.ndarray,
                                   documents: List[str], embeddings: np.ndarray,
-                                  k_neighbors: int = 32, max_iterations: int = 10,
-                                  parallel: int = 3, **kwargs) -> List[int]:
+                                  k_neighbors: int = 16, max_iterations: int = 5,
+                                  parallel: int = 2, **kwargs) -> List[int]:
         """
         Simulate Graph-PIR search using the GraphANN SearchKNN algorithm (UPDATED implementation).
         
@@ -194,7 +194,7 @@ class RetrievalPerformanceTester:
         # 4. Select best 'parallel' start vertices by distance (GraphANN fastStartQueue)
         start_candidates = []
         for vertex_id in start_vertex_ids:
-            dist = np.linalg.norm(embeddings[vertex_id] - query_embedding)  # L2Dist
+            dist = self._calculate_cosine_distance(embeddings[vertex_id], query_embedding)
             start_candidates.append((dist, vertex_id))
         
         # Sort by distance and take best 'parallel' vertices
@@ -225,11 +225,14 @@ class RetrievalPerformanceTester:
             
             if not batch_queries:
                 break
-                
-            print(f"    [Graph-PIR Simulation] Step {step}: exploring {len(batch_queries)} neighbors")
             
-            # 6. Process batch queries (GetVertexInfo simulation)
+            # 6. Process batch queries with deduplication (matches GraphPIR system)
             unique_queries = list(set([q for q in batch_queries if 0 <= q < n_docs]))
+            
+            if not unique_queries:
+                continue  # Skip if no valid unique queries
+                
+            print(f"    [Graph-PIR Simulation] Step {step}: PIR batch querying {len(unique_queries)} neighbors")
             
             for neighbor_id in unique_queries:
                 if neighbor_id not in known_vertices:
@@ -240,14 +243,14 @@ class RetrievalPerformanceTester:
                         known_vertices[neighbor_id] = (embeddings[neighbor_id], neighbor_neighbors)
                         reach_step[neighbor_id] = step
                         
-                        # Calculate L2 distance and add to exploration queue
-                        dist = np.linalg.norm(embeddings[neighbor_id] - query_embedding)
+                        # Calculate cosine distance and add to exploration queue
+                        dist = self._calculate_cosine_distance(embeddings[neighbor_id], query_embedding)
                         heapq.heappush(to_be_explored, (dist, neighbor_id))
         
-        # 7. Extract and rank all discovered vertices by L2 distance (GraphANN ending)
+        # 7. Extract and rank all discovered vertices by cosine distance (GraphANN ending)
         all_known_vertices = []
         for vertex_id, (vector, _) in known_vertices.items():
-            dist = np.linalg.norm(vector - query_embedding)  # L2Dist
+            dist = self._calculate_cosine_distance(vector, query_embedding)
             all_known_vertices.append((dist, vertex_id))
         
         # Sort by distance (ascending - closest first)
@@ -259,6 +262,22 @@ class RetrievalPerformanceTester:
         print(f"    [Graph-PIR Simulation] Found {len(ranked_doc_indices)} documents via GraphANN SearchKNN")
         
         return ranked_doc_indices
+
+    def _calculate_cosine_distance(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+        """
+        Calculate cosine distance between two vectors (matches GraphPIR system).
+        Returns 1.0 - cosine_similarity (0 = identical, 2 = opposite)
+        """
+        # Cosine similarity
+        dot_product = np.dot(vec1, vec2)
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+
+        if norm1 == 0 or norm2 == 0:
+            return 1.0  # Maximum distance
+
+        cosine_sim = dot_product / (norm1 * norm2)
+        return 1.0 - cosine_sim  # Convert to distance (0 = identical, 2 = opposite)
 
     def _simulate_tiptoe_search(self, query_embedding: np.ndarray,
                                documents: List[str], embeddings: np.ndarray,

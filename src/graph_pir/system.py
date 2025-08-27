@@ -47,17 +47,17 @@ class GraphPIRSystem:
     @property
     def graph_params(self):
         """
-        GraphANN SearchKNN parameters (updated to match private-search-temp implementation).
+        GraphANN SearchKNN parameters (optimized for speed vs precision trade-off).
         
         Returns GraphANN SearchKNN algorithm parameters:
-        - max_iterations: Maximum search steps (GraphANN maxStep)
-        - parallel: Number of parallel explorations per step (GraphANN parallel)
-        - ef_search: Search width parameter (GraphANN ef parameter)
+        - max_iterations: Maximum search steps (reduced for speed)
+        - parallel: Number of parallel explorations per step (reduced for speed)
+        - ef_search: Search width parameter (reduced for speed)
         """
         return {
-            'max_iterations': 10,  # GraphANN maxStep (was 20 in old implementation)
-            'parallel': 3,         # GraphANN parallel explorations per step (was nodes_per_step=5)  
-            'ef_search': 50        # GraphANN ef search width parameter (new)
+            'max_iterations': 5,   # Reduced from 10 -> 5 for speed (fewer PIR rounds)
+            'parallel': 2,         # Reduced from 3 -> 2 for speed (fewer parallel queries)  
+            'ef_search': 30        # Reduced from 50 -> 30 for speed (smaller search space)
         }
 
     def _prepare_vector_database(self, vector_db: np.ndarray, embedding_dim: int,
@@ -131,12 +131,12 @@ class GraphPIRSystem:
 
         if graph_params is None:
             graph_params = {
-                'k_neighbors': 32,
-                'ef_construction': 200,
-                'max_connections': 32,
-                'max_iterations': 10,    # GraphANN maxStep
-                'parallel': 3,           # GraphANN parallel  
-                'ef_search': 50          # GraphANN ef for search
+                'k_neighbors': 16,       # Reduced from 32 -> 16 for speed (fewer edges per node)
+                'ef_construction': 100,  # Reduced from 200 -> 100 for speed (faster graph build)
+                'max_connections': 16,   # Reduced from 32 -> 16 for speed (sparser graph)
+                'max_iterations': 5,     # GraphANN maxStep (reduced for speed)
+                'parallel': 2,           # GraphANN parallel (reduced for speed)  
+                'ef_search': 30          # GraphANN ef for search (reduced for speed)
             }
 
         print("[GraphPIR] Setting up Graph-PIR system...")
@@ -147,9 +147,10 @@ class GraphPIRSystem:
         self.documents = documents
 
         # Store traversal parameters - use GraphANN SearchKNN parameters
-        self.max_iterations = graph_params.get('max_iterations', 10)  # maxStep in GraphANN
-        self.parallel = graph_params.get('parallel', 3)              # parallel in GraphANN
-        self.ef_search = graph_params.get('ef_search', 50)           # ef for search
+        self.max_iterations = graph_params.get('max_iterations', 5)   # maxStep in GraphANN
+        self.parallel = graph_params.get('parallel', 2)              # parallel in GraphANN
+        self.ef_search = graph_params.get('ef_search', 30)           # ef for search
+        self.k_neighbors = graph_params.get('k_neighbors', 16)       # neighbors per vertex
 
         # 1. Set up graph-based search
         print("[GraphPIR] Building graph structure...")
@@ -320,7 +321,7 @@ class GraphPIRSystem:
         to_be_explored = []     # min-heap: (distance, vertex_id)
         
         n_docs = len(self.embeddings)
-        m = 32  # neighbors per vertex (k_neighbors)
+        m = self.k_neighbors  # neighbors per vertex (use actual k_neighbors parameter)
 
         print(f"[GraphPIR] GraphANN SearchKNN: n={n_docs}, maxStep={self.max_iterations}, parallel={self.parallel}")
 
