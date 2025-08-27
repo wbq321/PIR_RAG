@@ -118,8 +118,9 @@ class GraphPIRSystem:
                 'k_neighbors': 32,
                 'ef_construction': 200,
                 'max_connections': 32,
-                'max_iterations': 20,
-                'nodes_per_step': 5
+                'max_iterations': 10,    # GraphANN maxStep
+                'parallel': 3,           # GraphANN parallel  
+                'ef_search': 50          # GraphANN ef for search
             }
 
         print("[GraphPIR] Setting up Graph-PIR system...")
@@ -129,9 +130,10 @@ class GraphPIRSystem:
         self.embeddings = embeddings
         self.documents = documents
 
-        # Store traversal parameters
-        self.max_iterations = graph_params.get('max_iterations', 10)
-        self.nodes_per_step = graph_params.get('nodes_per_step', 5)
+        # Store traversal parameters - use GraphANN SearchKNN parameters
+        self.max_iterations = graph_params.get('max_iterations', 10)  # maxStep in GraphANN
+        self.parallel = graph_params.get('parallel', 3)              # parallel in GraphANN
+        self.ef_search = graph_params.get('ef_search', 50)           # ef for search
 
         # 1. Set up graph-based search
         print("[GraphPIR] Building graph structure...")
@@ -280,98 +282,137 @@ class GraphPIRSystem:
     def _phase1_graph_search(self, query_embedding: np.ndarray,
                            num_candidates: int) -> Tuple[List[int], Dict[str, Any]]:
         """
-        Phase 1: Use graph search + REAL vector PIR to find candidate document indices.
+        Phase 1: Use GraphANN SearchKNN algorithm + REAL vector PIR to find candidate document indices.
 
-        FIXED: Now properly returns embeddings like private-search-temp implementation.
-        Each PIR query returns (embedding, neighbors) for client-side similarity computation.
+        UPDATED: Now uses the proper GraphANN SearchKNN approach from private-search-temp:
+        1. Start vertices: first sqrt(n) vertices, select best 'parallel' by distance
+        2. Priority queue (min-heap) of vertices to explore, ranked by L2 distance  
+        3. Each step: pop 'parallel' closest vertices, explore ALL their neighbors in batch
+        4. PIR batch query neighbors, add new vertices to priority queue
+        5. Return all discovered vertices sorted by L2 distance
         """
+        import heapq
+        
         # Track PIR communication costs
         total_upload_bytes = 0
         total_download_bytes = 0
         pir_query_count = 0
 
-        # Initialize graph search state
-        visited = set()
-        candidates = []
+        # Initialize GraphANN SearchKNN state
+        reach_step = {}         # vertex_id -> step when discovered  
+        known_vertices = {}     # vertex_id -> (embedding, neighbors)
+        to_be_explored = []     # min-heap: (distance, vertex_id)
+        
+        n_docs = len(self.embeddings)
+        m = 32  # neighbors per vertex (k_neighbors)
 
-        # Start with entry point(s) - use first few documents as entry points
-        n_entry_points = min(3, len(self.embeddings))
-        current_nodes = list(range(n_entry_points))
+        print(f"[GraphPIR] GraphANN SearchKNN: n={n_docs}, maxStep={self.max_iterations}, parallel={self.parallel}")
 
-        # For entry points, we already have embeddings locally (no PIR needed)
-        for node in current_nodes:
-            visited.add(node)
-            # Calculate distance to query using known embeddings
-            dist = self._calculate_distance(query_embedding, self.embeddings[node])
-            candidates.append((node, dist))
+        # Step 1: Start vertices - first sqrt(n) documents (like GraphANN GetStartVertex)
+        target_num = int(np.sqrt(n_docs))
+        start_vertex_ids = list(range(min(target_num, n_docs)))
+        
+        print(f"[GraphPIR] Start vertices: first {len(start_vertex_ids)} vertices")
+        
+        # Step 2: Select best 'parallel' start vertices by distance (GraphANN fastStartQueue)
+        start_candidates = []
+        for vertex_id in start_vertex_ids:
+            # For start vertices, we have embeddings locally (no PIR needed)
+            dist = self._calculate_distance(query_embedding, self.embeddings[vertex_id])
+            start_candidates.append((dist, vertex_id))
+        
+        # Sort by distance and take best 'parallel' vertices
+        start_candidates.sort(key=lambda x: x[0])
+        for i in range(min(self.parallel, len(start_candidates))):
+            dist, vertex_id = start_candidates[i]
+            if vertex_id not in known_vertices:
+                # Get neighbors from graph structure
+                neighbors = []
+                if hasattr(self.graph_search, 'graph') and vertex_id in self.graph_search.graph:
+                    neighbors = self.graph_search.graph[vertex_id]
+                
+                known_vertices[vertex_id] = (self.embeddings[vertex_id], neighbors)
+                reach_step[vertex_id] = 0
+                heapq.heappush(to_be_explored, (dist, vertex_id))
 
-        # Use configurable traversal parameters
-        max_iterations = self.max_iterations
-        nodes_per_step = self.nodes_per_step
-
-        for iteration in range(max_iterations):
-            if len(candidates) >= num_candidates:
+        # Step 3: Main GraphANN SearchKNN loop
+        for step in range(self.max_iterations):
+            # Collect batch queries for this step
+            batch_queries = []
+            
+            # For each of 'parallel' repetitions  
+            for rept in range(self.parallel):
+                if len(to_be_explored) == 0:
+                    # Fallback: make random queries if no vertices to explore
+                    batch_queries.extend([np.random.randint(0, n_docs) for _ in range(m)])
+                else:
+                    # Pop closest vertex and add ALL its neighbors to batch (GraphANN approach)
+                    current_dist, current_vertex_id = heapq.heappop(to_be_explored)
+                    if current_vertex_id in known_vertices:
+                        _, neighbors = known_vertices[current_vertex_id]
+                        batch_queries.extend(neighbors)  # Add ALL neighbors to batch
+            
+            if not batch_queries:
                 break
+                
+            print(f"[GraphPIR] Step {step}: PIR batch querying {len(batch_queries)} neighbors")
+            
+            # Step 4: PIR batch query neighbors (GetVertexInfo equivalent)
+            # Remove duplicates and invalid indices
+            unique_queries = list(set([q for q in batch_queries if 0 <= q < n_docs]))
+            
+            if unique_queries:
+                # Use REAL PIR to retrieve (embeddings + neighbors) for these nodes
+                pir_start = time.time()
+                retrieved_data = self._pir_query_graph_nodes(unique_queries)
+                pir_time = time.time() - pir_start
 
-            # Select best current nodes to explore neighbors from
-            current_best = sorted(candidates, key=lambda x: x[1])[:nodes_per_step]
+                # Calculate PIR communication costs
+                bytes_per_node = len(self.embeddings[0]) * 4 + 16 * 4  # embedding + neighbors
+                query_upload = len(unique_queries) * 256  # PIR query overhead
+                query_download = len(unique_queries) * bytes_per_node
 
-            # Collect unvisited neighbors to query
-            next_nodes_to_query = []
-            for node_id, _ in current_best:
-                if hasattr(self.graph_search, 'graph') and node_id in self.graph_search.graph:
-                    neighbors = self.graph_search.graph[node_id][:nodes_per_step]
-                    for neighbor in neighbors:
-                        if neighbor not in visited and neighbor < len(self.embeddings):
-                            next_nodes_to_query.append(neighbor)
-                            visited.add(neighbor)
+                total_upload_bytes += query_upload
+                total_download_bytes += query_download
+                pir_query_count += 1
 
-            if not next_nodes_to_query:
-                break
+                # Step 5: Process PIR results (GraphANN neighbor processing)
+                for i, neighbor_id in enumerate(unique_queries):
+                    if neighbor_id not in known_vertices and i < len(retrieved_data):
+                        # Extract embedding and neighbors from PIR response
+                        node_embedding, node_neighbors = retrieved_data[i]
+                        
+                        # Check if neighbor list is valid (not all zeros)
+                        if len(node_neighbors) > 0 and any(n != 0 for n in node_neighbors):
+                            # Add to known vertices
+                            known_vertices[neighbor_id] = (node_embedding, node_neighbors)
+                            reach_step[neighbor_id] = step
+                            
+                            # Calculate L2 distance and add to exploration queue
+                            dist = self._calculate_distance(query_embedding, node_embedding)
+                            heapq.heappush(to_be_explored, (dist, neighbor_id))
 
-            # FIXED: Use REAL PIR to retrieve (embeddings + neighbors) for these nodes
-            print(f"[GraphPIR] PIR querying {len(next_nodes_to_query)} nodes...")
-
-            # Simulate PIR query that returns embeddings (like private-search-temp)
-            pir_start = time.time()
-            retrieved_data = self._pir_query_graph_nodes(next_nodes_to_query)
-            pir_time = time.time() - pir_start
-
-            # Calculate PIR communication costs
-            # Each query returns: embedding (768*4 bytes) + neighbors (16*4 bytes) = ~3KB per node
-            bytes_per_node = len(self.embeddings[0]) * 4 + 16 * 4  # embedding + neighbors
-            query_upload = len(next_nodes_to_query) * 256  # PIR query overhead
-            query_download = len(next_nodes_to_query) * bytes_per_node
-
-            total_upload_bytes += query_upload
-            total_download_bytes += query_download
-            pir_query_count += 1
-
-            # Process retrieved embeddings and neighbors
-            current_nodes = []
-            for i, node_id in enumerate(next_nodes_to_query):
-                if i < len(retrieved_data):
-                    # Extract embedding and neighbors from PIR response
-                    node_embedding, node_neighbors = retrieved_data[i]
-
-                    # Calculate distance using retrieved embedding (client-side privacy!)
-                    dist = self._calculate_distance(query_embedding, node_embedding)
-                    candidates.append((node_id, dist))
-                    current_nodes.append(node_id)
-
-        # Sort candidates by distance and return top candidates
-        candidates.sort(key=lambda x: x[1])
-        candidate_indices = [idx for idx, _ in candidates[:num_candidates]]
+        # Step 6: Extract and rank all discovered vertices by L2 distance (GraphANN ending)
+        all_known_vertices = []
+        for vertex_id, (vector, _) in known_vertices.items():
+            dist = self._calculate_distance(query_embedding, vector)
+            all_known_vertices.append((dist, vertex_id))
+        
+        # Sort by distance (ascending - closest first)
+        all_known_vertices.sort(key=lambda x: x[0])
+        
+        # Return top candidates
+        candidate_indices = [vertex_id for _, vertex_id in all_known_vertices[:num_candidates]]
 
         phase1_metrics = {
             "phase1_upload_bytes": total_upload_bytes,
             "phase1_download_bytes": total_download_bytes,
             "graph_traversal_steps": pir_query_count,
             "pir_queries_made": pir_query_count,
-            "total_nodes_explored": len(visited)
+            "total_nodes_explored": len(known_vertices)
         }
 
-        print(f"[GraphPIR] Phase 1 complete: {pir_query_count} PIR queries, {len(visited)} nodes explored")
+        print(f"[GraphPIR] GraphANN SearchKNN complete: {pir_query_count} PIR queries, {len(known_vertices)} nodes explored")
 
         return candidate_indices, phase1_metrics
 

@@ -158,67 +158,105 @@ class RetrievalPerformanceTester:
 
     def _simulate_graph_pir_search(self, query_embedding: np.ndarray,
                                   documents: List[str], embeddings: np.ndarray,
-                                  k_neighbors: int = 16, max_iterations: int = 5,
-                                  nodes_per_step: int = 3) -> List[int]:
+                                  k_neighbors: int = 32, max_iterations: int = 10,
+                                  parallel: int = 3, **kwargs) -> List[int]:
         """
-        Simulate Graph-PIR search strategy in plaintext for accurate retrieval metrics.
+        Simulate Graph-PIR search using the GraphANN SearchKNN algorithm (UPDATED implementation).
         
-        Strategy:
-        1. Build graph structure (HNSW-style)
-        2. Graph traversal starting from entry points
-        3. Return documents found during traversal
+        UPDATED: Now matches the improved Graph-PIR that uses GraphANN SearchKNN approach:
+        1. Start vertices: first sqrt(n) vertices, select best 'parallel' by distance
+        2. Priority queue (min-heap) of vertices to explore, ranked by L2 distance
+        3. Each step: pop 'parallel' closest vertices, explore ALL their neighbors in batch
+        4. Batch query neighbors, add new vertices to priority queue
+        5. Return all discovered vertices sorted by L2 distance
         """
-        print(f"    [Graph-PIR Simulation] Building graph for {len(embeddings)} documents...")
+        import heapq
         
-        # 1. Build graph structure (simplified HNSW)
+        n_docs = len(embeddings)
+        m = k_neighbors  # Number of neighbors per vertex
+        
+        print(f"    [Graph-PIR Simulation] GraphANN SearchKNN: n={n_docs}, m={m}, maxStep={max_iterations}, parallel={parallel}")
+        
+        # 1. Build k-NN graph structure  
         graph = self._build_simple_graph(embeddings, k_neighbors)
         
-        # 2. Graph traversal search
-        visited = set()
-        candidates = []
+        # 2. Initialize GraphANN SearchKNN state
+        reach_step = {}         # vertex_id -> step when discovered  
+        known_vertices = {}     # vertex_id -> (vector, neighbors)
+        to_be_explored = []     # min-heap: (distance, vertex_id)
         
-        # Start with entry points (first few documents)
-        n_entry_points = min(3, len(embeddings))
-        current_nodes = list(range(n_entry_points))
+        # 3. Start vertices: first sqrt(n) documents (GraphANN GetStartVertex)
+        target_num = int(np.sqrt(n_docs))
+        start_vertex_ids = list(range(min(target_num, n_docs)))
         
-        # Process entry points
-        for node in current_nodes:
-            visited.add(node)
-            similarity = cosine_similarity([query_embedding], [embeddings[node]])[0][0]
-            candidates.append((node, similarity))
+        print(f"    [Graph-PIR Simulation] Start vertices: first {len(start_vertex_ids)} vertices")
         
-        print(f"    [Graph-PIR Simulation] Starting traversal from {n_entry_points} entry points...")
+        # 4. Select best 'parallel' start vertices by distance (GraphANN fastStartQueue)
+        start_candidates = []
+        for vertex_id in start_vertex_ids:
+            dist = np.linalg.norm(embeddings[vertex_id] - query_embedding)  # L2Dist
+            start_candidates.append((dist, vertex_id))
         
-        # 3. Iterative traversal
-        for iteration in range(max_iterations):
-            # Select best current nodes to explore neighbors from
-            current_best = sorted(candidates, key=lambda x: x[1], reverse=True)[:nodes_per_step]
+        # Sort by distance and take best 'parallel' vertices
+        start_candidates.sort(key=lambda x: x[0])
+        for i in range(min(parallel, len(start_candidates))):
+            dist, vertex_id = start_candidates[i]
+            if vertex_id not in known_vertices:
+                known_vertices[vertex_id] = (embeddings[vertex_id], graph.get(vertex_id, []))
+                reach_step[vertex_id] = 0
+                heapq.heappush(to_be_explored, (dist, vertex_id))
+        
+        # 5. Main GraphANN SearchKNN loop
+        for step in range(max_iterations):
+            # Collect batch queries for this step
+            batch_queries = []
             
-            # Collect unvisited neighbors
-            next_nodes = []
-            for node_id, _ in current_best:
-                if node_id in graph:
-                    neighbors = graph[node_id][:nodes_per_step]
-                    for neighbor in neighbors:
-                        if neighbor not in visited and neighbor < len(embeddings):
-                            next_nodes.append(neighbor)
-                            visited.add(neighbor)
+            # For each of 'parallel' repetitions
+            for rept in range(parallel):
+                if len(to_be_explored) == 0:
+                    # Make random queries if no vertices to explore (benchmarking fallback)
+                    batch_queries.extend([np.random.randint(0, n_docs) for _ in range(m)])
+                else:
+                    # Pop closest vertex and add ALL its neighbors to batch
+                    current_dist, current_vertex_id = heapq.heappop(to_be_explored)
+                    if current_vertex_id in known_vertices:
+                        _, neighbors = known_vertices[current_vertex_id]
+                        batch_queries.extend(neighbors)  # Add ALL neighbors to batch
             
-            if not next_nodes:
+            if not batch_queries:
                 break
                 
-            print(f"    [Graph-PIR Simulation] Iteration {iteration+1}: exploring {len(next_nodes)} new nodes")
+            print(f"    [Graph-PIR Simulation] Step {step}: exploring {len(batch_queries)} neighbors")
             
-            # Process new nodes
-            for node_id in next_nodes:
-                similarity = cosine_similarity([query_embedding], [embeddings[node_id]])[0][0]
-                candidates.append((node_id, similarity))
+            # 6. Process batch queries (GetVertexInfo simulation)
+            unique_queries = list(set([q for q in batch_queries if 0 <= q < n_docs]))
+            
+            for neighbor_id in unique_queries:
+                if neighbor_id not in known_vertices:
+                    # Check if neighbor list is valid (not all zeros)
+                    neighbor_neighbors = graph.get(neighbor_id, [])
+                    if len(neighbor_neighbors) > 0 and any(n != 0 for n in neighbor_neighbors):
+                        # Add to known vertices
+                        known_vertices[neighbor_id] = (embeddings[neighbor_id], neighbor_neighbors)
+                        reach_step[neighbor_id] = step
+                        
+                        # Calculate L2 distance and add to exploration queue
+                        dist = np.linalg.norm(embeddings[neighbor_id] - query_embedding)
+                        heapq.heappush(to_be_explored, (dist, neighbor_id))
         
-        # Sort by similarity and return indices
-        candidates.sort(key=lambda x: x[1], reverse=True)
-        ranked_doc_indices = [idx for idx, _ in candidates]
+        # 7. Extract and rank all discovered vertices by L2 distance (GraphANN ending)
+        all_known_vertices = []
+        for vertex_id, (vector, _) in known_vertices.items():
+            dist = np.linalg.norm(vector - query_embedding)  # L2Dist
+            all_known_vertices.append((dist, vertex_id))
         
-        print(f"    [Graph-PIR Simulation] Found {len(ranked_doc_indices)} documents via graph traversal")
+        # Sort by distance (ascending - closest first)
+        all_known_vertices.sort(key=lambda x: x[0])
+        
+        # Return vertex IDs in distance order
+        ranked_doc_indices = [vertex_id for _, vertex_id in all_known_vertices]
+        
+        print(f"    [Graph-PIR Simulation] Found {len(ranked_doc_indices)} documents via GraphANN SearchKNN")
         
         return ranked_doc_indices
 
@@ -345,7 +383,7 @@ class RetrievalPerformanceTester:
             elif system_name == "Graph-PIR":
                 retrieved_doc_indices = self._simulate_graph_pir_search(
                     query_embedding, documents, embeddings,
-                    k_neighbors=16, max_iterations=5, nodes_per_step=3
+                    k_neighbors=32, max_iterations=20, nodes_per_step=5  # YOUR actual parameters
                 )
             elif system_name == "Tiptoe":
                 retrieved_doc_indices = self._simulate_tiptoe_search(
