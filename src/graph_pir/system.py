@@ -359,7 +359,10 @@ class GraphPIRSystem:
         print(f"[GraphPIR] Phase 2: Fast URL retrieval (Tiptoe method) for {len(candidate_indices)} documents")
 
         # Initialize Tiptoe's SimpleLinearHomomorphicPIR for fast URL retrieval
-        from ..tiptoe.crypto_fixed import SimpleLinearHomomorphicScheme
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+        from tiptoe.crypto_fixed import SimpleLinearHomomorphicScheme
         
         url_pir_scheme = SimpleLinearHomomorphicScheme()
         
