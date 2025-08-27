@@ -100,27 +100,38 @@ class PIRRAGServer:
                 cluster_urls = self.clusters_urls[cluster_idx]
                 
                 if cluster_urls:
-                    # Combine URLs with their embeddings for this cluster
-                    cluster_data_parts = []
+                    # EFFICIENCY FIX: Use binary encoding instead of string conversion
+                    import struct
+                    import pickle
+                    
+                    # Collect URL indices and embeddings for this cluster
+                    cluster_doc_indices = []
+                    cluster_embeddings = []
+                    
                     for url in cluster_urls:
-                        # Extract document index from URL
                         try:
                             doc_idx = int(url.split('_')[-1])
                             if 0 <= doc_idx < len(self.document_embeddings):
-                                embedding = self.document_embeddings[doc_idx]
-                                # Format: URL|||embedding_as_string
-                                embedding_str = ','.join(map(str, embedding))
-                                combined_data = f"{url}|||{embedding_str}"
-                                cluster_data_parts.append(combined_data)
+                                cluster_doc_indices.append(doc_idx)
+                                cluster_embeddings.append(self.document_embeddings[doc_idx])
                         except (ValueError, IndexError):
-                            # Skip invalid URLs
                             continue
                     
-                    # Join all URL+embedding pairs for this cluster
-                    cluster_combined_string = "###".join(cluster_data_parts)
-                    
-                    # Convert to bytes and encrypt in chunks
-                    data_bytes = cluster_combined_string.encode('utf-8')
+                    if cluster_doc_indices:
+                        # Create compact binary format: [n_docs][doc_idx1][embedding1][doc_idx2][embedding2]...
+                        data_parts = []
+                        data_parts.append(struct.pack('I', len(cluster_doc_indices)))  # Number of documents
+                        
+                        for doc_idx, embedding in zip(cluster_doc_indices, cluster_embeddings):
+                            data_parts.append(struct.pack('I', doc_idx))  # Document index (4 bytes)
+                            # Convert embedding to bytes (much more efficient than string)
+                            embedding_bytes = embedding.astype(np.float32).tobytes()
+                            data_parts.append(struct.pack('I', len(embedding_bytes)))  # Embedding length
+                            data_parts.append(embedding_bytes)  # Embedding data
+                        
+                        data_bytes = b''.join(data_parts)
+                    else:
+                        data_bytes = b''
                     
                     # Use 4-byte chunks to avoid overflow in linear scheme
                     chunk_results = []
