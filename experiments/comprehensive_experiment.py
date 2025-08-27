@@ -12,6 +12,7 @@ import pandas as pd
 import json
 import sys
 import os
+import torch
 from datetime import datetime
 from typing import Dict, Any, List, Tuple
 import argparse
@@ -131,7 +132,8 @@ class PIRExperimentRunner:
             
             # Step 1: Find relevant clusters
             cluster_start = time.perf_counter()
-            relevant_clusters = client.find_relevant_clusters(query_embedding, top_clusters=3)
+            query_tensor = torch.tensor(query_embedding) if not isinstance(query_embedding, torch.Tensor) else query_embedding
+            relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
             cluster_time = time.perf_counter() - cluster_start
             
             # Step 2: PIR retrieval
@@ -141,7 +143,7 @@ class PIRExperimentRunner:
             
             # Step 3: Reranking
             rerank_start = time.perf_counter()
-            final_results = client.rerank_documents(query_embedding, urls, top_k=top_k)
+            final_results = client.rerank_documents(query_tensor, urls, top_k=top_k)
             rerank_time = time.perf_counter() - rerank_start
             
             total_query_time = time.perf_counter() - query_start

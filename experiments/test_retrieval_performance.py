@@ -12,6 +12,7 @@ import time
 import numpy as np
 import pandas as pd
 import json
+import torch
 from typing import Dict, Any, List, Tuple
 from pathlib import Path
 import sys
@@ -145,7 +146,8 @@ class RetrievalPerformanceTester:
             if system_name == "PIR-RAG":
                 # Step-by-step PIR-RAG execution
                 cluster_start = time.perf_counter()
-                relevant_clusters = client.find_relevant_clusters(query_embedding, top_clusters=3)
+                query_tensor = torch.tensor(query_embedding) if not isinstance(query_embedding, torch.Tensor) else query_embedding
+                relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
                 cluster_time = time.perf_counter() - cluster_start
                 
                 pir_start = time.perf_counter()
@@ -261,9 +263,10 @@ class RetrievalPerformanceTester:
         if system_name == "PIR-RAG":
             client, server = system
             for query in queries:
-                relevant_clusters = client.find_relevant_clusters(query, top_clusters=3)
+                query_tensor = torch.tensor(query) if not isinstance(query, torch.Tensor) else query
+                relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
                 urls, _ = client.pir_retrieve(relevant_clusters, server)
-                client.rerank_documents(query, urls, top_k=5)
+                client.rerank_documents(query_tensor, urls, top_k=5)
                 
         elif system_name == "Graph-PIR":
             for query in queries:

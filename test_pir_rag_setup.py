@@ -50,8 +50,9 @@ try:
             print(f"   Setup time: {client_result['setup_time']:.4f}s")
             
             # Step 4: Test a simple query
-            query = np.random.randn(embed_dim).astype(np.float32)
-            relevant_clusters = client.find_relevant_clusters(query, top_clusters=2)
+            import torch
+            query = torch.tensor(np.random.randn(embed_dim).astype(np.float32))
+            relevant_clusters = client.find_relevant_clusters(query, top_k=2)
             print(f"✅ Query test successful: found {len(relevant_clusters)} relevant clusters")
             
             print("\n🎉 PIR-RAG setup test PASSED!")
