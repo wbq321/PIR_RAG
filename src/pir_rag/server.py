@@ -91,25 +91,19 @@ class PIRRAGServer:
         Returns:
             List of encrypted URL data that client must decrypt
         """
-        print(f"[PIR-RAG] DEBUG: Server processing PIR query for {len(encrypted_query)} clusters")
-        print(f"[PIR-RAG] DEBUG: Available clusters: {len(self.clusters_urls)}")
-        
         encrypted_results = []
         
         # For each cluster, compute encrypted result using homomorphic operations
         for cluster_idx in range(len(self.clusters_urls)):
             if cluster_idx < len(encrypted_query):
                 cluster_urls = self.clusters_urls[cluster_idx]
-                print(f"[PIR-RAG] DEBUG: Cluster {cluster_idx} has {len(cluster_urls)} URLs")
                 
                 if cluster_urls:
                     # Encode the URLs as a simple concatenated string for this cluster
                     cluster_url_string = "|||".join(cluster_urls)
-                    print(f"[PIR-RAG] DEBUG: Cluster {cluster_idx} URL string: '{cluster_url_string[:100]}...' (first 100 chars)")
                     
                     # Convert to bytes and then to integers (using smaller chunks)
                     url_bytes = cluster_url_string.encode('utf-8')
-                    print(f"[PIR-RAG] DEBUG: URL bytes length: {len(url_bytes)}")
                     
                     # Use 4-byte chunks to avoid overflow in linear scheme
                     chunk_results = []
@@ -127,18 +121,13 @@ class PIRRAGServer:
                                 encrypted_query[cluster_idx], chunk_int
                             )
                             chunk_results.append(encrypted_chunk)
-                            if len(chunk_results) <= 3:  # Show first few for debugging
-                                print(f"[PIR-RAG] DEBUG: Chunk {i//4}: {chunk_int} -> encrypted")
                     
-                    print(f"[PIR-RAG] DEBUG: Cluster {cluster_idx} produced {len(chunk_results)} encrypted chunks")
                     encrypted_results.extend(chunk_results)
                 else:
                     # Empty cluster - add encrypted zero
                     encrypted_zero = crypto_scheme.scalar_multiply(encrypted_query[cluster_idx], 0)
                     encrypted_results.append(encrypted_zero)
-                    print(f"[PIR-RAG] DEBUG: Cluster {cluster_idx} is empty, added encrypted zero")
         
-        print(f"[PIR-RAG] DEBUG: Server returning {len(encrypted_results)} encrypted chunks total")
         return encrypted_results
     
     def get_document_embeddings_for_urls(self, urls: List[str]) -> np.ndarray:

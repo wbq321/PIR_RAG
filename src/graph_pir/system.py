@@ -269,10 +269,6 @@ class GraphPIRSystem:
         Phase 1: Use graph search + REAL vector PIR to find candidate document indices.
         Based on private-search-temp implementation.
         """
-        print("[GraphPIR] DEBUG: Starting Phase 1 - Graph traversal with vector PIR")
-        print(f"[GraphPIR] DEBUG: Query embedding shape: {query_embedding.shape}")
-        print(f"[GraphPIR] DEBUG: Target candidates: {num_candidates}")
-
         # Track PIR communication costs
         total_upload_bytes = 0
         total_download_bytes = 0
@@ -285,7 +281,6 @@ class GraphPIRSystem:
         # Start with entry point(s) - use first few documents as entry points
         n_entry_points = min(5, len(self.embeddings))
         current_nodes = list(range(n_entry_points))
-        print(f"[GraphPIR] DEBUG: Starting with {n_entry_points} entry points: {current_nodes}")
 
         # Add entry points to visited
         for node in current_nodes:
@@ -294,16 +289,11 @@ class GraphPIRSystem:
             dist = self._calculate_distance(query_embedding, self.embeddings[node])
             candidates.append((node, dist))
 
-        print(f"[GraphPIR] DEBUG: Initial candidates: {[(node, f'{dist:.4f}') for node, dist in candidates[:3]]}...")
-
         max_iterations = 10  # Limit graph traversal steps
         nodes_per_step = 5   # Number of neighbors to explore per step
 
         for iteration in range(max_iterations):
-            print(f"[GraphPIR] DEBUG: Graph traversal iteration {iteration+1}/{max_iterations}")
-            
             if len(candidates) >= num_candidates:
-                print(f"[GraphPIR] DEBUG: Reached target candidates ({len(candidates)} >= {num_candidates})")
                 break
 
             # Select best unvisited neighbors to explore
@@ -319,14 +309,9 @@ class GraphPIRSystem:
                             visited.add(neighbor)
 
             if not next_nodes_to_query:
-                print(f"[GraphPIR] DEBUG: No more unvisited neighbors found")
                 break
 
-            print(f"[GraphPIR] DEBUG: Querying {len(next_nodes_to_query)} new nodes via PIR")
-
             # Use REAL PIR to retrieve vectors for these nodes
-            print(f"[GraphPIR] PIR query for {len(next_nodes_to_query)} vectors at iteration {iteration}")
-
             # Generate PIR query for the neighbor vectors
             pir_vectors, pir_metrics = self.vector_pir_client.query_vectors(
                 self.vector_pir_server, next_nodes_to_query
@@ -335,8 +320,6 @@ class GraphPIRSystem:
             total_upload_bytes += pir_metrics["upload_bytes"]
             total_download_bytes += pir_metrics["download_bytes"]
             pir_query_count += 1
-
-            print(f"[GraphPIR] DEBUG: PIR returned {len(pir_vectors)} vectors")
 
             # Calculate distances and add to candidates
             current_nodes = []
@@ -347,15 +330,10 @@ class GraphPIRSystem:
                     dist = self._calculate_distance(query_embedding, vector)
                     candidates.append((node_id, dist))
                     current_nodes.append(node_id)
-                    if i < 3:  # Show first few for debugging
-                        print(f"[GraphPIR] DEBUG: Node {node_id}: distance = {dist:.4f}")
 
         # Sort candidates by distance and return top candidates
         candidates.sort(key=lambda x: x[1])
         candidate_indices = [idx for idx, _ in candidates[:num_candidates]]
-        
-        print(f"[GraphPIR] DEBUG: Phase 1 complete, selected top {len(candidate_indices)} candidates")
-        print(f"[GraphPIR] DEBUG: Best candidates: {candidate_indices[:5]}")
 
         phase1_metrics = {
             "phase1_upload_bytes": total_upload_bytes,
@@ -374,9 +352,6 @@ class GraphPIRSystem:
         Phase 2: Use Tiptoe's fast URL retrieval method instead of expensive Paillier PIR.
         This is much faster than the original Paillier-based approach.
         """
-        print(f"[GraphPIR] DEBUG: Starting Phase 2 - Fast URL retrieval for {len(candidate_indices)} documents")
-        print(f"[GraphPIR] DEBUG: Candidate indices: {candidate_indices}")
-
         # Initialize Tiptoe's SimpleLinearHomomorphicPIR for fast URL retrieval
         import sys
         import os
@@ -395,27 +370,20 @@ class GraphPIRSystem:
 
         # Prepare all URLs for PIR database (convert to byte arrays like Tiptoe)
         all_urls = [f"https://example.com/doc_{i}" for i in range(len(self.documents))]
-        print(f"[GraphPIR] DEBUG: Total URL database size: {len(all_urls)}")
         
         url_database = []
         for url in all_urls:
             # Convert URL to byte array (like Tiptoe's URL PIR)
             url_bytes = [ord(c) for c in url.ljust(50)[:50]]  # Pad/truncate to 50 chars
             url_database.append(url_bytes)
-        
-        print(f"[GraphPIR] DEBUG: URL database prepared, sample URL: {all_urls[0]}")
 
         # Retrieve each URL using fast PIR (much faster than per-document Paillier)
         for idx, doc_idx in enumerate(candidate_indices):
-            print(f"[GraphPIR] DEBUG: Retrieving URL {idx+1}/{len(candidate_indices)}, doc_idx={doc_idx}")
-            
             # Generate PIR query (much faster than Paillier)
             query_start = time.perf_counter()
             pir_query, query_metrics = url_pir_scheme.create_pir_query(doc_idx, len(url_database))
             query_gen_time = time.perf_counter() - query_start
             encryption_time += query_gen_time
-
-            print(f"[GraphPIR] DEBUG: PIR query created, size: {len(pir_query)}")
 
             # Add query metrics
             upload_bytes += query_metrics['upload_bytes']
@@ -435,20 +403,15 @@ class GraphPIRSystem:
             decrypt_time = time.perf_counter() - decrypt_start
             decryption_time += decrypt_time
 
-            print(f"[GraphPIR] DEBUG: Decrypted URL bytes: {url_bytes[:10]}... (first 10)")
-
             # Convert bytes back to URL string
             if isinstance(url_bytes, list):
                 url_text = ''.join(chr(b) for b in url_bytes if 0 <= b <= 127).strip()
             else:
                 url_text = f"https://example.com/doc_{doc_idx}"
 
-            print(f"[GraphPIR] DEBUG: Final URL: {url_text}")
-
             # Fallback URL if decryption fails
             if not url_text or not url_text.strip():
                 url_text = f"https://example.com/doc_{doc_idx}"
-                print(f"[GraphPIR] DEBUG: Using fallback URL: {url_text}")
             
             retrieved_urls.append(url_text)
 
@@ -463,9 +426,6 @@ class GraphPIRSystem:
             "retrieved_type": "urls",  # Flag indicating URL retrieval
             "pir_method": "tiptoe_fast"  # Method used for Phase 2
         }
-
-        print(f"[GraphPIR] Phase 2 complete: {len(retrieved_urls)} URLs retrieved (fast method)")
-        print(f"[GraphPIR] Communication: {upload_bytes:,} upload, {download_bytes:,} download bytes")
 
         return retrieved_urls, phase2_metrics
 

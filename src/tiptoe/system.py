@@ -340,50 +340,35 @@ class TiptoeSystem:
         total_ranking_comm = 0
         if self.homomorphic_ranking is not None:
             try:
-                print(f"[Tiptoe] DEBUG: Starting real BFV homomorphic ranking for cluster {cluster_id}")
-                print(f"[Tiptoe] DEBUG: Query vector shape: {query_reduced.shape}")
-                print(f"[Tiptoe] DEBUG: Ranking matrix shape: {ranking_matrix.shape}")
-                print(f"[Tiptoe] DEBUG: Documents in cluster: {n_docs_in_cluster}")
-                
                 # Encrypt query vector
                 ctxt_query = self.homomorphic_ranking.encrypt_vector(query_reduced)
-                print(f"[Tiptoe] DEBUG: Query encrypted successfully, {len(ctxt_query)} elements")
                 
                 # Compute homomorphic dot products with all documents in cluster
                 # ranking_matrix has shape (dimensions, n_documents), so each column is a document
                 db_vectors = [ranking_matrix[:, i] for i in range(n_docs_in_cluster)]
-                print(f"[Tiptoe] DEBUG: Database vectors prepared: {len(db_vectors)} documents")
                 
                 ctxt_scores = self.homomorphic_ranking.dot_product(ctxt_query, db_vectors)
-                print(f"[Tiptoe] DEBUG: Homomorphic dot products computed: {len(ctxt_scores)} scores")
                 
                 # Decrypt to get similarity scores
                 scores = self.homomorphic_ranking.decrypt_scores(ctxt_scores)
-                print(f"[Tiptoe] DEBUG: Decrypted scores: {scores[:3]}... (showing first 3)")
                 
                 # Estimate communication cost for homomorphic operations
                 query_size = len(str(ctxt_query))  # Encrypted query size
                 response_size = len(str(ctxt_scores))  # Encrypted scores size
                 total_ranking_comm = query_size + response_size
                 
-                print(f"[Tiptoe] Real homomorphic ranking completed for cluster {cluster_id}")
-                
             except Exception as e:
-                print(f"[Tiptoe] Homomorphic ranking error: {str(e)[:50]}... falling back to simulated")
                 # Fallback to simulated ranking
                 scores = (ranking_matrix.T @ query_reduced).tolist()
                 total_ranking_comm = 1024 + 512  # Estimated comm cost
         else:
-            print(f"[Tiptoe] DEBUG: Using simulated ranking for cluster {cluster_id}")
             # Simulated homomorphic ranking (direct computation for testing)
             # ranking_matrix @ query_reduced gives dot products for all documents
             scores = (ranking_matrix.T @ query_reduced).tolist()  # Transpose to get (n_docs, dims) @ (dims,)
-            print(f"[Tiptoe] DEBUG: Simulated scores computed: {scores[:3]}... (showing first 3)")
             total_ranking_comm = 1024 + 512  # Estimated comm cost
 
         # Sort and select top-k
         top_indices = np.argsort(scores)[::-1][:top_k].tolist()
-        print(f"[Tiptoe] DEBUG: Top-k indices selected: {top_indices}")
         ranking_time = time.perf_counter() - ranking_start
 
         return top_indices, {
@@ -417,10 +402,6 @@ class TiptoeSystem:
             }
         
         # Get PIR system for this cluster
-        print(f"[Tiptoe] DEBUG: Starting PIR URL retrieval for cluster {cluster_id}")
-        print(f"[Tiptoe] DEBUG: Ranked indices to retrieve: {ranked_indices[:top_k]}")
-        print(f"[Tiptoe] DEBUG: Cluster has {len(cluster_docs)} documents")
-        
         pir_system = self.pir_systems[cluster_id]
         
         # PIR retrieval for each ranked document URL
@@ -430,12 +411,9 @@ class TiptoeSystem:
         for idx, rank_idx in enumerate(ranked_indices[:top_k]):
             if rank_idx < len(cluster_docs):
                 try:
-                    print(f"[Tiptoe] DEBUG: Retrieving document {idx+1}/{top_k}, rank_idx={rank_idx}")
-                    
                     # Generate synthetic URL for this document (realistic web search scenario)
                     doc_global_idx = doc_indices[rank_idx]
                     synthetic_url = f"https://example.com/doc_{doc_global_idx}"
-                    print(f"[Tiptoe] DEBUG: Target URL: {synthetic_url}")
                     
                     # Use LinearHomomorphicPIR to retrieve URL instead of document
                     # Create PIR query for this URL index in the cluster
@@ -443,19 +421,15 @@ class TiptoeSystem:
                         target_index=rank_idx,
                         database_size=len(cluster_docs)
                     )
-                    print(f"[Tiptoe] DEBUG: PIR query created, size: {len(pir_query)}")
                     
                     # CRYPTO VERIFICATION: Check if PIR query contains encrypted elements
                     if len(pir_query) > 0 and isinstance(pir_query[0], dict) and ('u' in pir_query[0] or 'value' in pir_query[0]):
                         crypto_verified = True
-                        print(f"[Tiptoe] DEBUG: PIR query is properly encrypted ✓")
                     else:
                         crypto_verified = False
-                        print(f"[Tiptoe] WARNING: PIR query may not be properly encrypted!")
                     
                     # Server processes query (PIR over actual URL content, not indices)
                     url_database = [f"https://example.com/doc_{doc_indices[i]}" for i in range(len(cluster_docs))]
-                    print(f"[Tiptoe] DEBUG: URL database size: {len(url_database)}")
                     
                     # Convert URLs to numerical representation for PIR (encode as bytes)
                     url_bytes_db = []
@@ -470,7 +444,6 @@ class TiptoeSystem:
                     pir_response, server_metrics = pir_system.process_pir_query(
                         pir_query, url_bytes_db  # PIR over actual URL bytes, not indices
                     )
-                    print(f"[Tiptoe] DEBUG: PIR response received, processing...")
                     
                     # Client decrypts to get actual URL bytes
                     retrieved_url_bytes = pir_system.decrypt_pir_response(pir_response)
@@ -482,13 +455,10 @@ class TiptoeSystem:
                             byte_values = [max(0, min(255, int(b))) for b in retrieved_url_bytes]
                             url_bytes = bytes(byte_values)
                             retrieved_url = url_bytes.rstrip(b'\x00').decode('utf-8', errors='ignore')
-                            print(f"[Tiptoe] DEBUG: Decrypted URL: {retrieved_url}")
                         except Exception as e:
-                            print(f"[Tiptoe] DEBUG: URL decryption failed: {e}, using fallback")
                             retrieved_url = synthetic_url
                     else:
                         # Single integer response - fallback
-                        print(f"[Tiptoe] DEBUG: Unexpected response type, using fallback URL")
                         retrieved_url = synthetic_url
                     
                     retrieved_urls.append(retrieved_url)
