@@ -735,8 +735,7 @@ def main():
             graph_params = {
                 'k_neighbors': args.graph_pir_k_neighbors,
                 'ef_construction': args.graph_pir_ef_construction,
-                'max_connections': args.graph_pir_max_connections,
-                'ef_search': args.graph_pir_ef_search
+                'max_connections': args.graph_pir_max_connections
             }
             results['graph_pir'] = runner.run_graph_pir_experiment(
                 embeddings, documents, queries,
@@ -777,8 +776,7 @@ def main():
         graph_pir_params = {
             'k_neighbors': args.graph_pir_k_neighbors,
             'ef_construction': args.graph_pir_ef_construction,
-            'max_connections': args.graph_pir_max_connections,
-            'ef_search': args.graph_pir_ef_search
+            'max_connections': args.graph_pir_max_connections
         }
         tiptoe_params = {
             'k_clusters': args.tiptoe_k_clusters,
@@ -810,8 +808,7 @@ def main():
         base_graph_pir_params = {
             'k_neighbors': args.graph_pir_k_neighbors,
             'ef_construction': args.graph_pir_ef_construction,
-            'max_connections': args.graph_pir_max_connections,
-            'ef_search': args.graph_pir_ef_search
+            'max_connections': args.graph_pir_max_connections
         }
 
         sensitivity_results = runner.run_parameter_sensitivity_experiment(
