@@ -243,7 +243,7 @@ class GraphPIRSystem:
             **phase1_metrics
         })
 
-        # Phase 2: Document retrieval PIR  
+        # Phase 2: Document retrieval PIR
         print(f"[GraphPIR] Phase 2: Document PIR for {len(candidate_indices)} candidates...")
         phase2_start = time.perf_counter()
 
@@ -271,7 +271,7 @@ class GraphPIRSystem:
                            num_candidates: int) -> Tuple[List[int], Dict[str, Any]]:
         """
         Phase 1: Use graph search + REAL vector PIR to find candidate document indices.
-        
+
         FIXED: Now properly returns embeddings like private-search-temp implementation.
         Each PIR query returns (embedding, neighbors) for client-side similarity computation.
         """
@@ -295,8 +295,8 @@ class GraphPIRSystem:
             dist = self._calculate_distance(query_embedding, self.embeddings[node])
             candidates.append((node, dist))
 
-        max_iterations = 5  # Limit graph traversal steps
-        nodes_per_step = 3   # Number of neighbors to explore per step
+        max_iterations = 10  # Limit graph traversal steps
+        nodes_per_step = 5   # Number of neighbors to explore per step
 
         for iteration in range(max_iterations):
             if len(candidates) >= num_candidates:
@@ -304,7 +304,7 @@ class GraphPIRSystem:
 
             # Select best current nodes to explore neighbors from
             current_best = sorted(candidates, key=lambda x: x[1])[:nodes_per_step]
-            
+
             # Collect unvisited neighbors to query
             next_nodes_to_query = []
             for node_id, _ in current_best:
@@ -320,18 +320,18 @@ class GraphPIRSystem:
 
             # FIXED: Use REAL PIR to retrieve (embeddings + neighbors) for these nodes
             print(f"[GraphPIR] PIR querying {len(next_nodes_to_query)} nodes...")
-            
+
             # Simulate PIR query that returns embeddings (like private-search-temp)
             pir_start = time.time()
             retrieved_data = self._pir_query_graph_nodes(next_nodes_to_query)
             pir_time = time.time() - pir_start
-            
+
             # Calculate PIR communication costs
             # Each query returns: embedding (768*4 bytes) + neighbors (16*4 bytes) = ~3KB per node
             bytes_per_node = len(self.embeddings[0]) * 4 + 16 * 4  # embedding + neighbors
             query_upload = len(next_nodes_to_query) * 256  # PIR query overhead
             query_download = len(next_nodes_to_query) * bytes_per_node
-            
+
             total_upload_bytes += query_upload
             total_download_bytes += query_download
             pir_query_count += 1
@@ -342,7 +342,7 @@ class GraphPIRSystem:
                 if i < len(retrieved_data):
                     # Extract embedding and neighbors from PIR response
                     node_embedding, node_neighbors = retrieved_data[i]
-                    
+
                     # Calculate distance using retrieved embedding (client-side privacy!)
                     dist = self._calculate_distance(query_embedding, node_embedding)
                     candidates.append((node_id, dist))
@@ -363,53 +363,53 @@ class GraphPIRSystem:
         print(f"[GraphPIR] Phase 1 complete: {pir_query_count} PIR queries, {len(visited)} nodes explored")
 
         return candidate_indices, phase1_metrics
-    
+
     def _pir_query_graph_nodes(self, node_indices: List[int]) -> List[Tuple[np.ndarray, List[int]]]:
         """
         PIR query that returns (embedding, neighbors) for each node.
-        
+
         This simulates what private-search-temp does: return both the node's embedding
         and its neighbor list so client can make traversal decisions.
-        
+
         Args:
             node_indices: List of node IDs to query
-            
+
         Returns:
             List of (embedding, neighbors) tuples
         """
         # In a real implementation, this would use homomorphic PIR
         # For now, simulate the PIR by returning the actual data
         # (in practice, this would be encrypted/decrypted)
-        
+
         retrieved_data = []
         for node_id in node_indices:
             if 0 <= node_id < len(self.embeddings):
                 # Get node embedding
                 embedding = self.embeddings[node_id].copy()
-                
+
                 # Get node neighbors from graph
                 if hasattr(self.graph_search, 'graph') and node_id in self.graph_search.graph:
                     neighbors = self.graph_search.graph[node_id][:16]  # Up to 16 neighbors
                 else:
                     neighbors = []
-                
+
                 # Pad neighbors list to 16 entries (like private-search-temp)
                 while len(neighbors) < 16:
                     neighbors.append(-1)  # -1 indicates no neighbor
-                
+
                 retrieved_data.append((embedding, neighbors))
             else:
                 # Return zero embedding and empty neighbors for invalid nodes
                 zero_embedding = np.zeros(len(self.embeddings[0]))
                 empty_neighbors = [-1] * 16
                 retrieved_data.append((zero_embedding, empty_neighbors))
-        
+
         return retrieved_data
 
     def _phase2_url_retrieval(self, candidate_indices: List[int]) -> Tuple[List[str], Dict[str, Any]]:
         """
         Phase 2: Use fast PIR to retrieve URLs for candidate documents.
-        
+
         FIXED: Returns URLs instead of full documents for fair comparison with PIR-RAG.
         Full document retrieval would create massive download sizes.
         """
@@ -418,9 +418,9 @@ class GraphPIRSystem:
         import os
         sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
         from tiptoe.crypto_fixed import SimpleLinearHomomorphicPIR
-        
+
         url_pir_scheme = SimpleLinearHomomorphicPIR(url_mode=True)
-        
+
         upload_bytes = 0
         download_bytes = 0
         encryption_time = 0
@@ -431,7 +431,7 @@ class GraphPIRSystem:
 
         # Prepare URL database
         all_urls = [f"https://example.com/doc_{i}" for i in range(len(self.documents))]
-        
+
         url_database = []
         for url in all_urls:
             # Convert URL to byte array for PIR
@@ -469,7 +469,7 @@ class GraphPIRSystem:
             # Fallback URL if decryption fails
             if not url_text or not url_text.strip():
                 url_text = f"https://example.com/doc_{doc_idx}"
-            
+
             retrieved_urls.append(url_text)
 
         phase2_metrics = {
@@ -494,9 +494,9 @@ class GraphPIRSystem:
         import os
         sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
         from tiptoe.crypto_fixed import SimpleLinearHomomorphicPIR
-        
+
         url_pir_scheme = SimpleLinearHomomorphicPIR(url_mode=True)
-        
+
         upload_bytes = 0
         download_bytes = 0
         encryption_time = 0
@@ -507,7 +507,7 @@ class GraphPIRSystem:
 
         # Prepare all URLs for PIR database (convert to byte arrays like Tiptoe)
         all_urls = [f"https://example.com/doc_{i}" for i in range(len(self.documents))]
-        
+
         url_database = []
         for url in all_urls:
             # Convert URL to byte array (like Tiptoe's URL PIR)
@@ -549,7 +549,7 @@ class GraphPIRSystem:
             # Fallback URL if decryption fails
             if not url_text or not url_text.strip():
                 url_text = f"https://example.com/doc_{doc_idx}"
-            
+
             retrieved_urls.append(url_text)
 
         phase2_metrics = {
@@ -610,11 +610,11 @@ class GraphPIRSystem:
         return 1.0 - cosine_sim  # Convert to distance (0 = identical, 2 = opposite)
 
     def _rerank_documents_with_phase1_embeddings(self, query_embedding: np.ndarray,
-                                               documents: List[str], candidate_indices: List[int], 
+                                               documents: List[str], candidate_indices: List[int],
                                                top_k: int) -> List[str]:
         """
         Rerank documents using embeddings that were retrieved via PIR in Phase 1.
-        
+
         PRIVACY FIX: Uses client-side similarity calculation instead of server-side reranking.
         This maintains privacy as server never learns final document rankings.
         """
@@ -625,7 +625,7 @@ class GraphPIRSystem:
         # In practice, we'd store these embeddings from Phase 1
         # For now, simulate by using the actual embeddings (would be PIR-retrieved)
         doc_similarities = []
-        
+
         for i, doc_url in enumerate(documents):
             if i < len(candidate_indices):
                 doc_idx = candidate_indices[i]
@@ -638,11 +638,11 @@ class GraphPIRSystem:
                     doc_similarities.append((doc_url, float('inf')))
             else:
                 doc_similarities.append((doc_url, float('inf')))
-        
+
         # Sort by similarity and return top-k
         doc_similarities.sort(key=lambda x: x[1])
         top_k_docs = [doc for doc, _ in doc_similarities[:top_k]]
-        
+
         return top_k_docs
 
     def get_system_info(self) -> Dict[str, Any]:
