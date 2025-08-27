@@ -136,14 +136,14 @@ class PIRExperimentRunner:
             relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
             cluster_time = time.perf_counter() - cluster_start
             
-            # Step 2: PIR retrieval
+            # Step 2: PIR retrieval (now returns URLs and embeddings together)
             pir_start = time.perf_counter()
-            urls, pir_metrics = client.pir_retrieve(relevant_clusters, server)
+            doc_tuples, pir_metrics = client.pir_retrieve(relevant_clusters, server)
             pir_time = time.perf_counter() - pir_start
             
-            # Step 3: Reranking
+            # Step 3: Reranking (using embeddings from PIR, no server request)
             rerank_start = time.perf_counter()
-            final_results = client.rerank_documents(query_tensor, urls, server, top_k=top_k)
+            final_results = client.rerank_documents(query_tensor, doc_tuples, top_k=top_k)
             rerank_time = time.perf_counter() - rerank_start
             
             total_query_time = time.perf_counter() - query_start

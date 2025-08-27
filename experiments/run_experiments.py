@@ -124,12 +124,12 @@ class PIRRAGExperimentRunner:
                 query_embedding, config.get('top_n_clusters', 3)
             )
             
-            # 2. PIR retrieval
+            # 2. PIR retrieval (now returns document tuples with embeddings)
             retrieved_docs, pir_metrics = client.pir_retrieve(cluster_indices, server)
             
-            # 3. Re-ranking
+            # 3. Re-ranking (using embeddings from PIR, no additional server request)
             final_docs = client.rerank_documents(
-                query_embedding, retrieved_docs, self.model, top_k=10
+                query_embedding, retrieved_docs, top_k=10
             )
             
             query_latency = time.perf_counter() - query_start_time

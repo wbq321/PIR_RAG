@@ -159,13 +159,13 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
         # Find relevant clusters
         cluster_indices = client.find_relevant_clusters(query_embedding, top_k=3)
 
-        # Perform PIR retrieval
+        # Perform PIR retrieval (now returns URLs and embeddings together)
         query_start = time.perf_counter()
-        retrieved_urls, query_metrics = client.pir_retrieve(cluster_indices, server)
+        doc_tuples, query_metrics = client.pir_retrieve(cluster_indices, server)
         
-        # Re-rank URLs using document embeddings for semantic relevance
-        if retrieved_urls:
-            ranked_urls = client.rerank_documents(query_embedding, retrieved_urls, server, top_k=10)
+        # Re-rank using embeddings obtained from PIR (no additional server request)
+        if doc_tuples:
+            ranked_urls = client.rerank_documents(query_embedding, doc_tuples, top_k=10)
         else:
             ranked_urls = []
             
@@ -177,7 +177,7 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
 
         if i == 0:
             print(f"First query: '{query_text[:50]}...'")
-            print(f"Retrieved {len(retrieved_urls)} URLs, re-ranked to {len(ranked_urls)} in {query_time:.3f}s")
+            print(f"Retrieved {len(doc_tuples)} documents, re-ranked to {len(ranked_urls)} in {query_time:.3f}s")
             print(f"Top ranked URL: {ranked_urls[0] if ranked_urls else 'None'}")
 
     avg_metrics = {

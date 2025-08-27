@@ -80,16 +80,17 @@ class PIRRAGServer:
     
     def handle_pir_query(self, encrypted_query: List, crypto_scheme) -> List:
         """
-        Process PIR query and return encrypted URLs using homomorphic operations.
+        Process PIR query and return encrypted URLs+embeddings using homomorphic operations.
         
-        FIXED: Return encrypted URLs that client must decrypt, preserving privacy.
+        PRIVACY FIX: Return both URLs and embeddings together so server never learns
+        which specific documents the user is interested in.
         
         Args:
             encrypted_query: List of encrypted query values (one per cluster)
             crypto_scheme: SimpleLinearHomomorphicScheme instance
             
         Returns:
-            List of encrypted URL data that client must decrypt
+            List of encrypted data containing both URLs and embeddings
         """
         encrypted_results = []
         
@@ -99,16 +100,32 @@ class PIRRAGServer:
                 cluster_urls = self.clusters_urls[cluster_idx]
                 
                 if cluster_urls:
-                    # Encode the URLs as a simple concatenated string for this cluster
-                    cluster_url_string = "|||".join(cluster_urls)
+                    # Combine URLs with their embeddings for this cluster
+                    cluster_data_parts = []
+                    for url in cluster_urls:
+                        # Extract document index from URL
+                        try:
+                            doc_idx = int(url.split('_')[-1])
+                            if 0 <= doc_idx < len(self.document_embeddings):
+                                embedding = self.document_embeddings[doc_idx]
+                                # Format: URL|||embedding_as_string
+                                embedding_str = ','.join(map(str, embedding))
+                                combined_data = f"{url}|||{embedding_str}"
+                                cluster_data_parts.append(combined_data)
+                        except (ValueError, IndexError):
+                            # Skip invalid URLs
+                            continue
                     
-                    # Convert to bytes and then to integers (using smaller chunks)
-                    url_bytes = cluster_url_string.encode('utf-8')
+                    # Join all URL+embedding pairs for this cluster
+                    cluster_combined_string = "###".join(cluster_data_parts)
+                    
+                    # Convert to bytes and encrypt in chunks
+                    data_bytes = cluster_combined_string.encode('utf-8')
                     
                     # Use 4-byte chunks to avoid overflow in linear scheme
                     chunk_results = []
-                    for i in range(0, len(url_bytes), 4):
-                        chunk = url_bytes[i:i+4]
+                    for i in range(0, len(data_bytes), 4):
+                        chunk = data_bytes[i:i+4]
                         # Pad to 4 bytes
                         while len(chunk) < 4:
                             chunk += b'\x00'
@@ -130,37 +147,11 @@ class PIRRAGServer:
         
         return encrypted_results
     
-    def get_document_embeddings_for_urls(self, urls: List[str]) -> np.ndarray:
-        """
-        Get document embeddings for given URLs to enable semantic ranking.
-        
-        Args:
-            urls: List of document URLs
-            
-        Returns:
-            Array of document embeddings corresponding to the URLs
-        """
-        embeddings = []
-        for url in urls:
-            # Extract document index from URL (format: https://example.com/doc_X)
-            try:
-                doc_idx = int(url.split('_')[-1])
-                if 0 <= doc_idx < len(self.document_embeddings):
-                    embeddings.append(self.document_embeddings[doc_idx])
-                else:
-                    # Fallback: use zero embedding
-                    embeddings.append(np.zeros(self.document_embeddings.shape[1]))
-            except (ValueError, IndexError):
-                # Fallback: use zero embedding
-                embeddings.append(np.zeros(self.document_embeddings.shape[1]))
-        
-        return np.array(embeddings)
-    
     def get_cluster_info(self) -> Dict[str, Any]:
         """Get information about the clustering setup."""
         return {
             "n_clusters": len(self.centroids) if self.centroids is not None else 0,
             "centroids_shape": self.centroids.shape if self.centroids is not None else None,
             "max_chunks": MAX_CHUNKS_HOLDER[0],
-            "db_size": len(self.pir_db_by_chunk)
+            "db_size": len(self.pir_db_by_chunk) if hasattr(self, 'pir_db_by_chunk') else 0
         }

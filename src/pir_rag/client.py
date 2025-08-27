@@ -6,6 +6,7 @@ import sys
 import time
 from typing import List, Tuple, Dict, Any
 import torch
+import numpy as np
 from sentence_transformers import util
 
 # Import fast linear homomorphic scheme instead of Paillier
@@ -132,19 +133,19 @@ class PIRRAGClient:
         
         return urls, download_bytes
     
-    def pir_retrieve(self, cluster_indices: List[int], server) -> Tuple[List[str], Dict[str, Any]]:
+    def pir_retrieve(self, cluster_indices: List[int], server) -> Tuple[List[Tuple[str, np.ndarray]], Dict[str, Any]]:
         """
-        Perform private retrieval of document URLs from multiple clusters.
+        Perform private retrieval of document URLs and embeddings from multiple clusters.
         
-        FIXED: Client properly decrypts encrypted URL data from server.
+        PRIVACY FIX: Now returns both URLs and embeddings from PIR response
+        to avoid revealing which documents user is interested in.
         
         Args:
             cluster_indices: List of cluster indices to query
             server: PIRRAGServer instance
-            cluster_indices: List of cluster indices to retrieve from
             
         Returns:
-            Tuple of (retrieved URLs, performance metrics)
+            Tuple of (list of (URL, embedding) tuples, performance metrics)
         """
         if self.centroids is None:
             raise ValueError("Client not set up. Call setup() first.")
@@ -163,7 +164,7 @@ class PIRRAGClient:
             "n_clusters_queried": len(cluster_indices)
         }
         
-        candidate_urls = []
+        candidate_docs = []  # Now stores (URL, embedding) tuples
 
         for cluster_idx in cluster_indices:
             cluster_start = time.perf_counter()
@@ -175,34 +176,39 @@ class PIRRAGClient:
             metrics["total_query_gen_time"] += query_gen_time
             metrics["total_upload_bytes"] += upload_bytes
             
-            # Server processing returns encrypted URL data
+            # Server processing returns encrypted URL+embedding data
             server_start_time = time.perf_counter()
             encrypted_chunks = server.handle_pir_query(query_vec, self.crypto_scheme)
             server_time = time.perf_counter() - server_start_time
             metrics["total_server_time"] += server_time
             
-            # Client decrypts the encrypted URL data
+            # Client decrypts the encrypted URL+embedding data
             decrypt_start_time = time.perf_counter()
-            urls = self._decrypt_url_chunks(encrypted_chunks)
+            urls, embeddings = self._decrypt_url_chunks(encrypted_chunks)
             decrypt_time = time.perf_counter() - decrypt_start_time
             metrics["total_decode_time"] += decrypt_time
             metrics["total_download_bytes"] += len(str(encrypted_chunks).encode('utf-8'))
             
-            candidate_urls.extend(urls)
+            # Combine URLs and embeddings into tuples
+            for url, embedding in zip(urls, embeddings):
+                candidate_docs.append((url, embedding))
 
         total_pir_time = time.perf_counter() - pir_retrieve_start
 
-        return candidate_urls, metrics
+        return candidate_docs, metrics
     
-    def _decrypt_url_chunks(self, encrypted_chunks: List) -> List[str]:
+    def _decrypt_url_chunks(self, encrypted_chunks: List) -> Tuple[List[str], List[np.ndarray]]:
         """
-        Decrypt encrypted URL chunks back to URL strings.
+        Decrypt encrypted URL+embedding chunks back to URLs and embeddings.
+        
+        PRIVACY FIX: Now returns both URLs and embeddings from single PIR response
+        to avoid revealing which documents user is interested in.
         
         Args:
-            encrypted_chunks: List of encrypted URL chunk data
+            encrypted_chunks: List of encrypted URL+embedding chunk data
             
         Returns:
-            List of decrypted URLs
+            Tuple of (list of decrypted URLs, list of corresponding embeddings)
         """
         try:
             # Decrypt each chunk
@@ -217,7 +223,7 @@ class PIRRAGClient:
             
             # Convert integers back to bytes and then to text
             if not decrypted_ints:
-                return []
+                return [], []
             
             byte_data = b''
             for int_val in decrypted_ints:
@@ -230,25 +236,48 @@ class PIRRAGClient:
             
             # Remove null bytes and decode
             byte_data = byte_data.rstrip(b'\x00')
-            url_string = byte_data.decode('utf-8', errors='ignore')
+            combined_string = byte_data.decode('utf-8', errors='ignore')
             
-            # Split by separator and filter out empty strings
-            urls = [url.strip() for url in url_string.split('|||') if url.strip()]
+            # Parse URL+embedding pairs
+            urls = []
+            embeddings = []
             
-            return urls
+            # Split by document separator
+            doc_pairs = [pair.strip() for pair in combined_string.split('###') if pair.strip()]
+            
+            for doc_pair in doc_pairs:
+                try:
+                    # Split URL from embedding: URL|||embedding_as_string
+                    parts = doc_pair.split('|||')
+                    if len(parts) >= 2:
+                        url = parts[0].strip()
+                        embedding_str = parts[1].strip()
+                        
+                        # Parse embedding from comma-separated string
+                        embedding_values = [float(x) for x in embedding_str.split(',')]
+                        embedding = np.array(embedding_values)
+                        
+                        urls.append(url)
+                        embeddings.append(embedding)
+                except (ValueError, IndexError) as e:
+                    # Skip malformed entries
+                    continue
+            
+            return urls, embeddings
             
         except Exception as e:
             return []
     
-    def rerank_documents(self, query_embedding: torch.Tensor, urls: List[str], 
-                        server, top_k: int = 10) -> List[str]:
+    def rerank_documents(self, query_embedding: torch.Tensor, doc_tuples: List[Tuple[str, np.ndarray]], 
+                        top_k: int = 10) -> List[str]:
         """
-        Re-rank retrieved URLs using document embeddings from server.
+        Re-rank retrieved documents using embeddings already obtained from PIR.
+        
+        PRIVACY FIX: No longer requests embeddings from server, uses PIR-obtained embeddings.
         
         Args:
             query_embedding: Query embedding
-            urls: List of candidate URLs
-            server: PIRRAGServer instance to get document embeddings
+            doc_tuples: List of (URL, embedding) tuples from PIR retrieval
             top_k: Number of top URLs to return
             
         Returns:
@@ -257,15 +286,18 @@ class PIRRAGClient:
         print(f"[PIR-RAG] DEBUG: ===== RERANKING START =====")
         rerank_start = time.perf_counter()
         
-        if not urls:
-            print(f"[PIR-RAG] DEBUG: No URLs to rerank")
+        if not doc_tuples:
+            print(f"[PIR-RAG] DEBUG: No documents to rerank")
             return []
         
-        print(f"[PIR-RAG] DEBUG: Reranking {len(urls)} URLs")
+        print(f"[PIR-RAG] DEBUG: Reranking {len(doc_tuples)} documents")
         
-        # Get document embeddings from server for semantic ranking
-        doc_embeddings = server.get_document_embeddings_for_urls(urls)
-        doc_embeddings = torch.tensor(doc_embeddings, dtype=torch.float32)
+        # Extract URLs and embeddings from tuples
+        urls = [doc[0] for doc in doc_tuples]
+        embeddings = [doc[1] for doc in doc_tuples]
+        
+        # Convert embeddings to torch tensor
+        doc_embeddings = torch.tensor(np.array(embeddings), dtype=torch.float32)
         
         # Normalize embeddings
         query_embedding = query_embedding / torch.norm(query_embedding)

@@ -151,11 +151,11 @@ class RetrievalPerformanceTester:
                 cluster_time = time.perf_counter() - cluster_start
                 
                 pir_start = time.perf_counter()
-                urls, pir_metrics = client.pir_retrieve(relevant_clusters, server)
+                doc_tuples, pir_metrics = client.pir_retrieve(relevant_clusters, server)
                 pir_time = time.perf_counter() - pir_start
                 
                 rerank_start = time.perf_counter()
-                final_results = client.rerank_documents(query_embedding, urls, server, top_k=top_k)
+                final_results = client.rerank_documents(query_embedding, doc_tuples, top_k=top_k)
                 rerank_time = time.perf_counter() - rerank_start
                 
                 # Extract document indices from URLs (assuming format https://example.com/doc_{idx})
@@ -265,8 +265,8 @@ class RetrievalPerformanceTester:
             for query in queries:
                 query_tensor = torch.tensor(query) if not isinstance(query, torch.Tensor) else query
                 relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
-                urls, _ = client.pir_retrieve(relevant_clusters, server)
-                client.rerank_documents(query_tensor, urls, server, top_k=5)
+                doc_tuples, _ = client.pir_retrieve(relevant_clusters, server)
+                client.rerank_documents(query_tensor, doc_tuples, top_k=5)
                 
         elif system_name == "Graph-PIR":
             for query in queries:
