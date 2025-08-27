@@ -1,7 +1,7 @@
 """
 Comprehensive PIR Experiment Framework
 
-This script conducts detailed performance and scalability experiments for 
+This script conducts detailed performance and scalability experiments for
 all three PIR systems (PIR-RAG, Graph-PIR, Tiptoe) and collects comprehensive
 timing data for analysis and plotting.
 """
@@ -71,22 +71,22 @@ def generate_test_queries(documents: List[str], n_queries: int = 10) -> List[str
 
 class PIRExperimentRunner:
     """Comprehensive experiment runner for all PIR systems."""
-    
+
     def __init__(self, output_dir: str = "results"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        
+
     def get_default_k_clusters(self, n_docs: int, user_value: int = None) -> int:
         """Calculate default k_clusters value as n_docs/20, with minimum of 1."""
         if user_value is not None:
             return user_value
         return max(1, n_docs // 20)
-        
-    def load_or_generate_data(self, embeddings_path: str = None, corpus_path: str = None, 
+
+    def load_or_generate_data(self, embeddings_path: str = None, corpus_path: str = None,
                              n_docs: int = 1000, embed_dim: int = 384, seed: int = 42) -> Tuple[np.ndarray, List[str]]:
         """Load real data or generate synthetic data if paths not provided."""
-        
+
         # Try to load real data if paths provided
         if embeddings_path and corpus_path:
             try:
@@ -101,12 +101,12 @@ class PIRExperimentRunner:
                     print(f"Data files not found, falling back to synthetic data...")
             except Exception as e:
                 print(f"Error loading data: {e}, falling back to synthetic data...")
-        
+
         # Try default paths if no paths specified
         elif embeddings_path is None and corpus_path is None:
             default_embeddings = "data/embeddings_10000.npy"
             default_corpus = "data/corpus_10000.csv"
-            
+
             if os.path.exists(default_embeddings) and os.path.exists(default_corpus):
                 try:
                     print(f"Loading default MS MARCO data (first {n_docs} samples)...")
@@ -117,11 +117,11 @@ class PIRExperimentRunner:
                     return embeddings, documents
                 except Exception as e:
                     print(f"Error loading default data: {e}, falling back to synthetic data...")
-        
+
         # Generate synthetic data as fallback
         print(f"Generating synthetic test data: {n_docs} documents, {embed_dim}D embeddings")
         return self.generate_test_data(n_docs, embed_dim, seed)
-        
+
     def generate_test_data(self, n_docs: int, embed_dim: int = 384, seed: int = 42) -> Tuple[np.ndarray, List[str]]:
         """Generate synthetic test data."""
         np.random.seed(seed)
@@ -133,59 +133,59 @@ class PIRExperimentRunner:
             for i in range(n_docs)
         ]
         return embeddings, documents
-    
-    def run_pir_rag_experiment(self, embeddings: np.ndarray, documents: List[str], 
-                              queries: List[np.ndarray], k_clusters: int = 5, 
+
+    def run_pir_rag_experiment(self, embeddings: np.ndarray, documents: List[str],
+                              queries: List[np.ndarray], k_clusters: int = 5,
                               cluster_top_k: int = 3, top_k: int = 10) -> Dict[str, Any]:
         """Run PIR-RAG experiment with detailed timing."""
         print(f"Running PIR-RAG experiment (k_clusters={k_clusters}, cluster_top_k={cluster_top_k})")
-        
+
         # Setup phase
         setup_start = time.perf_counter()
         client = PIRRAGClient()
         server = PIRRAGServer()
-        
+
         # Setup timing breakdown
         cluster_start = time.perf_counter()
         # Server does clustering and setup first
         server_setup_result = server.setup(embeddings, documents, k_clusters)
         clustering_time = time.perf_counter() - cluster_start
-        
+
         server_setup_start = time.perf_counter()
         # Client setup with centroids from server
         client_setup_result = client.setup(server.centroids)
         server_setup_time = time.perf_counter() - server_setup_start
-        
+
         total_setup_time = time.perf_counter() - setup_start
-        
+
         # Query phase - detailed timing for each step
         query_times = []
         step_times = []
         communication_costs = []
-        
+
         for i, query_embedding in enumerate(queries):
             print(f"  Query {i+1}/{len(queries)}")
-            
+
             query_start = time.perf_counter()
-            
+
             # Step 1: Find relevant clusters
             cluster_start = time.perf_counter()
             query_tensor = torch.tensor(query_embedding) if not isinstance(query_embedding, torch.Tensor) else query_embedding
             relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=cluster_top_k)
             cluster_time = time.perf_counter() - cluster_start
-            
+
             # Step 2: PIR retrieval (now returns URLs and embeddings together)
             pir_start = time.perf_counter()
             doc_tuples, pir_metrics = client.pir_retrieve(relevant_clusters, server)
             pir_time = time.perf_counter() - pir_start
-            
+
             # Step 3: Reranking (using embeddings from PIR, no server request)
             rerank_start = time.perf_counter()
             final_results = client.rerank_documents(query_tensor, doc_tuples, top_k=top_k)
             rerank_time = time.perf_counter() - rerank_start
-            
+
             total_query_time = time.perf_counter() - query_start
-            
+
             query_times.append(total_query_time)
             step_times.append({
                 'cluster_selection_time': cluster_time,
@@ -199,7 +199,7 @@ class PIRExperimentRunner:
                 'upload_bytes': pir_metrics.get('total_upload_bytes', 0),
                 'download_bytes': pir_metrics.get('total_download_bytes', 0)
             })
-        
+
         return {
             'system': 'PIR-RAG',
             'setup_time': total_setup_time,
@@ -216,34 +216,42 @@ class PIRExperimentRunner:
             'n_documents': len(documents),
             'embedding_dim': embeddings.shape[1]
         }
-    
-    def run_graph_pir_experiment(self, embeddings: np.ndarray, documents: List[str], 
+
+    def run_graph_pir_experiment(self, embeddings: np.ndarray, documents: List[str],
                                 queries: List[np.ndarray], graph_params: Dict = None,
                                 top_k: int = 10) -> Dict[str, Any]:
         """Run Graph-PIR experiment with detailed timing."""
-        print(f"Running Graph-PIR experiment")
-        
+        print(f"Running Graph-PIR experiment with {len(documents)} docs")
+
         if graph_params is None:
             graph_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16}
-        
+
+        print(f"  Graph params: {graph_params}")
+
         # Setup phase
         setup_start = time.perf_counter()
-        system = GraphPIRSystem()
-        setup_metrics = system.setup(embeddings, documents, graph_params=graph_params)
+        try:
+            system = GraphPIRSystem()
+            print(f"  ✅ GraphPIRSystem created")
+            setup_metrics = system.setup(embeddings, documents, graph_params=graph_params)
+            print(f"  ✅ GraphPIR setup completed")
+        except Exception as e:
+            print(f"  ❌ GraphPIR setup failed: {e}")
+            raise
         setup_time = time.perf_counter() - setup_start
-        
+
         # Query phase - detailed timing
         query_times = []
         step_times = []
         communication_costs = []
-        
+
         for i, query_embedding in enumerate(queries):
             print(f"  Query {i+1}/{len(queries)}")
-            
+
             query_start = time.perf_counter()
             urls, query_metrics = system.query(query_embedding, top_k=top_k)
             query_time = time.perf_counter() - query_start
-            
+
             query_times.append(query_time)
             step_times.append({
                 'phase1_time': query_metrics.get('phase1_time', 0),
@@ -261,7 +269,7 @@ class PIRExperimentRunner:
                 'phase2_upload': query_metrics.get('phase2_upload_bytes', 0),
                 'phase2_download': query_metrics.get('phase2_download_bytes', 0)
             })
-        
+
         return {
             'system': 'Graph-PIR',
             'setup_time': setup_time,
@@ -279,34 +287,42 @@ class PIRExperimentRunner:
             'n_documents': len(documents),
             'embedding_dim': embeddings.shape[1]
         }
-    
-    def run_tiptoe_experiment(self, embeddings: np.ndarray, documents: List[str], 
+
+    def run_tiptoe_experiment(self, embeddings: np.ndarray, documents: List[str],
                              queries: List[np.ndarray], tiptoe_params: Dict = None,
                              top_k: int = 10) -> Dict[str, Any]:
         """Run Tiptoe experiment with detailed timing."""
-        print(f"Running Tiptoe experiment")
-        
+        print(f"Running Tiptoe experiment with {len(documents)} docs")
+
         if tiptoe_params is None:
             tiptoe_params = {'k_clusters': 5, 'use_real_crypto': True}
-        
+
+        print(f"  Tiptoe params: {tiptoe_params}")
+
         # Setup phase
         setup_start = time.perf_counter()
-        system = TiptoeSystem()
-        setup_metrics = system.setup(embeddings, documents, **tiptoe_params)
+        try:
+            system = TiptoeSystem()
+            print(f"  ✅ TiptoeSystem created")
+            setup_metrics = system.setup(embeddings, documents, **tiptoe_params)
+            print(f"  ✅ Tiptoe setup completed")
+        except Exception as e:
+            print(f"  ❌ Tiptoe setup failed: {e}")
+            raise
         setup_time = time.perf_counter() - setup_start
-        
+
         # Query phase - detailed timing
         query_times = []
         step_times = []
         communication_costs = []
-        
+
         for i, query_embedding in enumerate(queries):
             print(f"  Query {i+1}/{len(queries)}")
-            
+
             query_start = time.perf_counter()
             urls, query_metrics = system.query(query_embedding, top_k=top_k)
             query_time = time.perf_counter() - query_start
-            
+
             query_times.append(query_time)
             step_times.append({
                 'cluster_selection_time': query_metrics.get('cluster_selection_time', 0),
@@ -319,7 +335,7 @@ class PIRExperimentRunner:
                 'download_bytes': query_metrics.get('total_download_bytes', 0),
                 'pir_communication': query_metrics.get('pir_communication', 0)
             })
-        
+
         return {
             'system': 'Tiptoe',
             'setup_time': setup_time,
@@ -336,15 +352,15 @@ class PIRExperimentRunner:
             'n_documents': len(documents),
             'embedding_dim': embeddings.shape[1]
         }
-    
-    def run_scalability_experiment(self, doc_sizes: List[int] = [100, 500, 1000, 2000], 
+
+    def run_scalability_experiment(self, doc_sizes: List[int] = [1000, 2000, 3000, 4000, 5000],
                                   n_queries: int = 5, embed_dim: int = 384,
                                   embeddings_path: str = None, corpus_path: str = None,
                                   pir_rag_params: Dict = None, graph_pir_params: Dict = None,
                                   tiptoe_params: Dict = None) -> Dict[str, Any]:
         """Run scalability experiments across different dataset sizes."""
         print("Running scalability experiments...")
-        
+
         # Set default parameters if not provided
         if pir_rag_params is None:
             pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated per doc size
@@ -352,134 +368,148 @@ class PIRExperimentRunner:
             graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16}
         if tiptoe_params is None:
             tiptoe_params = {'k_clusters': None, 'use_real_crypto': True}  # None will be calculated per doc size
-        
+
         scalability_results = {
             'doc_sizes': doc_sizes,
             'pir_rag_results': [],
             'graph_pir_results': [],
             'tiptoe_results': []
         }
-        
+
         for n_docs in doc_sizes:
             print(f"\n=== Testing with {n_docs} documents ===")
-            
+
             # Load or generate test data
             embeddings, documents = self.load_or_generate_data(
                 embeddings_path, corpus_path, n_docs, embed_dim
             )
             queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(n_queries)]
-            
+
             # Test each system
             try:
+                print(f"  Running PIR-RAG with {n_docs} documents...")
                 # Adjust cluster numbers for dataset size
                 adjusted_pir_rag_params = pir_rag_params.copy()
                 adjusted_pir_rag_params['k_clusters'] = self.get_default_k_clusters(n_docs, adjusted_pir_rag_params['k_clusters'])
-                
+                print(f"  PIR-RAG using {adjusted_pir_rag_params['k_clusters']} clusters")
+
                 pir_rag_result = self.run_pir_rag_experiment(
-                    embeddings, documents, queries, 
+                    embeddings, documents, queries,
                     k_clusters=adjusted_pir_rag_params['k_clusters'],
                     cluster_top_k=adjusted_pir_rag_params['cluster_top_k']
                 )
                 scalability_results['pir_rag_results'].append(pir_rag_result)
+                print(f"  ✅ PIR-RAG completed for {n_docs} docs")
             except Exception as e:
-                print(f"PIR-RAG failed for {n_docs} docs: {e}")
+                print(f"  ❌ PIR-RAG failed for {n_docs} docs: {e}")
+                import traceback
+                traceback.print_exc()
                 scalability_results['pir_rag_results'].append(None)
-            
+
             try:
+                print(f"  Running Graph-PIR with {n_docs} documents...")
                 graph_pir_result = self.run_graph_pir_experiment(
-                    embeddings, documents, queries, 
+                    embeddings, documents, queries,
                     graph_params=graph_pir_params
                 )
                 scalability_results['graph_pir_results'].append(graph_pir_result)
+                print(f"  ✅ Graph-PIR completed for {n_docs} docs")
             except Exception as e:
-                print(f"Graph-PIR failed for {n_docs} docs: {e}")
+                print(f"  ❌ Graph-PIR failed for {n_docs} docs: {e}")
+                import traceback
+                traceback.print_exc()
                 scalability_results['graph_pir_results'].append(None)
-            
+
             try:
+                print(f"  Running Tiptoe with {n_docs} documents...")
                 # Adjust cluster numbers for dataset size
                 adjusted_tiptoe_params = tiptoe_params.copy()
                 adjusted_tiptoe_params['k_clusters'] = self.get_default_k_clusters(n_docs, adjusted_tiptoe_params['k_clusters'])
-                
+                print(f"  Tiptoe using {adjusted_tiptoe_params['k_clusters']} clusters")
+
                 tiptoe_result = self.run_tiptoe_experiment(
-                    embeddings, documents, queries, 
+                    embeddings, documents, queries,
                     tiptoe_params=adjusted_tiptoe_params
                 )
                 scalability_results['tiptoe_results'].append(tiptoe_result)
+                print(f"  ✅ Tiptoe completed for {n_docs} docs")
             except Exception as e:
-                print(f"Tiptoe failed for {n_docs} docs: {e}")
+                print(f"  ❌ Tiptoe failed for {n_docs} docs: {e}")
+                import traceback
+                traceback.print_exc()
                 scalability_results['tiptoe_results'].append(None)
-        
+
         return scalability_results
-    
+
     def run_parameter_sensitivity_experiment(self, n_docs: int = 1000, n_queries: int = 10,
                                            embeddings_path: str = None, corpus_path: str = None,
-                                           base_pir_rag_params: Dict = None, 
+                                           base_pir_rag_params: Dict = None,
                                            base_graph_pir_params: Dict = None) -> Dict[str, Any]:
         """Run parameter sensitivity experiments."""
         print("Running parameter sensitivity experiments...")
-        
+
         # Set default base parameters if not provided
         if base_pir_rag_params is None:
             base_pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated based on n_docs
         if base_graph_pir_params is None:
             base_graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16}
-        
+
         # Load or generate test data
         embeddings, documents = self.load_or_generate_data(
             embeddings_path, corpus_path, n_docs
         )
-        
+
         # Calculate default k_clusters if not provided
         if base_pir_rag_params['k_clusters'] is None:
             base_pir_rag_params['k_clusters'] = self.get_default_k_clusters(n_docs, None)
         queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(n_queries)]
-        
+
         sensitivity_results = {}
-        
+
         # PIR-RAG: k_clusters sensitivity
         print("\nTesting PIR-RAG k_clusters sensitivity...")
         k_clusters_values = [3, 5, 10, 15, 20]
         pir_rag_sensitivity = []
-        
+
         for k in k_clusters_values:
             if k > n_docs // 10:  # Skip if too many clusters
                 continue
             try:
                 result = self.run_pir_rag_experiment(
-                    embeddings, documents, queries[:3], 
+                    embeddings, documents, queries[:3],
                     k_clusters=k,
                     cluster_top_k=base_pir_rag_params['cluster_top_k']
                 )
                 pir_rag_sensitivity.append(result)
             except Exception as e:
                 print(f"PIR-RAG failed for k_clusters={k}: {e}")
-        
+
         sensitivity_results['pir_rag_k_clusters'] = pir_rag_sensitivity
-        
+
         # Graph-PIR: k_neighbors sensitivity
         print("\nTesting Graph-PIR k_neighbors sensitivity...")
         k_neighbors_values = [8, 16, 32, 64]
         graph_pir_sensitivity = []
-        
+
         for k in k_neighbors_values:
             try:
                 graph_params = base_graph_pir_params.copy()
                 graph_params['k_neighbors'] = k
                 graph_params['max_connections'] = k  # Adjust max_connections to match k_neighbors
-                
+
                 result = self.run_graph_pir_experiment(
-                    embeddings, documents, queries[:3], 
+                    embeddings, documents, queries[:3],
                     graph_params=graph_params
                 )
                 graph_pir_sensitivity.append(result)
             except Exception as e:
                 print(f"Graph-PIR failed for k_neighbors={k}: {e}")
-        
+
         sensitivity_results['graph_pir_k_neighbors'] = graph_pir_sensitivity
-        
+
         return sensitivity_results
-    
-    def run_retrieval_performance_experiment(self, n_docs: int = 1000, n_queries: int = 50, 
+
+    def run_retrieval_performance_experiment(self, n_docs: int = 1000, n_queries: int = 50,
                                            embeddings_path: str = None, corpus_path: str = None,
                                            embed_dim: int = 384, top_k: int = 10,
                                            pir_rag_k_clusters: int = 5,
@@ -488,24 +518,24 @@ class PIRExperimentRunner:
         if not RETRIEVAL_TESTING_AVAILABLE:
             print("❌ Retrieval performance testing not available")
             return {}
-            
+
         print(f"\n{'='*60}")
         print(f"Running Retrieval Performance Experiment")
         print(f"Documents: {n_docs}, Queries: {n_queries}, Top-K: {top_k}")
         print(f"{'='*60}")
-        
+
         # Load or generate data
         embeddings, documents = self.load_or_generate_data(
             embeddings_path, corpus_path, n_docs, embed_dim
         )
-        
+
         # Create retrieval performance tester
         tester = RetrievalPerformanceTester()
-        
+
         # Generate queries for testing
         np.random.seed(42)
         queries = tester.generate_realistic_queries(embeddings, n_queries)
-        
+
         # Test each system individually and collect results
         retrieval_results = {
             'experiment_info': {
@@ -517,19 +547,19 @@ class PIRExperimentRunner:
                 'data_type': 'real' if embeddings_path else 'synthetic'
             }
         }
-        
+
         # Test PIR-RAG
         try:
             pir_rag_client = PIRRAGClient()
             pir_rag_server = PIRRAGServer()
-            
+
             # Setup server first (it does the clustering)
             k_clusters = self.get_default_k_clusters(len(documents), pir_rag_k_clusters)
             server_setup_result = pir_rag_server.setup(embeddings, documents, k_clusters)
-            
+
             # Setup client with centroids from server
             client_setup_result = pir_rag_client.setup(pir_rag_server.centroids)
-            
+
             pir_rag_system = (pir_rag_client, pir_rag_server)
             pir_rag_results = tester.test_retrieval_performance(
                 "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k
@@ -539,7 +569,7 @@ class PIRExperimentRunner:
         except Exception as e:
             print(f"❌ PIR-RAG retrieval test failed: {e}")
             retrieval_results['pir_rag'] = None
-        
+
         # Test Graph-PIR
         try:
             graph_pir_system = GraphPIRSystem()
@@ -551,7 +581,7 @@ class PIRExperimentRunner:
         except Exception as e:
             print(f"❌ Graph-PIR retrieval test failed: {e}")
             retrieval_results['graph_pir'] = None
-        
+
         # Test Tiptoe
         try:
             tiptoe_system = TiptoeSystem()
@@ -563,12 +593,12 @@ class PIRExperimentRunner:
         except Exception as e:
             print(f"❌ Tiptoe retrieval test failed: {e}")
             retrieval_results['tiptoe'] = None
-        
+
         return retrieval_results
-    
+
     def save_results(self, results: Dict[str, Any], experiment_name: str):
         """Save experiment results to files."""
-        
+
         # Save detailed JSON results
         json_path = self.output_dir / f"{experiment_name}_{self.timestamp}.json"
         with open(json_path, 'w') as f:
@@ -583,19 +613,19 @@ class PIRExperimentRunner:
                 elif isinstance(obj, list):
                     return [convert_numpy(item) for item in obj]
                 return obj
-            
+
             json.dump(convert_numpy(results), f, indent=2)
-        
+
         # Save CSV summary
         csv_path = self.output_dir / f"{experiment_name}_summary_{self.timestamp}.csv"
-        
+
         if experiment_name == "scalability":
             # Create scalability summary CSV
             scalability_data = []
             for i, n_docs in enumerate(results['doc_sizes']):
                 row = {'n_documents': n_docs}
-                
-                for system, key in [('PIR-RAG', 'pir_rag_results'), 
+
+                for system, key in [('PIR-RAG', 'pir_rag_results'),
                                    ('Graph-PIR', 'graph_pir_results'),
                                    ('Tiptoe', 'tiptoe_results')]:
                     if i < len(results[key]) and results[key][i] is not None:
@@ -615,11 +645,11 @@ class PIRExperimentRunner:
                             f'{system}_avg_upload_bytes': None,
                             f'{system}_avg_download_bytes': None
                         })
-                
+
                 scalability_data.append(row)
-            
+
             pd.DataFrame(scalability_data).to_csv(csv_path, index=False)
-        
+
         print(f"Results saved to:")
         print(f"  JSON: {json_path}")
         print(f"  CSV: {csv_path}")
@@ -628,24 +658,24 @@ class PIRExperimentRunner:
 def main():
     """Main experiment runner."""
     parser = argparse.ArgumentParser(description="Comprehensive PIR Experiments")
-    parser.add_argument("--experiment", choices=["single", "scalability", "sensitivity", "retrieval", "all"], 
+    parser.add_argument("--experiment", choices=["single", "scalability", "sensitivity", "retrieval", "all"],
                        default="all", help="Type of experiment to run")
     parser.add_argument("--output-dir", default="results", help="Output directory for results")
     parser.add_argument("--n-docs", type=int, default=1000, help="Number of documents for single experiment")
     parser.add_argument("--n-queries", type=int, default=10, help="Number of queries to test")
     parser.add_argument("--embed-dim", type=int, default=384, help="Embedding dimension")
-    parser.add_argument("--embeddings-path", type=str, default=None, 
+    parser.add_argument("--embeddings-path", type=str, default=None,
                        help="Path to embeddings file (.npy format)")
     parser.add_argument("--corpus-path", type=str, default=None,
                        help="Path to corpus file (.csv format with 'text' column)")
     parser.add_argument("--top-k", type=int, default=10, help="Top-K for retrieval evaluation")
-    
+
     # PIR-RAG specific arguments
-    parser.add_argument("--pir-rag-k-clusters", type=int, default=None, 
+    parser.add_argument("--pir-rag-k-clusters", type=int, default=None,
                        help="Number of clusters for PIR-RAG (default: n_docs/20)")
     parser.add_argument("--pir-rag-cluster-top-k", type=int, default=3,
                        help="Number of top clusters to retrieve in PIR-RAG")
-    
+
     # Graph-PIR specific arguments
     parser.add_argument("--graph-pir-k-neighbors", type=int, default=16,
                        help="Number of neighbors in HNSW graph for Graph-PIR")
@@ -655,26 +685,26 @@ def main():
                        help="Maximum connections per node in HNSW graph")
     parser.add_argument("--graph-pir-ef-search", type=int, default=50,
                        help="ef parameter for graph search")
-    
+
     # Tiptoe specific arguments
     parser.add_argument("--tiptoe-k-clusters", type=int, default=None,
                        help="Number of clusters for Tiptoe (default: n_docs/20)")
     parser.add_argument("--tiptoe-use-real-crypto", action="store_true", default=True,
                        help="Use real cryptography for Tiptoe (default: True)")
-    parser.add_argument("--tiptoe-no-real-crypto", dest="tiptoe_use_real_crypto", 
+    parser.add_argument("--tiptoe-no-real-crypto", dest="tiptoe_use_real_crypto",
                        action="store_false", help="Disable real cryptography for Tiptoe")
     parser.add_argument("--tiptoe-poly-degree", type=int, default=8192,
                        help="Polynomial degree for Tiptoe homomorphic encryption")
     parser.add_argument("--tiptoe-plain-modulus", type=int, default=1024,
                        help="Plain modulus for Tiptoe homomorphic encryption")
-    
+
     args = parser.parse_args()
-    
+
     runner = PIRExperimentRunner(args.output_dir)
-    
+
     if args.experiment in ["single", "all"]:
         print(f"Running single experiment with {args.n_docs} documents...")
-        
+
         # Load or generate data with flexible options
         embeddings, documents = runner.load_or_generate_data(
             embeddings_path=args.embeddings_path,
@@ -683,15 +713,15 @@ def main():
             embed_dim=args.embed_dim
         )
         queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(args.n_queries)]
-        
+
         # Run all three systems with configured parameters
         results = {}
-        
+
         try:
             # PIR-RAG with custom parameters
             k_clusters = runner.get_default_k_clusters(args.n_docs, args.pir_rag_k_clusters)
             results['pir_rag'] = runner.run_pir_rag_experiment(
-                embeddings, documents, queries, 
+                embeddings, documents, queries,
                 k_clusters=k_clusters,
                 cluster_top_k=args.pir_rag_cluster_top_k,
                 top_k=args.top_k
@@ -699,7 +729,7 @@ def main():
             print(f"✅ PIR-RAG completed with k_clusters={k_clusters}")
         except Exception as e:
             print(f"❌ PIR-RAG experiment failed: {e}")
-            
+
         try:
             # Graph-PIR with custom parameters
             graph_params = {
@@ -716,7 +746,7 @@ def main():
             print(f"✅ Graph-PIR completed with k_neighbors={args.graph_pir_k_neighbors}")
         except Exception as e:
             print(f"❌ Graph-PIR experiment failed: {e}")
-            
+
         try:
             # Tiptoe with custom parameters
             tiptoe_params = {
@@ -733,12 +763,12 @@ def main():
             print(f"✅ Tiptoe completed with k_clusters={tiptoe_params['k_clusters']}, crypto={args.tiptoe_use_real_crypto}")
         except Exception as e:
             print(f"❌ Tiptoe experiment failed: {e}")
-        
+
         runner.save_results(results, "single_experiment")
-    
+
     if args.experiment in ["scalability", "all"]:
         print("Running scalability experiments...")
-        
+
         # Create parameter dictionaries for each system
         pir_rag_params = {
             'k_clusters': args.pir_rag_k_clusters,
@@ -756,10 +786,10 @@ def main():
             'poly_degree': args.tiptoe_poly_degree,
             'plain_modulus': args.tiptoe_plain_modulus
         }
-        
+
         scalability_results = runner.run_scalability_experiment(
-            doc_sizes=[100, 500, 1000, 2000], 
-            n_queries=5, 
+            doc_sizes=[100, 500, 1000, 2000],
+            n_queries=5,
             embed_dim=args.embed_dim,
             embeddings_path=args.embeddings_path,
             corpus_path=args.corpus_path,
@@ -768,10 +798,10 @@ def main():
             tiptoe_params=tiptoe_params
         )
         runner.save_results(scalability_results, "scalability")
-    
+
     if args.experiment in ["sensitivity", "all"]:
         print("Running parameter sensitivity experiments...")
-        
+
         # Use base parameters from arguments for sensitivity analysis
         base_pir_rag_params = {
             'k_clusters': args.pir_rag_k_clusters,
@@ -783,9 +813,9 @@ def main():
             'max_connections': args.graph_pir_max_connections,
             'ef_search': args.graph_pir_ef_search
         }
-        
+
         sensitivity_results = runner.run_parameter_sensitivity_experiment(
-            n_docs=args.n_docs, 
+            n_docs=args.n_docs,
             n_queries=5,
             embeddings_path=args.embeddings_path,
             corpus_path=args.corpus_path,
@@ -793,7 +823,7 @@ def main():
             base_graph_pir_params=base_graph_pir_params
         )
         runner.save_results(sensitivity_results, "parameter_sensitivity")
-    
+
     if args.experiment in ["retrieval", "all"]:
         print("Running retrieval performance experiments...")
         retrieval_results = runner.run_retrieval_performance_experiment(
@@ -808,7 +838,7 @@ def main():
         )
         if retrieval_results:
             runner.save_results(retrieval_results, "retrieval_performance")
-    
+
     print("All experiments completed!")
 
 
