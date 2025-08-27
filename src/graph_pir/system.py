@@ -357,6 +357,7 @@ class GraphPIRSystem:
             for rept in range(self.parallel):
                 if len(to_be_explored) == 0:
                     # Fallback: make random queries if no vertices to explore
+                    print(f"[GraphPIR] WARNING: Step {step} using random fallback (search got stuck)")
                     batch_queries.extend([np.random.randint(0, n_docs) for _ in range(m)])
                 else:
                     # Pop closest vertex and add ALL its neighbors to batch (GraphANN approach)
@@ -373,6 +374,8 @@ class GraphPIRSystem:
             # Step 4: PIR batch query neighbors (GetVertexInfo equivalent)
             # Remove duplicates and invalid indices
             unique_queries = list(set([q for q in batch_queries if 0 <= q < n_docs]))
+            
+            print(f"[GraphPIR] Step {step}: unique_queries={len(unique_queries)}, to_be_explored={len(to_be_explored)}")
             
             if unique_queries:
                 # Use REAL PIR to retrieve (embeddings + neighbors) for these nodes
@@ -426,6 +429,7 @@ class GraphPIRSystem:
         }
 
         print(f"[GraphPIR] GraphANN SearchKNN complete: {pir_query_count} PIR queries, {len(known_vertices)} nodes explored")
+        print(f"[GraphPIR] PERFORMANCE DEBUG: dataset_size={n_docs}, pir_operations={pir_query_count}, steps_completed={step+1}/{self.max_iterations}")
 
         return candidate_indices, phase1_metrics
 
