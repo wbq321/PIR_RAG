@@ -409,23 +409,59 @@ class PIRExperimentRunner:
         # Create retrieval performance tester
         tester = RetrievalPerformanceTester()
         
-        # Run comprehensive retrieval tests
-        retrieval_results = tester.run_comprehensive_test(
-            embeddings=embeddings,
-            documents=documents,
-            n_queries=n_queries,
-            top_k=top_k
-        )
+        # Generate queries for testing
+        np.random.seed(42)
+        queries = tester.generate_realistic_queries(embeddings, n_queries)
         
-        # Add experiment metadata
-        retrieval_results['experiment_info'] = {
-            'timestamp': self.timestamp,
-            'n_docs': n_docs,
-            'n_queries': n_queries,
-            'top_k': top_k,
-            'embed_dim': embeddings.shape[1],
-            'data_type': 'real' if embeddings_path else 'synthetic'
+        # Test each system individually and collect results
+        retrieval_results = {
+            'experiment_info': {
+                'timestamp': self.timestamp,
+                'n_docs': n_docs,
+                'n_queries': n_queries,
+                'top_k': top_k,
+                'embed_dim': embeddings.shape[1],
+                'data_type': 'real' if embeddings_path else 'synthetic'
+            }
         }
+        
+        # Test PIR-RAG
+        try:
+            pir_rag_client = PIRRAGClient()
+            pir_rag_server = PIRRAGServer()
+            pir_rag_system = (pir_rag_client, pir_rag_server)
+            pir_rag_results = tester.test_retrieval_performance(
+                "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k
+            )
+            retrieval_results['pir_rag'] = pir_rag_results
+            print(f"✅ PIR-RAG retrieval test completed")
+        except Exception as e:
+            print(f"❌ PIR-RAG retrieval test failed: {e}")
+            retrieval_results['pir_rag'] = None
+        
+        # Test Graph-PIR
+        try:
+            graph_pir_system = GraphPIRSystem()
+            graph_pir_results = tester.test_retrieval_performance(
+                "Graph-PIR", graph_pir_system, embeddings, documents, queries, top_k
+            )
+            retrieval_results['graph_pir'] = graph_pir_results
+            print(f"✅ Graph-PIR retrieval test completed")
+        except Exception as e:
+            print(f"❌ Graph-PIR retrieval test failed: {e}")
+            retrieval_results['graph_pir'] = None
+        
+        # Test Tiptoe
+        try:
+            tiptoe_system = TiptoeSystem()
+            tiptoe_results = tester.test_retrieval_performance(
+                "Tiptoe", tiptoe_system, embeddings, documents, queries, top_k
+            )
+            retrieval_results['tiptoe'] = tiptoe_results
+            print(f"✅ Tiptoe retrieval test completed")
+        except Exception as e:
+            print(f"❌ Tiptoe retrieval test failed: {e}")
+            retrieval_results['tiptoe'] = None
         
         return retrieval_results
     
