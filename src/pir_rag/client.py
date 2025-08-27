@@ -132,13 +132,14 @@ class PIRRAGClient:
         
         return urls, download_bytes
     
-    def pir_retrieve(self, server, cluster_indices: List[int]) -> Tuple[List[str], Dict[str, Any]]:
+    def pir_retrieve(self, cluster_indices: List[int], server) -> Tuple[List[str], Dict[str, Any]]:
         """
         Perform private retrieval of document URLs from multiple clusters.
         
         FIXED: Client properly decrypts encrypted URL data from server.
         
         Args:
+            cluster_indices: List of cluster indices to query
             server: PIRRAGServer instance
             cluster_indices: List of cluster indices to retrieve from
             

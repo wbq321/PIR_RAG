@@ -143,7 +143,7 @@ class PIRExperimentRunner:
             
             # Step 3: Reranking
             rerank_start = time.perf_counter()
-            final_results = client.rerank_documents(query_tensor, urls, top_k=top_k)
+            final_results = client.rerank_documents(query_tensor, urls, server, top_k=top_k)
             rerank_time = time.perf_counter() - rerank_start
             
             total_query_time = time.perf_counter() - query_start

@@ -161,7 +161,7 @@ def run_pir_rag_experiment(embeddings: np.ndarray, documents: List[str],
 
         # Perform PIR retrieval
         query_start = time.perf_counter()
-        retrieved_urls, query_metrics = client.pir_retrieve(server, cluster_indices)
+        retrieved_urls, query_metrics = client.pir_retrieve(cluster_indices, server)
         
         # Re-rank URLs using document embeddings for semantic relevance
         if retrieved_urls:

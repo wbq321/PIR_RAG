@@ -165,7 +165,7 @@ class PIRRAGExperimentRunner:
             )
             
             # 2. PIR retrieval
-            retrieved_docs, pir_metrics = client.pir_retrieve(server, cluster_indices)
+            retrieved_docs, pir_metrics = client.pir_retrieve(cluster_indices, server)
             
             # 3. Re-ranking
             final_docs = client.rerank_documents(
