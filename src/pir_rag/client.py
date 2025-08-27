@@ -69,11 +69,18 @@ class PIRRAGClient:
         if self.centroids is None:
             raise ValueError("Client not set up. Call setup() first.")
         
+        print(f"[PIR-RAG] DEBUG: ===== CLUSTER SELECTION START =====")
+        cluster_selection_start = time.perf_counter()
+        
         similarities = util.cos_sim(query_embedding, self.centroids)[0]
         best_cluster_indices = torch.topk(similarities, k=min(top_k, len(self.centroids))).indices.tolist()
         
+        cluster_selection_time = time.perf_counter() - cluster_selection_start
+        
         print(f"[PIR-RAG] DEBUG: Cluster selection - similarities: {similarities[:5]}... (first 5)")
         print(f"[PIR-RAG] DEBUG: Selected cluster indices: {best_cluster_indices}")
+        print(f"[PIR-RAG] DEBUG: Cluster selection took {cluster_selection_time:.4f}s")
+        print(f"[PIR-RAG] DEBUG: ===== CLUSTER SELECTION COMPLETE =====")
         
         return best_cluster_indices
     
@@ -151,6 +158,9 @@ class PIRRAGClient:
         """
         if self.centroids is None:
             raise ValueError("Client not set up. Call setup() first.")
+
+        print(f"[PIR-RAG] DEBUG: ===== PIR RETRIEVE START =====")
+        pir_retrieve_start = time.perf_counter()
         
         num_clusters = len(self.centroids)
         
@@ -167,26 +177,48 @@ class PIRRAGClient:
         candidate_urls = []
 
         for cluster_idx in cluster_indices:
+            print(f"[PIR-RAG] DEBUG: ===== PROCESSING CLUSTER {cluster_idx} =====")
+            cluster_start = time.perf_counter()
+            
             print(f"    [Client] Processing cluster {cluster_idx}...")
             
             # Generate encrypted query
-            start_time = time.perf_counter()
+            query_gen_start = time.perf_counter()
             query_vec, upload_bytes = self.generate_pir_query(cluster_idx, num_clusters)
-            metrics["total_query_gen_time"] += (time.perf_counter() - start_time)
+            query_gen_time = time.perf_counter() - query_gen_start
+            metrics["total_query_gen_time"] += query_gen_time
             metrics["total_upload_bytes"] += upload_bytes
+            print(f"[PIR-RAG] DEBUG: Query generation took {query_gen_time:.4f}s")
             
             # Server processing returns encrypted URL data
             server_start_time = time.perf_counter()
             encrypted_chunks = server.handle_pir_query(query_vec, self.crypto_scheme)
-            metrics["total_server_time"] += (time.perf_counter() - server_start_time)
+            server_time = time.perf_counter() - server_start_time
+            metrics["total_server_time"] += server_time
+            print(f"[PIR-RAG] DEBUG: Server processing took {server_time:.4f}s")
+            print(f"[PIR-RAG] DEBUG: Server returned {len(encrypted_chunks)} encrypted chunks")
             
             # Client decrypts the encrypted URL data
-            start_time = time.perf_counter()
+            decrypt_start_time = time.perf_counter()
             urls = self._decrypt_url_chunks(encrypted_chunks)
-            metrics["total_decode_time"] += (time.perf_counter() - start_time)
+            decrypt_time = time.perf_counter() - decrypt_start_time
+            metrics["total_decode_time"] += decrypt_time
             metrics["total_download_bytes"] += len(str(encrypted_chunks).encode('utf-8'))
+            print(f"[PIR-RAG] DEBUG: Decryption took {decrypt_time:.4f}s")
+            print(f"[PIR-RAG] DEBUG: Decrypted {len(urls)} URLs")
+            
+            cluster_total_time = time.perf_counter() - cluster_start
+            print(f"[PIR-RAG] DEBUG: Total cluster {cluster_idx} time: {cluster_total_time:.4f}s")
             
             candidate_urls.extend(urls)
+
+        total_pir_time = time.perf_counter() - pir_retrieve_start
+        print(f"[PIR-RAG] DEBUG: ===== PIR RETRIEVE COMPLETE =====")
+        print(f"[PIR-RAG] DEBUG: Total PIR retrieve time: {total_pir_time:.4f}s")
+        print(f"[PIR-RAG] DEBUG: Query gen: {metrics['total_query_gen_time']:.4f}s")
+        print(f"[PIR-RAG] DEBUG: Server: {metrics['total_server_time']:.4f}s") 
+        print(f"[PIR-RAG] DEBUG: Decode: {metrics['total_decode_time']:.4f}s")
+        print(f"[PIR-RAG] DEBUG: Retrieved {len(candidate_urls)} total URLs")
 
         return candidate_urls, metrics
     
@@ -264,8 +296,14 @@ class PIRRAGClient:
         Returns:
             List of top-k re-ranked URLs
         """
+        print(f"[PIR-RAG] DEBUG: ===== RERANKING START =====")
+        rerank_start = time.perf_counter()
+        
         if not urls:
+            print(f"[PIR-RAG] DEBUG: No URLs to rerank")
             return []
+        
+        print(f"[PIR-RAG] DEBUG: Reranking {len(urls)} URLs")
         
         # Get document embeddings from server for semantic ranking
         doc_embeddings = server.get_document_embeddings_for_urls(urls)
@@ -281,6 +319,13 @@ class PIRRAGClient:
         
         if top_k_value > 0:
             top_k_indices = torch.topk(similarities, k=top_k_value).indices
-            return [urls[i] for i in top_k_indices]
+            result_urls = [urls[i] for i in top_k_indices]
+        else:
+            result_urls = urls[:top_k_value]
         
-        return urls[:top_k_value]
+        rerank_time = time.perf_counter() - rerank_start
+        print(f"[PIR-RAG] DEBUG: Reranking took {rerank_time:.4f}s")
+        print(f"[PIR-RAG] DEBUG: Returned {len(result_urls)} URLs")
+        print(f"[PIR-RAG] DEBUG: ===== RERANKING COMPLETE =====")
+        
+        return result_urls
