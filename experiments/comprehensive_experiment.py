@@ -224,8 +224,8 @@ class PIRExperimentRunner:
         print(f"Running Graph-PIR experiment with {len(documents)} docs")
 
         if graph_params is None:
-            graph_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16,
-                           'max_iterations': 10, 'nodes_per_step': 5}
+            graph_params = {'k_neighbors': 8, 'ef_construction': 100, 'max_connections': 8,
+                           'max_iterations': 5, 'parallel': 1, 'ef_search': 30}
 
         print(f"  Graph params: {graph_params}")
 
@@ -366,7 +366,8 @@ class PIRExperimentRunner:
         if pir_rag_params is None:
             pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated per doc size
         if graph_pir_params is None:
-            graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16}
+            graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16,
+                               'max_iterations': 5, 'parallel': 2, 'ef_search': 30}
         if tiptoe_params is None:
             tiptoe_params = {'k_clusters': None, 'use_real_crypto': True}  # None will be calculated per doc size
 
@@ -454,7 +455,7 @@ class PIRExperimentRunner:
             base_pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated based on n_docs
         if base_graph_pir_params is None:
             base_graph_pir_params = {'k_neighbors': 16, 'ef_construction': 200, 'max_connections': 16,
-                                   'max_iterations': 10, 'nodes_per_step': 5}
+                                   'max_iterations': 5, 'parallel': 2, 'ef_search': 30}
 
         # Load or generate test data
         embeddings, documents = self.load_or_generate_data(
@@ -605,29 +606,29 @@ class PIRExperimentRunner:
 
     def _print_hybrid_retrieval_summary(self, results: Dict[str, Any]):
         """Print a summary of hybrid retrieval performance results."""
-        
+
         print(f"\n{'='*70}")
         print(f"HYBRID RETRIEVAL PERFORMANCE SUMMARY")
         print(f"{'='*70}")
-        
+
         experiment_info = results.get('experiment_info', {})
         print(f"Test Configuration:")
         print(f"  Documents: {experiment_info.get('n_docs', 'N/A'):,}")
         print(f"  Queries: {experiment_info.get('n_queries', 'N/A')}")
         print(f"  Top-K: {experiment_info.get('top_k', 'N/A')}")
         print(f"  Data Type: {experiment_info.get('data_type', 'N/A')}")
-        
+
         # Table header
         print(f"\nHybrid Approach Results:")
         print(f"{'System':<12} {'Setup(s)':<10} {'Sim.Time(s)':<12} {'PIR Time(s)':<12} {'P@K':<8} {'R@K':<8} {'NDCG@K':<10} {'Comm(KB)':<10}")
         print("-" * 82)
-        
+
         for system_name in ['pir_rag', 'graph_pir', 'tiptoe']:
             system_results = results.get(system_name)
             if system_results is None:
                 print(f"{system_name.upper():<12} {'ERROR':<10} {'--':<12} {'--':<12} {'--':<8} {'--':<8} {'--':<10} {'--':<10}")
                 continue
-            
+
             # Check if this is hybrid approach results
             if system_results.get('hybrid_approach', False):
                 setup_time = f"{system_results.get('setup_time', 0):.2f}"
@@ -637,14 +638,14 @@ class PIRExperimentRunner:
                 recall = f"{system_results.get('avg_recall_at_k', 0):.3f}"
                 ndcg = f"{system_results.get('avg_ndcg_at_k', 0):.3f}"
                 comm = f"{system_results.get('avg_communication_bytes', 0)/1024:.1f}"
-                
+
                 print(f"{system_name.upper():<12} {setup_time:<10} {sim_time:<12} {pir_time:<12} {precision:<8} {recall:<8} {ndcg:<10} {comm:<10}")
             else:
                 print(f"{system_name.upper():<12} {'OLD':<10} {'--':<12} {'--':<12} {'--':<8} {'--':<8} {'--':<10} {'--':<10}")
-        
+
         print(f"\nHybrid Approach Benefits:")
         print(f"✅ Accurate quality metrics (no PIR corruption)")
-        print(f"✅ Realistic performance measurements")  
+        print(f"✅ Realistic performance measurements")
         print(f"✅ Preserved original PIR implementations")
         print(f"✅ Simulation Time: Plaintext quality calculation")
         print(f"✅ PIR Time: Real encrypted operations")
@@ -706,7 +707,7 @@ class PIRExperimentRunner:
         elif experiment_name == "retrieval_performance":
             # Create retrieval performance summary CSV
             retrieval_data = []
-            
+
             # Extract experiment info
             exp_info = results.get('experiment_info', {})
             base_row = {
@@ -716,14 +717,14 @@ class PIRExperimentRunner:
                 'embed_dim': exp_info.get('embed_dim', 'N/A'),
                 'data_type': exp_info.get('data_type', 'N/A')
             }
-            
+
             # Process each system's results
-            for system_key, system_name in [('pir_rag', 'PIR-RAG'), 
-                                          ('graph_pir', 'Graph-PIR'), 
+            for system_key, system_name in [('pir_rag', 'PIR-RAG'),
+                                          ('graph_pir', 'Graph-PIR'),
                                           ('tiptoe', 'Tiptoe')]:
                 row = base_row.copy()
                 row['system'] = system_name
-                
+
                 system_results = results.get(system_key)
                 if system_results is not None:
                     row.update({
@@ -757,9 +758,9 @@ class PIRExperimentRunner:
                         'ndcg_at_10': 'Error',
                         'mrr': 'Error'
                     })
-                
+
                 retrieval_data.append(row)
-            
+
             pd.DataFrame(retrieval_data).to_csv(csv_path, index=False)
 
         print(f"Results saved to:")
@@ -791,16 +792,16 @@ def main():
     # Graph-PIR specific arguments
     parser.add_argument("--graph-pir-k-neighbors", type=int, default=16,
                        help="Number of neighbors in HNSW graph for Graph-PIR")
-    parser.add_argument("--graph-pir-ef-construction", type=int, default=200,
+    parser.add_argument("--graph-pir-ef-construction", type=int, default=100,
                        help="ef_construction parameter for HNSW graph building")
     parser.add_argument("--graph-pir-max-connections", type=int, default=16,
                        help="Maximum connections per node in HNSW graph")
-    parser.add_argument("--graph-pir-ef-search", type=int, default=50,
+    parser.add_argument("--graph-pir-ef-search", type=int, default=30,
                        help="ef parameter for graph search")
-    parser.add_argument("--graph-pir-max-iterations", type=int, default=10,
-                       help="Maximum number of graph traversal iterations/turns")
-    parser.add_argument("--graph-pir-nodes-per-step", type=int, default=5,
-                       help="Number of neighbors to explore per iteration step")
+    parser.add_argument("--graph-pir-max-iterations", type=int, default=5,
+                       help="Maximum number of graph traversal iterations/turns (GraphANN maxStep)")
+    parser.add_argument("--graph-pir-parallel", type=int, default=2,
+                       help="Number of parallel explorations per step (GraphANN parallel)")
 
     # Tiptoe specific arguments
     parser.add_argument("--tiptoe-k-clusters", type=int, default=None,
@@ -852,8 +853,9 @@ def main():
                 'k_neighbors': args.graph_pir_k_neighbors,
                 'ef_construction': args.graph_pir_ef_construction,
                 'max_connections': args.graph_pir_max_connections,
+                'ef_search': args.graph_pir_ef_search,
                 'max_iterations': args.graph_pir_max_iterations,
-                'nodes_per_step': args.graph_pir_nodes_per_step
+                'parallel': args.graph_pir_parallel
             }
             results['graph_pir'] = runner.run_graph_pir_experiment(
                 embeddings, documents, queries,
@@ -895,8 +897,9 @@ def main():
             'k_neighbors': args.graph_pir_k_neighbors,
             'ef_construction': args.graph_pir_ef_construction,
             'max_connections': args.graph_pir_max_connections,
+            'ef_search': args.graph_pir_ef_search,
             'max_iterations': args.graph_pir_max_iterations,
-            'nodes_per_step': args.graph_pir_nodes_per_step
+            'parallel': args.graph_pir_parallel
         }
         tiptoe_params = {
             'k_clusters': args.tiptoe_k_clusters,
@@ -928,8 +931,9 @@ def main():
             'k_neighbors': args.graph_pir_k_neighbors,
             'ef_construction': args.graph_pir_ef_construction,
             'max_connections': args.graph_pir_max_connections,
+            'ef_search': args.graph_pir_ef_search,
             'max_iterations': args.graph_pir_max_iterations,
-            'nodes_per_step': args.graph_pir_nodes_per_step
+            'parallel': args.graph_pir_parallel
         }
 
         sensitivity_results = runner.run_parameter_sensitivity_experiment(
