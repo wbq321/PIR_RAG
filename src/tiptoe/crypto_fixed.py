@@ -9,6 +9,13 @@ import time
 import random
 from typing import List, Tuple, Dict, Any
 
+# Import Pyfhel for BFV
+try:
+    from Pyfhel import Pyfhel, PyCtxt
+    _pyfhel_available = True
+except ImportError:
+    _pyfhel_available = False
+
 
 class SimpleLinearHomomorphicScheme:
     """
@@ -174,3 +181,107 @@ class SimpleLinearHomomorphicPIR:
         else:
             # Single value decryption
             return self.crypto.decrypt(encrypted_response)
+
+
+class FixedTiptoeHomomorphicRanking:
+    """
+    FIXED real homomorphic encryption for Tiptoe ranking phase using Pyfhel (BFV).
+    
+    This version properly handles the operations that were causing transparent ciphertexts.
+    """
+    
+    def __init__(self, scheme: str = 'BFV', n_slots: int = 8192, t_bits: int = 20):
+        if not _pyfhel_available:
+            raise ImportError("Pyfhel is not installed. Please install it to use real homomorphic ranking.")
+            
+        print(f"[BFV] Initializing FIXED version with n={n_slots}, t_bits={t_bits}")
+        self.HE = Pyfhel()
+        
+        try:
+            # Use conservative, robust parameters
+            self.HE.contextGen(scheme='BFV', n=n_slots, t_bits=t_bits)
+            self.HE.keyGen()
+            print(f"[BFV] FIXED BFV context and keys generated successfully")
+        except Exception as e:
+            raise RuntimeError(f"FIXED Pyfhel context/key generation failed: {e}")
+            
+        self.scheme = 'BFV'
+        self.n_slots = n_slots
+        self.t_bits = t_bits
+
+    def encrypt_vector(self, vec):
+        """Encrypt a vector element by element."""
+        print(f"[BFV] Encrypting vector of length {len(vec)}")
+        # Convert to int64 and encrypt each element individually
+        encrypted_vec = []
+        for i, x in enumerate(vec):
+            # Ensure we have proper int64 value
+            val = int(x)
+            arr = np.array([val], dtype=np.int64)
+            ctxt = self.HE.encryptInt(arr)
+            encrypted_vec.append(ctxt)
+        
+        print(f"[BFV] Vector encrypted, {len(encrypted_vec)} elements")
+        return encrypted_vec
+
+    def dot_product(self, ctxt_query, db_vecs):
+        """
+        Compute homomorphic dot products: ctxt_query · db_vecs[i] for each document.
+        
+        This is the FIXED version that avoids transparent ciphertext issues.
+        """
+        print(f"[BFV] Computing dot products for {len(db_vecs)} documents")
+        results = []
+        
+        for doc_idx, doc_vec in enumerate(db_vecs):
+            print(f"[BFV] Processing document {doc_idx + 1}/{len(db_vecs)}")
+            
+            # Ensure doc_vec is int64
+            doc_arr = np.array(doc_vec, dtype=np.int64)
+            
+            # Check dimensions match
+            if len(ctxt_query) != len(doc_arr):
+                raise ValueError(f"Dimension mismatch: query={len(ctxt_query)}, doc={len(doc_arr)}")
+            
+            # Compute dot product homomorphically
+            dot_product_terms = []
+            
+            # Multiply each encrypted query element by corresponding doc value
+            for j in range(len(doc_arr)):
+                # Scalar multiplication: ctxt_query[j] * doc_arr[j]
+                if doc_arr[j] != 0:  # Skip zero multiplications for efficiency
+                    term = ctxt_query[j] * int(doc_arr[j])
+                    dot_product_terms.append(term)
+            
+            # Sum all terms to get final dot product
+            if not dot_product_terms:
+                # All zeros - encrypt zero result
+                zero_result = self.HE.encryptInt(np.array([0], dtype=np.int64))
+                results.append(zero_result)
+            else:
+                # Start with first term and add the rest
+                dot_result = dot_product_terms[0]
+                for term in dot_product_terms[1:]:
+                    dot_result = dot_result + term
+                results.append(dot_result)
+        
+        print(f"[BFV] Dot products computed for {len(results)} documents")
+        return results
+
+    def decrypt_scores(self, ctxt_scores):
+        """Decrypt similarity scores."""
+        print(f"[BFV] Decrypting {len(ctxt_scores)} scores")
+        scores = []
+        
+        for i, ctxt in enumerate(ctxt_scores):
+            try:
+                # Decrypt as integer array and take first element
+                decrypted_arr = self.HE.decryptInt(ctxt)
+                score = float(decrypted_arr[0]) if len(decrypted_arr) > 0 else 0.0
+                scores.append(score)
+            except Exception as e:
+                print(f"[BFV] Warning: Failed to decrypt score {i}: {e}")
+                scores.append(0.0)  # Fallback
+        
+        print(f"[BFV] Scores decrypted: {scores}")
+        return scores
