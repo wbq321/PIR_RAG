@@ -36,9 +36,42 @@ class PIRAnalyzer:
         self.figures_dir.mkdir(exist_ok=True)
         
     def load_json_results(self, json_file: str) -> Dict[str, Any]:
-        """Load results from JSON file."""
-        with open(self.results_dir / json_file, 'r') as f:
-            return json.load(f)
+        """Load results from JSON file with error handling."""
+        file_path = self.results_dir / json_file
+        try:
+            print(f"Loading JSON file: {file_path}")
+            
+            # Check if file exists
+            if not file_path.exists():
+                raise FileNotFoundError(f"File not found: {file_path}")
+            
+            # Check file size
+            file_size = file_path.stat().st_size
+            print(f"File size: {file_size} bytes")
+            
+            if file_size == 0:
+                raise ValueError(f"File is empty: {file_path}")
+            
+            with open(file_path, 'r') as f:
+                content = f.read()
+                if not content.strip():
+                    raise ValueError(f"File contains only whitespace: {file_path}")
+                
+                # Try to parse JSON
+                import json
+                try:
+                    results = json.loads(content)
+                    print(f"✅ Successfully loaded JSON with {len(results)} top-level keys")
+                    return results
+                except json.JSONDecodeError as e:
+                    print(f"❌ JSON parsing error in {file_path}:")
+                    print(f"   Error: {e}")
+                    print(f"   Content preview (first 200 chars): {content[:200]}")
+                    raise
+                    
+        except Exception as e:
+            print(f"❌ Error loading {file_path}: {e}")
+            raise
     
     def plot_single_experiment_timing(self, results: Dict[str, Any], save_name: str = "timing_breakdown"):
         """Plot detailed timing breakdown for single experiment."""
@@ -445,10 +478,21 @@ def main():
             analyzer.generate_summary_report(results)
         
         if scalability_files:
-            latest_scalability = max(scalability_files, key=lambda x: x.stat().st_mtime)
-            print(f"Analyzing scalability: {latest_scalability}")
-            results = analyzer.load_json_results(latest_scalability.name)
-            analyzer.plot_scalability_analysis(results)
+            # Try files in reverse chronological order until we find a valid one
+            scalability_files_sorted = sorted(scalability_files, key=lambda x: x.stat().st_mtime, reverse=True)
+            
+            for scalability_file in scalability_files_sorted:
+                try:
+                    print(f"Trying to analyze scalability: {scalability_file}")
+                    results = analyzer.load_json_results(scalability_file.name)
+                    analyzer.plot_scalability_analysis(results)
+                    print(f"✅ Successfully analyzed: {scalability_file}")
+                    break
+                except Exception as e:
+                    print(f"❌ Failed to analyze {scalability_file}: {e}")
+                    continue
+            else:
+                print("❌ No valid scalability files found")
         
         if sensitivity_files:
             latest_sensitivity = max(sensitivity_files, key=lambda x: x.stat().st_mtime)
@@ -465,9 +509,14 @@ def main():
             analyzer.generate_summary_report(results)
         
         if args.scalability_file:
-            print(f"Analyzing scalability: {args.scalability_file}")
-            results = analyzer.load_json_results(args.scalability_file)
-            analyzer.plot_scalability_analysis(results)
+            try:
+                print(f"Analyzing scalability: {args.scalability_file}")
+                results = analyzer.load_json_results(args.scalability_file)
+                analyzer.plot_scalability_analysis(results)
+                print(f"✅ Successfully analyzed: {args.scalability_file}")
+            except Exception as e:
+                print(f"❌ Failed to analyze {args.scalability_file}: {e}")
+                print("💡 Try using --generate-all to automatically find valid files")
         
         if args.sensitivity_file:
             print(f"Analyzing sensitivity: {args.sensitivity_file}")
