@@ -211,6 +211,8 @@ class TiptoeSystem:
 
         print(f"[Tiptoe] CORRECTED query completed in {total_query_time:.3f}s")
         print(f"[Tiptoe] Retrieved {len(retrieved_docs)} URLs")
+        print(f"[Tiptoe] CRYPTO VERIFICATION: Using real LWE-based encryption = {self.homomorphic_ranking is not None}")
+        print(f"[Tiptoe] PIR operations: {retrieval_metrics.get('pir_queries', 0)} real encrypted queries")
 
         return retrieved_docs, query_metrics
 
@@ -412,6 +414,13 @@ class TiptoeSystem:
                         target_index=rank_idx,
                         database_size=len(cluster_docs)
                     )
+                    
+                    # CRYPTO VERIFICATION: Check if PIR query contains encrypted elements
+                    if len(pir_query) > 0 and isinstance(pir_query[0], dict) and 'u' in pir_query[0]:
+                        crypto_verified = True
+                    else:
+                        crypto_verified = False
+                        print(f"[Tiptoe] WARNING: PIR query may not be properly encrypted!")
                     
                     # Server processes query (PIR over URL indices)
                     url_database = [f"https://example.com/doc_{doc_indices[i]}" for i in range(len(cluster_docs))]

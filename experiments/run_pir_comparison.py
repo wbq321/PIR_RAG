@@ -246,6 +246,8 @@ def run_graph_pir_experiment(embeddings: np.ndarray, documents: List[str],
             print(f"First query: '{query_text[:50]}...'")
             print(f"Retrieved {len(retrieved_urls)} URLs in {query_time:.3f}s")
             print(f"  Phase 1: {query_metrics['phase1_time']:.3f}s, Phase 2: {query_metrics['phase2_time']:.3f}s")
+            print(f"  Phase 1 comm: {query_metrics['phase1_upload_bytes'] + query_metrics['phase1_download_bytes']:,} bytes")
+            print(f"  Phase 2 comm: {query_metrics['phase2_upload_bytes'] + query_metrics['phase2_download_bytes']:,} bytes")
 
     avg_metrics = {
         "system": "Graph-PIR",
