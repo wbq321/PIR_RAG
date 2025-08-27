@@ -224,7 +224,7 @@ class PIRExperimentRunner:
         print(f"Running Graph-PIR experiment with {len(documents)} docs")
 
         if graph_params is None:
-            graph_params = {'k_neighbors': 8, 'ef_construction': 100, 'max_connections': 8,
+            graph_params = {'k_neighbors': 8, 'ef_construction': 20, 'max_connections': 8,
                            'max_iterations': 5, 'parallel': 1, 'ef_search': 30}
 
         print(f"  Graph params: {graph_params}")
