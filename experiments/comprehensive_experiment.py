@@ -37,6 +37,38 @@ except ImportError:
     print("⚠️  Retrieval performance testing not available. Install required dependencies.")
 
 
+def generate_test_queries(documents: List[str], n_queries: int = 10) -> List[str]:
+    """Generate realistic test queries by sampling from corpus documents."""
+    if len(documents) == 0:
+        raise ValueError("Cannot generate queries from empty document list")
+
+    # Sample random documents to use as queries
+    np.random.seed(42)  # For reproducible results
+    query_indices = np.random.choice(len(documents), size=min(n_queries, len(documents)), replace=False)
+
+    selected_queries = []
+    for idx in query_indices:
+        doc_text = documents[idx]
+        # Take first sentence or first 100 characters as query
+        if '.' in doc_text:
+            # Use first sentence
+            query = doc_text.split('.')[0].strip() + '.'
+        else:
+            # Use first 100 characters
+            query = doc_text[:100].strip()
+            if len(doc_text) > 100:
+                query += "..."
+
+        # Ensure query is not too short
+        if len(query.strip()) < 10:
+            query = doc_text[:50].strip() + "..."
+
+        selected_queries.append(query)
+
+    print(f"Generated {len(selected_queries)} queries from corpus documents")
+    return selected_queries
+
+
 class PIRExperimentRunner:
     """Comprehensive experiment runner for all PIR systems."""
     
