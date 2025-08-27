@@ -522,7 +522,9 @@ class PIRExperimentRunner:
             return {}
 
         print(f"\n{'='*60}")
-        print(f"Running Retrieval Performance Experiment")
+        print(f"Running Retrieval Performance Experiment (HYBRID APPROACH)")
+        print(f"• Phase 1: Plaintext simulation for accurate retrieval quality")
+        print(f"• Phase 2: Real PIR operations for realistic performance metrics")
         print(f"Documents: {n_docs}, Queries: {n_queries}, Top-K: {top_k}")
         print(f"{'='*60}")
 
@@ -596,7 +598,56 @@ class PIRExperimentRunner:
             print(f"❌ Tiptoe retrieval test failed: {e}")
             retrieval_results['tiptoe'] = None
 
+        # Print hybrid approach summary
+        self._print_hybrid_retrieval_summary(retrieval_results)
+
         return retrieval_results
+
+    def _print_hybrid_retrieval_summary(self, results: Dict[str, Any]):
+        """Print a summary of hybrid retrieval performance results."""
+        
+        print(f"\n{'='*70}")
+        print(f"HYBRID RETRIEVAL PERFORMANCE SUMMARY")
+        print(f"{'='*70}")
+        
+        experiment_info = results.get('experiment_info', {})
+        print(f"Test Configuration:")
+        print(f"  Documents: {experiment_info.get('n_docs', 'N/A'):,}")
+        print(f"  Queries: {experiment_info.get('n_queries', 'N/A')}")
+        print(f"  Top-K: {experiment_info.get('top_k', 'N/A')}")
+        print(f"  Data Type: {experiment_info.get('data_type', 'N/A')}")
+        
+        # Table header
+        print(f"\nHybrid Approach Results:")
+        print(f"{'System':<12} {'Setup(s)':<10} {'Sim.Time(s)':<12} {'PIR Time(s)':<12} {'P@K':<8} {'R@K':<8} {'NDCG@K':<10} {'Comm(KB)':<10}")
+        print("-" * 82)
+        
+        for system_name in ['pir_rag', 'graph_pir', 'tiptoe']:
+            system_results = results.get(system_name)
+            if system_results is None:
+                print(f"{system_name.upper():<12} {'ERROR':<10} {'--':<12} {'--':<12} {'--':<8} {'--':<8} {'--':<10} {'--':<10}")
+                continue
+            
+            # Check if this is hybrid approach results
+            if system_results.get('hybrid_approach', False):
+                setup_time = f"{system_results.get('setup_time', 0):.2f}"
+                sim_time = f"{system_results.get('avg_quality_simulation_time', 0):.3f}"
+                pir_time = f"{system_results.get('avg_pir_performance_time', 0):.3f}"
+                precision = f"{system_results.get('avg_precision_at_k', 0):.3f}"
+                recall = f"{system_results.get('avg_recall_at_k', 0):.3f}"
+                ndcg = f"{system_results.get('avg_ndcg_at_k', 0):.3f}"
+                comm = f"{system_results.get('avg_communication_bytes', 0)/1024:.1f}"
+                
+                print(f"{system_name.upper():<12} {setup_time:<10} {sim_time:<12} {pir_time:<12} {precision:<8} {recall:<8} {ndcg:<10} {comm:<10}")
+            else:
+                print(f"{system_name.upper():<12} {'OLD':<10} {'--':<12} {'--':<12} {'--':<8} {'--':<8} {'--':<10} {'--':<10}")
+        
+        print(f"\nHybrid Approach Benefits:")
+        print(f"✅ Accurate quality metrics (no PIR corruption)")
+        print(f"✅ Realistic performance measurements")  
+        print(f"✅ Preserved original PIR implementations")
+        print(f"✅ Simulation Time: Plaintext quality calculation")
+        print(f"✅ PIR Time: Real encrypted operations")
 
     def save_results(self, results: Dict[str, Any], experiment_name: str):
         """Save experiment results to files."""

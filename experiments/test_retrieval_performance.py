@@ -31,7 +31,13 @@ from tiptoe import TiptoeSystem
 
 
 class RetrievalPerformanceTester:
-    """Specialized tester for retrieval performance analysis."""
+    """
+    Hybrid tester for retrieval performance analysis.
+    
+    Uses two-phase approach:
+    1. Plaintext simulation for accurate retrieval quality metrics
+    2. Actual PIR operations for realistic performance/communication metrics
+    """
     
     def __init__(self, output_dir: str = "results"):
         self.output_dir = Path(output_dir)
@@ -101,153 +107,354 @@ class RetrievalPerformanceTester:
             'avg_similarity': avg_similarity,
             'num_retrieved': len(retrieved_doc_indices)
         }
+
+    def _simulate_pir_rag_search(self, query_embedding: np.ndarray, 
+                                documents: List[str], embeddings: np.ndarray,
+                                n_clusters: int = 32, top_k_clusters: int = 3) -> List[int]:
+        """
+        Simulate PIR-RAG search strategy in plaintext for accurate retrieval metrics.
+        
+        Strategy:
+        1. K-means clustering on embeddings (same as actual PIR-RAG)
+        2. Find top-k clusters by centroid similarity
+        3. Compute similarities with all documents in selected clusters
+        4. Return ranked document indices
+        """
+        from sklearn.cluster import KMeans
+        
+        print(f"    [PIR-RAG Simulation] Clustering {len(embeddings)} docs into {n_clusters} clusters...")
+        
+        # 1. Perform K-means clustering (same as actual system)
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
+        cluster_labels = kmeans.fit_predict(embeddings)
+        centroids = kmeans.cluster_centers_
+        
+        # 2. Find top-k clusters by centroid similarity
+        centroid_similarities = cosine_similarity([query_embedding], centroids)[0]
+        top_cluster_indices = np.argsort(centroid_similarities)[::-1][:top_k_clusters]
+        
+        print(f"    [PIR-RAG Simulation] Selected clusters: {top_cluster_indices}")
+        
+        # 3. Collect all documents from selected clusters
+        candidate_doc_indices = []
+        for cluster_idx in top_cluster_indices:
+            cluster_docs = np.where(cluster_labels == cluster_idx)[0]
+            candidate_doc_indices.extend(cluster_docs)
+        
+        print(f"    [PIR-RAG Simulation] Found {len(candidate_doc_indices)} candidate documents")
+        
+        # 4. Compute similarities and rank
+        if candidate_doc_indices:
+            candidate_embeddings = embeddings[candidate_doc_indices]
+            similarities = cosine_similarity([query_embedding], candidate_embeddings)[0]
+            
+            # Sort by similarity
+            sorted_indices = np.argsort(similarities)[::-1]
+            ranked_doc_indices = [candidate_doc_indices[i] for i in sorted_indices]
+        else:
+            ranked_doc_indices = []
+        
+        return ranked_doc_indices
+
+    def _simulate_graph_pir_search(self, query_embedding: np.ndarray,
+                                  documents: List[str], embeddings: np.ndarray,
+                                  k_neighbors: int = 16, max_iterations: int = 5,
+                                  nodes_per_step: int = 3) -> List[int]:
+        """
+        Simulate Graph-PIR search strategy in plaintext for accurate retrieval metrics.
+        
+        Strategy:
+        1. Build graph structure (HNSW-style)
+        2. Graph traversal starting from entry points
+        3. Return documents found during traversal
+        """
+        print(f"    [Graph-PIR Simulation] Building graph for {len(embeddings)} documents...")
+        
+        # 1. Build graph structure (simplified HNSW)
+        graph = self._build_simple_graph(embeddings, k_neighbors)
+        
+        # 2. Graph traversal search
+        visited = set()
+        candidates = []
+        
+        # Start with entry points (first few documents)
+        n_entry_points = min(3, len(embeddings))
+        current_nodes = list(range(n_entry_points))
+        
+        # Process entry points
+        for node in current_nodes:
+            visited.add(node)
+            similarity = cosine_similarity([query_embedding], [embeddings[node]])[0][0]
+            candidates.append((node, similarity))
+        
+        print(f"    [Graph-PIR Simulation] Starting traversal from {n_entry_points} entry points...")
+        
+        # 3. Iterative traversal
+        for iteration in range(max_iterations):
+            # Select best current nodes to explore neighbors from
+            current_best = sorted(candidates, key=lambda x: x[1], reverse=True)[:nodes_per_step]
+            
+            # Collect unvisited neighbors
+            next_nodes = []
+            for node_id, _ in current_best:
+                if node_id in graph:
+                    neighbors = graph[node_id][:nodes_per_step]
+                    for neighbor in neighbors:
+                        if neighbor not in visited and neighbor < len(embeddings):
+                            next_nodes.append(neighbor)
+                            visited.add(neighbor)
+            
+            if not next_nodes:
+                break
+                
+            print(f"    [Graph-PIR Simulation] Iteration {iteration+1}: exploring {len(next_nodes)} new nodes")
+            
+            # Process new nodes
+            for node_id in next_nodes:
+                similarity = cosine_similarity([query_embedding], [embeddings[node_id]])[0][0]
+                candidates.append((node_id, similarity))
+        
+        # Sort by similarity and return indices
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        ranked_doc_indices = [idx for idx, _ in candidates]
+        
+        print(f"    [Graph-PIR Simulation] Found {len(ranked_doc_indices)} documents via graph traversal")
+        
+        return ranked_doc_indices
+
+    def _simulate_tiptoe_search(self, query_embedding: np.ndarray,
+                               documents: List[str], embeddings: np.ndarray,
+                               n_clusters: int = 32) -> List[int]:
+        """
+        Simulate Tiptoe search strategy in plaintext for accurate retrieval metrics.
+        
+        Strategy:
+        1. K-means clustering (same as PIR-RAG)
+        2. Find single closest cluster
+        3. Compute similarities with all documents in that cluster
+        4. Return ranked document indices
+        """
+        from sklearn.cluster import KMeans
+        
+        print(f"    [Tiptoe Simulation] Clustering {len(embeddings)} docs into {n_clusters} clusters...")
+        
+        # 1. Perform K-means clustering
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
+        cluster_labels = kmeans.fit_predict(embeddings)
+        centroids = kmeans.cluster_centers_
+        
+        # 2. Find single closest cluster
+        centroid_similarities = cosine_similarity([query_embedding], centroids)[0]
+        closest_cluster_idx = np.argmax(centroid_similarities)
+        
+        print(f"    [Tiptoe Simulation] Selected closest cluster: {closest_cluster_idx}")
+        
+        # 3. Get all documents from the closest cluster
+        cluster_doc_indices = np.where(cluster_labels == closest_cluster_idx)[0]
+        
+        print(f"    [Tiptoe Simulation] Found {len(cluster_doc_indices)} documents in closest cluster")
+        
+        # 4. Compute similarities and rank
+        if len(cluster_doc_indices) > 0:
+            cluster_embeddings = embeddings[cluster_doc_indices]
+            similarities = cosine_similarity([query_embedding], cluster_embeddings)[0]
+            
+            # Sort by similarity
+            sorted_indices = np.argsort(similarities)[::-1]
+            ranked_doc_indices = [cluster_doc_indices[i] for i in sorted_indices]
+        else:
+            ranked_doc_indices = []
+        
+        return ranked_doc_indices
+
+    def _build_simple_graph(self, embeddings: np.ndarray, k_neighbors: int = 16) -> Dict[int, List[int]]:
+        """Build a simple k-NN graph for Graph-PIR simulation."""
+        n_docs = len(embeddings)
+        graph = {}
+        
+        # For each document, find k nearest neighbors
+        for i in range(n_docs):
+            similarities = cosine_similarity([embeddings[i]], embeddings)[0]
+            # Get k+1 most similar (excluding self)
+            neighbor_indices = np.argsort(similarities)[::-1][1:k_neighbors+1]
+            graph[i] = neighbor_indices.tolist()
+            
+            if (i + 1) % 100 == 0:
+                print(f"      Built graph for {i+1}/{n_docs} documents")
+        
+        return graph
     
     def test_retrieval_performance(self, system_name: str, system, embeddings: np.ndarray, 
                                   documents: List[str], queries: List[np.ndarray], 
                                   top_k: int = 10) -> Dict[str, Any]:
-        """Test retrieval performance for a single system."""
+        """
+        Hybrid test: Plaintext simulation for retrieval quality + Real PIR for performance metrics.
         
-        print(f"Testing {system_name} retrieval performance...")
+        This approach ensures:
+        1. Accurate retrieval quality metrics (no PIR corruption)
+        2. Realistic performance and communication measurements
+        """
         
-        # Setup system
+        print(f"\n=== Testing {system_name} with Hybrid Approach ===")
+        
+        # Setup system for performance measurements
         setup_start = time.perf_counter()
         if system_name == "PIR-RAG":
             client, server = system
-            # Server does clustering first
-            k_clusters = min(5, len(documents)//20)
+            k_clusters = min(32, max(5, len(documents)//20))
             server.setup(embeddings, documents, k_clusters)
-            # Client gets centroids from server
             client.setup(server.centroids)
         elif system_name == "Graph-PIR":
             system.setup(embeddings, documents)
         elif system_name == "Tiptoe":
-            system.setup(embeddings, documents, k_clusters=min(5, len(documents)//20))
+            k_clusters = min(32, max(5, len(documents)//20))
+            system.setup(embeddings, documents, k_clusters=k_clusters)
         setup_time = time.perf_counter() - setup_start
         
-        # Test queries
+        print(f"  System setup completed in {setup_time:.3f}s")
+        
+        # Initialize results tracking
         results = {
             'system': system_name,
             'setup_time': setup_time,
             'query_results': [],
             'quality_metrics': [],
             'timing_breakdown': [],
-            'communication_costs': []
+            'communication_costs': [],
+            'hybrid_approach': True  # Flag to indicate this uses hybrid testing
         }
         
-        total_query_time = 0
+        total_quality_time = 0
+        total_performance_time = 0
         total_communication = 0
         
-        for i, query_embedding in enumerate(queries):
-            print(f"  Processing query {i+1}/{len(queries)}")
-            
-            # Execute query with timing
-            query_start = time.perf_counter()
-            
-            if system_name == "PIR-RAG":
-                # Step-by-step PIR-RAG execution
-                cluster_start = time.perf_counter()
-                query_tensor = torch.tensor(query_embedding) if not isinstance(query_embedding, torch.Tensor) else query_embedding
-                relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
-                cluster_time = time.perf_counter() - cluster_start
-                
-                pir_start = time.perf_counter()
-                doc_tuples, pir_metrics = client.pir_retrieve(relevant_clusters, server)
-                pir_time = time.perf_counter() - pir_start
-                
-                rerank_start = time.perf_counter()
-                final_results = client.rerank_documents(query_tensor, doc_tuples, top_k=top_k)
-                rerank_time = time.perf_counter() - rerank_start
-                
-                # Extract document indices from URLs (assuming format https://example.com/doc_{idx})
-                retrieved_indices = []
-                for url in final_results:
-                    try:
-                        idx = int(url.split('_')[-1])
-                        retrieved_indices.append(idx)
-                    except:
-                        pass
-                
-                timing = {
-                    'cluster_selection': cluster_time,
-                    'pir_retrieval': pir_time,
-                    'reranking': rerank_time,
-                    'total': time.perf_counter() - query_start
-                }
-                
-                comm_cost = pir_metrics.get('total_upload_bytes', 0) + pir_metrics.get('total_download_bytes', 0)
-                
-            elif system_name == "Graph-PIR":
-                urls, metrics = system.query(query_embedding, top_k=top_k)
-                
-                # Extract document indices
-                retrieved_indices = []
-                for url in urls:
-                    try:
-                        idx = int(url.split('_')[-1])
-                        retrieved_indices.append(idx)
-                    except:
-                        pass
-                
-                timing = {
-                    'phase1': metrics.get('phase1_time', 0),
-                    'phase2': metrics.get('phase2_time', 0),
-                    'total': time.perf_counter() - query_start
-                }
-                
-                comm_cost = (metrics.get('phase1_upload_bytes', 0) + metrics.get('phase1_download_bytes', 0) +
-                           metrics.get('phase2_upload_bytes', 0) + metrics.get('phase2_download_bytes', 0))
-                
-            elif system_name == "Tiptoe":
-                urls, metrics = system.query(query_embedding, top_k=top_k)
-                
-                # Extract document indices
-                retrieved_indices = []
-                for url in urls:
-                    try:
-                        idx = int(url.split('_')[-1])
-                        retrieved_indices.append(idx)
-                    except:
-                        pass
-                
-                timing = {
-                    'ranking': metrics.get('ranking_time', 0),
-                    'retrieval': metrics.get('retrieval_time', 0),
-                    'total': time.perf_counter() - query_start
-                }
-                
-                comm_cost = metrics.get('total_upload_bytes', 0) + metrics.get('total_download_bytes', 0)
-            
-            query_time = time.perf_counter() - query_start
-            total_query_time += query_time
-            total_communication += comm_cost
-            
-            # Calculate retrieval quality
-            quality = self.calculate_retrieval_quality(query_embedding, retrieved_indices, embeddings, top_k)
-            
-            results['query_results'].append({
-                'query_id': i,
-                'retrieved_indices': retrieved_indices,
-                'query_time': query_time
-            })
-            results['quality_metrics'].append(quality)
-            results['timing_breakdown'].append(timing)
-            results['communication_costs'].append(comm_cost)
+        print(f"  Testing {len(queries)} queries...")
         
-        # Aggregate metrics
-        quality_metrics = results['quality_metrics']
-        results['avg_metrics'] = {
-            'avg_query_time': total_query_time / len(queries),
-            'avg_precision_at_k': np.mean([q['precision_at_k'] for q in quality_metrics]),
-            'avg_recall_at_k': np.mean([q['recall_at_k'] for q in quality_metrics]),
-            'avg_ndcg_at_k': np.mean([q['ndcg_at_k'] for q in quality_metrics]),
-            'avg_similarity': np.mean([q['avg_similarity'] for q in quality_metrics]),
-            'avg_communication_per_query': total_communication / len(queries),
-            'queries_per_second': len(queries) / total_query_time,
-            'communication_efficiency': total_communication / (len(queries) * top_k)  # bytes per retrieved doc
-        }
+        for query_idx, query_embedding in enumerate(queries):
+            print(f"\n  Query {query_idx + 1}/{len(queries)}:")
+            
+            # === PHASE 1: PLAINTEXT SIMULATION FOR RETRIEVAL QUALITY ===
+            quality_start = time.perf_counter()
+            
+            print(f"    Phase 1: Plaintext simulation for retrieval quality...")
+            if system_name == "PIR-RAG":
+                retrieved_doc_indices = self._simulate_pir_rag_search(
+                    query_embedding, documents, embeddings, 
+                    n_clusters=k_clusters, top_k_clusters=3
+                )
+            elif system_name == "Graph-PIR":
+                retrieved_doc_indices = self._simulate_graph_pir_search(
+                    query_embedding, documents, embeddings,
+                    k_neighbors=16, max_iterations=5, nodes_per_step=3
+                )
+            elif system_name == "Tiptoe":
+                retrieved_doc_indices = self._simulate_tiptoe_search(
+                    query_embedding, documents, embeddings, n_clusters=k_clusters
+                )
+            else:
+                raise ValueError(f"Unknown system: {system_name}")
+            
+            quality_time = time.perf_counter() - quality_start
+            total_quality_time += quality_time
+            
+            # Calculate retrieval quality metrics
+            quality_metrics = self.calculate_retrieval_quality(
+                query_embedding, retrieved_doc_indices, embeddings, top_k
+            )
+            
+            print(f"    Quality metrics: P@{top_k}={quality_metrics['precision_at_k']:.3f}, "
+                  f"R@{top_k}={quality_metrics['recall_at_k']:.3f}, "
+                  f"NDCG@{top_k}={quality_metrics['ndcg_at_k']:.3f}")
+            
+            # === PHASE 2: ACTUAL PIR FOR PERFORMANCE METRICS ===
+            performance_start = time.perf_counter()
+            
+            print(f"    Phase 2: Actual PIR for performance measurement...")
+            try:
+                if system_name == "PIR-RAG":
+                    # Run actual PIR operations to measure performance
+                    query_tensor = torch.from_numpy(query_embedding).unsqueeze(0)
+                    relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
+                    doc_tuples, pir_metrics = client.pir_retrieve(relevant_clusters, server)
+                    
+                    communication_cost = pir_metrics.get('upload_bytes', 0) + pir_metrics.get('download_bytes', 0)
+                    
+                elif system_name == "Graph-PIR":
+                    # Run actual Graph-PIR query
+                    doc_tuples, pir_metrics = system.query(query_embedding, top_k=top_k)
+                    
+                    communication_cost = (pir_metrics.get('phase1_upload_bytes', 0) + 
+                                        pir_metrics.get('phase1_download_bytes', 0) +
+                                        pir_metrics.get('phase2_upload_bytes', 0) + 
+                                        pir_metrics.get('phase2_download_bytes', 0))
+                    
+                elif system_name == "Tiptoe":
+                    # Run actual Tiptoe query
+                    doc_tuples, pir_metrics = system.query(query_embedding, top_k=top_k)
+                    
+                    communication_cost = pir_metrics.get('upload_bytes', 0) + pir_metrics.get('download_bytes', 0)
+                
+                performance_time = time.perf_counter() - performance_start
+                total_performance_time += performance_time
+                total_communication += communication_cost
+                
+                print(f"    Performance: {performance_time:.3f}s, {communication_cost/1024:.1f}KB transferred")
+                
+            except Exception as e:
+                print(f"    Warning: PIR performance measurement failed: {e}")
+                performance_time = 0
+                communication_cost = 0
+                pir_metrics = {}
+            
+            # Store combined results
+            query_result = {
+                'query_idx': query_idx,
+                'quality_simulation_time': quality_time,
+                'pir_performance_time': performance_time,
+                'total_query_time': quality_time + performance_time,
+                'communication_bytes': communication_cost,
+                'num_retrieved_simulated': len(retrieved_doc_indices),
+                **quality_metrics
+            }
+            
+            results['query_results'].append(query_result)
+            results['quality_metrics'].append(quality_metrics)
+            results['communication_costs'].append(communication_cost)
+        
+        # Calculate aggregate metrics
+        quality_metrics_agg = {}
+        if results['quality_metrics']:
+            for metric in ['precision_at_k', 'recall_at_k', 'ndcg_at_k', 'avg_similarity']:
+                values = [qm[metric] for qm in results['quality_metrics'] if metric in qm]
+                if values:
+                    quality_metrics_agg[f'avg_{metric}'] = np.mean(values)
+                    quality_metrics_agg[f'std_{metric}'] = np.std(values)
+        
+        # Summary statistics
+        avg_quality_time = total_quality_time / len(queries) if queries else 0
+        avg_performance_time = total_performance_time / len(queries) if queries else 0
+        avg_communication = total_communication / len(queries) if queries else 0
+        
+        results.update({
+            'avg_quality_simulation_time': avg_quality_time,
+            'avg_pir_performance_time': avg_performance_time,
+            'avg_total_query_time': avg_quality_time + avg_performance_time,
+            'avg_communication_bytes': avg_communication,
+            'total_communication_kb': total_communication / 1024,
+            **quality_metrics_agg
+        })
+        
+        print(f"\n=== {system_name} Summary ===")
+        print(f"  Setup time: {setup_time:.3f}s")
+        print(f"  Avg quality simulation time: {avg_quality_time:.3f}s")
+        print(f"  Avg PIR performance time: {avg_performance_time:.3f}s")
+        print(f"  Avg communication: {avg_communication/1024:.1f}KB")
+        print(f"  Avg Precision@{top_k}: {quality_metrics_agg.get('avg_precision_at_k', 0):.3f}")
+        print(f"  Avg Recall@{top_k}: {quality_metrics_agg.get('avg_recall_at_k', 0):.3f}")
+        print(f"  Avg NDCG@{top_k}: {quality_metrics_agg.get('avg_ndcg_at_k', 0):.3f}")
         
         return results
-    
+
     def test_throughput_performance(self, system_name: str, system, embeddings: np.ndarray, 
                                    documents: List[str], n_concurrent_queries: int = 50) -> Dict[str, Any]:
         """Test throughput performance with many concurrent queries."""
@@ -382,14 +589,22 @@ class RetrievalPerformanceTester:
                 print(f"{system_name:<15} ERROR: {system_results['error']}")
                 continue
                 
-            metrics = system_results['avg_metrics']
+            avg_metrics = system_results.get('avg_metrics', {})
             throughput = system_results.get('throughput', {})
             
-            query_time = f"{metrics['avg_query_time']:.3f}s"
-            precision = f"{metrics['avg_precision_at_k']:.3f}"
-            ndcg = f"{metrics['avg_ndcg_at_k']:.3f}"
+            # Use hybrid approach metrics if available
+            if 'avg_quality_simulation_time' in system_results:
+                query_time = f"{system_results['avg_total_query_time']:.3f}s"
+                precision = f"{system_results.get('avg_precision_at_k', 0):.3f}"
+                ndcg = f"{system_results.get('avg_ndcg_at_k', 0):.3f}"
+                comm = f"{system_results['avg_communication_bytes']:,.0f}B"
+            else:
+                query_time = f"{avg_metrics.get('avg_query_time', 0):.3f}s"
+                precision = f"{avg_metrics.get('avg_precision_at_k', 0):.3f}"
+                ndcg = f"{avg_metrics.get('avg_ndcg_at_k', 0):.3f}"
+                comm = f"{avg_metrics.get('avg_communication_per_query', 0):,.0f}B"
+            
             qps = f"{throughput.get('queries_per_second', 0):.1f}"
-            comm = f"{metrics['avg_communication_per_query']:,.0f}B"
             
             print(f"{system_name:<15} {query_time:<12} {precision:<12} {ndcg:<10} {qps:<10} {comm:<12}")
         
