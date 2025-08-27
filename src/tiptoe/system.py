@@ -425,7 +425,7 @@ class TiptoeSystem:
                     )
                     
                     # CRYPTO VERIFICATION: Check if PIR query contains encrypted elements
-                    if len(pir_query) > 0 and isinstance(pir_query[0], dict) and 'u' in pir_query[0]:
+                    if len(pir_query) > 0 and isinstance(pir_query[0], dict) and ('u' in pir_query[0] or 'value' in pir_query[0]):
                         crypto_verified = True
                     else:
                         crypto_verified = False
