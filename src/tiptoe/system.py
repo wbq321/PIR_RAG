@@ -201,6 +201,9 @@ class TiptoeSystem:
             'using_real_homomorphic_ranking': self.homomorphic_ranking is not None,
             'homomorphic_ranking_available': self.homomorphic_ranking is not None,
             'crypto_scheme': 'Real Pyfhel BFV' if self.homomorphic_ranking is not None else 'Simulated',
+            # Debug info
+            'debug_ranking_metrics': ranking_metrics,
+            'debug_retrieval_metrics': retrieval_metrics,
             **cluster_metrics,
             **ranking_metrics,
             **retrieval_metrics

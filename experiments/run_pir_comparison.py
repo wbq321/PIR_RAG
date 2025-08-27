@@ -318,12 +318,16 @@ def run_tiptoe_experiment(embeddings: np.ndarray, documents: List[str],
 
         # Accumulate metrics
         total_query_time += query_time
-        total_upload += query_metrics.get('phase1_upload_bytes', 0) + query_metrics.get('phase2_upload_bytes', 0)
-        total_download += query_metrics.get('phase1_download_bytes', 0) + query_metrics.get('phase2_download_bytes', 0)
+        total_upload += query_metrics.get('upload_bytes', 0)
+        total_download += query_metrics.get('download_bytes', 0)
 
         print(f"Query {i+1}: {query_time:.3f}s, {len(retrieved_urls)} URLs, cluster {query_metrics.get('selected_cluster', 'N/A')}")
+        if i == 0:  # Show debug info for first query
+            print(f"  Debug - Upload: {query_metrics.get('upload_bytes', 0)}, Download: {query_metrics.get('download_bytes', 0)}")
+            print(f"  Debug - Ranking metrics: {query_metrics.get('debug_ranking_metrics', {})}")
+            print(f"  Debug - Retrieval metrics: {query_metrics.get('debug_retrieval_metrics', {})}")
         if i < 3:  # Show detailed breakdown for first few queries
-            print(f"  Phase 1: {query_metrics.get('phase1_time', 0):.3f}s, Phase 2: {query_metrics.get('phase2_time', 0):.3f}s")
+            print(f"  Phase 1: {query_metrics.get('phase1_time', 0):.3f}s, Phase 2: {query_metrics.get('phase2_round1_time', 0) + query_metrics.get('phase2_round2_time', 0):.3f}s")
 
     avg_metrics = {
         "system": "Tiptoe",
