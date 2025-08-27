@@ -836,7 +836,7 @@ def main():
         print("Running retrieval performance experiments...")
         retrieval_results = runner.run_retrieval_performance_experiment(
             n_docs=args.n_docs,
-            n_queries=args.n_queries * 5,  # More queries for retrieval eval
+            n_queries=args.n_queries,  # Use exact number specified by user
             embeddings_path=args.embeddings_path,
             corpus_path=args.corpus_path,
             embed_dim=args.embed_dim,
