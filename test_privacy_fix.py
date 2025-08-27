@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from pir_rag.client import PIRRAGClient
 from pir_rag.server import PIRRAGServer
-from pir_rag.crypto import SimpleLinearHomomorphicScheme
+from tiptoe.crypto_fixed import SimpleLinearHomomorphicScheme
 
 def test_privacy_fix():
     print("🔒 Testing PIR-RAG Privacy Fix")
