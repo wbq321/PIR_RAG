@@ -353,15 +353,16 @@ class GraphPIRSystem:
 
     def _phase2_document_retrieval(self, candidate_indices: List[int]) -> Tuple[List[str], Dict[str, Any]]:
         """
-        Phase 2: Use REAL PIR with Paillier encryption to retrieve document URLs.
-        Similar to PIR-RAG's approach but retrieves URLs instead of full documents.
+        Phase 2: Use Tiptoe's fast URL retrieval method instead of expensive Paillier PIR.
+        This is much faster than the original Paillier-based approach.
         """
-        print(f"[GraphPIR] Phase 2: URL PIR with Paillier encryption for {len(candidate_indices)} documents")
+        print(f"[GraphPIR] Phase 2: Fast URL retrieval (Tiptoe method) for {len(candidate_indices)} documents")
 
-        # Use pre-generated Paillier keys (same approach as PIR-RAG)
-        public_key = self.paillier_public_key
-        private_key = self.paillier_private_key
-
+        # Initialize Tiptoe's SimpleLinearHomomorphicPIR for fast URL retrieval
+        from ..tiptoe.crypto_fixed import SimpleLinearHomomorphicScheme
+        
+        url_pir_scheme = SimpleLinearHomomorphicScheme()
+        
         upload_bytes = 0
         download_bytes = 0
         encryption_time = 0
@@ -370,44 +371,45 @@ class GraphPIRSystem:
 
         retrieved_urls = []
 
+        # Prepare all URLs for PIR database (like Tiptoe)
+        all_urls = [f"https://example.com/doc_{i}" for i in range(len(self.documents))]
+        
+        # Setup PIR database with URLs
+        setup_start = time.perf_counter()
+        url_pir_scheme.setup_database(all_urls)
+        setup_time = time.perf_counter() - setup_start
+        server_time += setup_time
+
+        # Retrieve each URL using fast PIR (much faster than per-document Paillier)
         for doc_idx in candidate_indices:
-            # Generate PIR query for this document URL (similar to PIR-RAG)
+            # Generate PIR query (much faster than Paillier)
             query_start = time.perf_counter()
-
-            # Create PIR query vector: encrypt 1 for target document, 0 for others
-            encrypted_query = []
-            for i in range(len(self.documents)):
-                if i == doc_idx:
-                    encrypted_query.append(public_key.encrypt(1))
-                else:
-                    encrypted_query.append(public_key.encrypt(0))
-
+            pir_query = url_pir_scheme.generate_query(doc_idx)
             query_gen_time = time.perf_counter() - query_start
             encryption_time += query_gen_time
 
-            # Calculate upload size (encrypted query vector)
-            query_upload = sum(len(str(c.ciphertext())) for c in encrypted_query)
+            # Calculate upload size (much smaller than Paillier queries)
+            query_upload = len(str(pir_query))
             upload_bytes += query_upload
 
-            # Server processes PIR query for URL retrieval using homomorphic operations
+            # Server processes PIR query (much faster than homomorphic operations)
             server_start = time.perf_counter()
-            encrypted_response = self._process_url_pir_query(encrypted_query, public_key, doc_idx)
+            encrypted_response = url_pir_scheme.process_query(pir_query)
             server_processing_time = time.perf_counter() - server_start
             server_time += server_processing_time
 
-            # Calculate download size (encrypted response for URL - much smaller than documents)
-            response_download = sum(len(str(c.ciphertext())) for c in encrypted_response)
+            # Calculate download size (much smaller than Paillier responses)
+            response_download = len(str(encrypted_response))
             download_bytes += response_download
 
-            # Client decrypts response to get URL
+            # Client decrypts response to get URL (much faster than Paillier)
             decrypt_start = time.perf_counter()
-            decrypted_chunks = [private_key.decrypt(c) for c in encrypted_response]
-            url_text = decode_chunks_to_text(decrypted_chunks)
+            url_text = url_pir_scheme.decrypt_response(encrypted_response)
             decrypt_time = time.perf_counter() - decrypt_start
             decryption_time += decrypt_time
 
-            # Generate synthetic URL if decryption fails
-            if not url_text.strip():
+            # Fallback URL if decryption fails
+            if not url_text or not url_text.strip():
                 url_text = f"https://example.com/doc_{doc_idx}"
             
             retrieved_urls.append(url_text)
@@ -420,40 +422,15 @@ class GraphPIRSystem:
             "server_processing_time": server_time,
             "decryption_time": decryption_time,
             "total_pir_documents": len(candidate_indices),
-            "retrieved_type": "urls"  # Flag indicating URL retrieval
+            "retrieved_type": "urls",  # Flag indicating URL retrieval
+            "pir_method": "tiptoe_fast"  # Method used for Phase 2
         }
 
-        print(f"[GraphPIR] Phase 2 complete: {len(retrieved_urls)} URLs retrieved")
+        print(f"[GraphPIR] Phase 2 complete: {len(retrieved_urls)} URLs retrieved (fast method)")
         print(f"[GraphPIR] Communication: {upload_bytes:,} upload, {download_bytes:,} download bytes")
 
         return retrieved_urls, phase2_metrics
 
-    def _process_url_pir_query(self, encrypted_query: List, public_key, doc_idx: int) -> List:
-        """
-        Server-side processing of URL PIR query using homomorphic encryption.
-        Similar to document PIR but for URLs (much smaller data).
-        """
-        # Generate synthetic URL for this document
-        url = f"https://example.com/doc_{doc_idx}"
-        
-        # Convert URL to chunks (URLs are much smaller than documents)
-        url_chunks = encode_text_to_chunks(url)
-        
-        # Perform homomorphic computation for each chunk position
-        encrypted_response = []
-        for chunk_pos in range(len(url_chunks)):
-            # Compute chunk result using homomorphic operations
-            chunk_result = public_key.encrypt(0)  # Start with encrypted zero
-            
-            # Add this document's URL chunk contribution
-            if chunk_pos < len(url_chunks):
-                for i, query_bit in enumerate(encrypted_query):
-                    if i == doc_idx:  # Only the target document contributes
-                        chunk_result += url_chunks[chunk_pos] * query_bit
-            
-            encrypted_response.append(chunk_result)
-        
-        return encrypted_response
 
     def _process_document_pir_query(self, encrypted_query: List, public_key) -> List:
         """
