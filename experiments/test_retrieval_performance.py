@@ -44,24 +44,48 @@ class RetrievalPerformanceTester:
         self.output_dir.mkdir(exist_ok=True)
         
     def generate_realistic_queries(self, embeddings: np.ndarray, n_queries: int = 20) -> List[np.ndarray]:
-        """Generate realistic query embeddings that have some relation to the document corpus."""
+        """Generate realistic query embeddings that are independent of the document corpus."""
         np.random.seed(42)
         queries = []
         
-        # Create queries that are slight variations of random documents
+        # FIXED: Generate independent queries instead of variations of existing documents
+        # This prevents data leakage that was causing perfect precision scores
         for i in range(n_queries):
-            # Pick a random document as base
-            base_doc_idx = np.random.randint(0, len(embeddings))
-            base_embedding = embeddings[base_doc_idx]
-            
-            # Add some noise to simulate a related query
-            noise = np.random.normal(0, 0.1, base_embedding.shape)
-            query_embedding = base_embedding + noise
+            # Method 1: Create queries from random combinations of multiple documents
+            if i % 3 == 0:
+                # Combine 2-3 random documents to create a composite query
+                num_docs_to_combine = np.random.randint(2, 4)
+                doc_indices = np.random.choice(len(embeddings), size=num_docs_to_combine, replace=False)
+                
+                # Weighted combination of documents
+                weights = np.random.dirichlet([1] * num_docs_to_combine)  # Random weights that sum to 1
+                query_embedding = np.zeros(embeddings.shape[1])
+                for idx, weight in zip(doc_indices, weights):
+                    query_embedding += weight * embeddings[idx]
+                    
+            # Method 2: Random embedding in the same space
+            elif i % 3 == 1:
+                # Generate random vector in similar range as embeddings
+                mean_norm = np.mean([np.linalg.norm(emb) for emb in embeddings[:100]])  # Sample mean norm
+                query_embedding = np.random.normal(0, 0.3, embeddings.shape[1])
+                query_embedding = query_embedding / np.linalg.norm(query_embedding) * mean_norm
+                
+            # Method 3: Slight variation of a document (but with more noise)
+            else:
+                # Pick a random document but add significant noise
+                base_doc_idx = np.random.randint(0, len(embeddings))
+                base_embedding = embeddings[base_doc_idx]
+                
+                # Add significant noise to make it a genuinely different query
+                noise = np.random.normal(0, 0.4, base_embedding.shape)  # Increased noise from 0.1 to 0.4
+                query_embedding = base_embedding + noise
             
             # Normalize to unit vector
             query_embedding = query_embedding / np.linalg.norm(query_embedding)
             queries.append(query_embedding.astype(np.float32))
             
+        print(f"Generated {len(queries)} diverse queries (fixed data leakage issue)")
+        print(f"  Query types: {n_queries//3} composite, {n_queries//3} random, {n_queries - 2*(n_queries//3)} noisy variants")
         return queries
     
     def calculate_retrieval_quality(self, query_embedding: np.ndarray, 
@@ -76,6 +100,12 @@ class RetrievalPerformanceTester:
         # Calculate metrics
         retrieved_set = set(retrieved_doc_indices[:top_k])
         true_set = set(true_top_k)
+        
+        # DEBUG: Print overlap analysis
+        overlap = retrieved_set.intersection(true_set)
+        print(f"      DEBUG: Retrieved {len(retrieved_set)} docs, True top-{top_k}: {true_top_k[:5]}...")
+        print(f"      DEBUG: Retrieved docs: {list(retrieved_doc_indices[:5])}...")
+        print(f"      DEBUG: Overlap: {len(overlap)} docs {list(overlap)[:3] if overlap else 'None'}")
         
         # Precision@K
         precision_at_k = len(retrieved_set.intersection(true_set)) / min(len(retrieved_set), top_k)
