@@ -460,5 +460,221 @@ def main():
             print(report)
 
 
+class RecallOnlyAnalyzer(RetrievalAnalyzer):
+    """Analyzer that focuses only on recall metrics and generates individual plots."""
+    
+    def plot_recall_only_comparison(self, results: List[Dict], save_path: str = None):
+        """Plot only recall metrics comparison across systems."""
+        if not results:
+            print("No results to plot")
+            return
+            
+        # Extract recall metrics for each system
+        systems_data = {}
+        
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                
+                # Skip if system_data is None or not a dict
+                if system_data is None or not isinstance(system_data, dict):
+                    print(f"Warning: Skipping {system_name} - invalid data (None or not dict)")
+                    continue
+                    
+                if system_name not in systems_data:
+                    display_name = self.get_display_name(system_name)
+                    systems_data[display_name] = {
+                        'recall': [],
+                        'query_time': []
+                    }
+                
+                # Check if system_data is still valid before checking keys
+                if system_data is not None and isinstance(system_data, dict) and 'avg_recall_at_k' in system_data:
+                    display_name = self.get_display_name(system_name)
+                    systems_data[display_name]['recall'].append(system_data['avg_recall_at_k'])
+                    # Use the correct field name for query time
+                    query_time = system_data.get('avg_total_query_time', system_data.get('avg_query_time', 0))
+                    systems_data[display_name]['query_time'].append(query_time)
+        
+        if not systems_data:
+            print("No valid system data found")
+            return
+        
+        # Create individual recall plot
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        systems = list(systems_data.keys())
+        recall_values = [np.mean(systems_data[sys]['recall']) if systems_data[sys]['recall'] else 0 
+                        for sys in systems]
+        recall_errors = [np.std(systems_data[sys]['recall']) if len(systems_data[sys]['recall']) > 1 else 0 
+                        for sys in systems]
+        
+        bars = ax.bar(systems, recall_values, yerr=recall_errors, capsize=5, alpha=0.7, color='skyblue')
+        ax.set_title('Recall@K Comparison', fontweight='bold', fontsize=14)
+        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=12)
+        ax.set_xlabel('Systems', fontweight='bold', fontsize=12)
+        
+        # Add value labels on bars
+        for bar, value in zip(bars, recall_values):
+            if value > 0:
+                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + bar.get_height()*0.01,
+                       f'{value:.3f}', ha='center', va='bottom', fontweight='bold')
+        
+        # Rotate x-axis labels for better readability
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Recall-only plot saved to: {save_path}")
+        else:
+            plt.show()
+        
+        plt.close()
+    
+    def plot_recall_vs_query_time(self, results: List[Dict], save_path: str = None):
+        """Plot recall vs query time scatter plot."""
+        if not results:
+            print("No results to plot")
+            return
+            
+        # Extract data for scatter plot
+        systems_data = {}
+        
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                
+                if system_data is None or not isinstance(system_data, dict):
+                    continue
+                    
+                if 'avg_recall_at_k' in system_data:
+                    display_name = self.get_display_name(system_name)
+                    if display_name not in systems_data:
+                        systems_data[display_name] = {'recall': [], 'query_time': []}
+                    
+                    systems_data[display_name]['recall'].append(system_data['avg_recall_at_k'])
+                    query_time = system_data.get('avg_total_query_time', system_data.get('avg_query_time', 0))
+                    systems_data[display_name]['query_time'].append(query_time)
+        
+        if not systems_data:
+            print("No valid system data found")
+            return
+        
+        # Create scatter plot
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        colors = plt.cm.Set1(np.linspace(0, 1, len(systems_data)))
+        
+        for i, (system, data) in enumerate(systems_data.items()):
+            avg_recall = np.mean(data['recall']) if data['recall'] else 0
+            avg_query_time = np.mean(data['query_time']) if data['query_time'] else 0
+            
+            ax.scatter(avg_query_time, avg_recall, s=100, alpha=0.7, 
+                      color=colors[i], label=system, edgecolors='black')
+            
+            # Add system name labels
+            ax.annotate(system, (avg_query_time, avg_recall), 
+                       xytext=(5, 5), textcoords='offset points', fontweight='bold')
+        
+        ax.set_xlabel('Average Query Time (seconds)', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Average Recall@K', fontweight='bold', fontsize=12)
+        ax.set_title('Recall vs Query Time Trade-off', fontweight='bold', fontsize=14)
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Recall vs Query Time plot saved to: {save_path}")
+        else:
+            plt.show()
+        
+        plt.close()
+    
+    def plot_recall_distribution(self, results: List[Dict], save_path: str = None):
+        """Plot recall distribution across queries for each system."""
+        if not results:
+            print("No results to plot")
+            return
+        
+        # Extract per-query recall data
+        systems_data = {}
+        
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                
+                if system_data is None or not isinstance(system_data, dict):
+                    continue
+                    
+                if 'per_query_metrics' in system_data:
+                    display_name = self.get_display_name(system_name)
+                    recalls = []
+                    
+                    for query_metrics in system_data['per_query_metrics']:
+                        if 'recall_at_k' in query_metrics:
+                            recalls.append(query_metrics['recall_at_k'])
+                    
+                    if recalls:
+                        systems_data[display_name] = recalls
+        
+        if not systems_data:
+            print("No per-query recall data found")
+            return
+        
+        # Create box plot
+        fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+        
+        systems = list(systems_data.keys())
+        recall_data = [systems_data[sys] for sys in systems]
+        
+        box_plot = ax.boxplot(recall_data, labels=systems, patch_artist=True)
+        
+        # Color the boxes
+        colors = plt.cm.Set3(np.linspace(0, 1, len(systems)))
+        for patch, color in zip(box_plot['boxes'], colors):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        ax.set_xlabel('Systems', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=12)
+        ax.set_title('Recall Distribution Across Queries', fontweight='bold', fontsize=14)
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(axis='x', rotation=45)
+        
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Recall distribution plot saved to: {save_path}")
+        else:
+            plt.show()
+        
+        plt.close()
+    
+    def generate_individual_recall_plots(self, figures_dir: Path):
+        """Generate all individual recall-focused plots."""
+        results = self.load_retrieval_results()
+        if not results:
+            print("No retrieval results found")
+            return
+        
+        print("Generating individual recall-focused plots...")
+        
+        # Create individual plots
+        self.plot_recall_only_comparison(results, figures_dir / "recall_only_comparison.png")
+        self.plot_recall_vs_query_time(results, figures_dir / "recall_vs_query_time.png")
+        self.plot_recall_distribution(results, figures_dir / "recall_distribution.png")
+        
+        print("✅ Individual recall plots generated successfully!")
+
+
 if __name__ == "__main__":
     main()

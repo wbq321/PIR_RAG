@@ -532,5 +532,194 @@ def main():
     print("Analysis complete! Check the 'figures' directory for plots.")
 
 
+class IndividualPlotAnalyzer(PIRAnalyzer):
+    """Extended analyzer that creates individual plots in addition to combined ones."""
+    
+    def plot_individual_timing(self, save_name: str = "individual_timing"):
+        """Generate individual timing plots instead of combined subplots."""
+        if not self.results:
+            print("No results to plot")
+            return
+            
+        result = self.results[0]  # Use first result
+        
+        # Individual figure 1: Query Times
+        self._plot_query_times_individual(result, f"{save_name}_query_times")
+        
+        # Individual figure 2: Communication Costs  
+        self._plot_communication_costs_individual(result, f"{save_name}_communication_costs")
+        
+        # Individual figure 3: Step Breakdown
+        self._plot_step_breakdown_individual(result, f"{save_name}_step_breakdown")
+        
+        # Individual figure 4: PIR-RAG Breakdown
+        self._plot_pir_rag_breakdown_individual(result, f"{save_name}_pir_rag_breakdown")
+    
+    def _plot_query_times_individual(self, result: Dict[str, Any], save_name: str):
+        """Plot query times as individual figure."""
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        # Extract query times
+        query_times = result.get('query_times', [])
+        if query_times:
+            ax.plot(range(1, len(query_times) + 1), query_times, 'bo-', linewidth=2, markersize=6)
+            ax.set_xlabel('Query Number', fontweight='bold', fontsize=12)
+            ax.set_ylabel('Time (seconds)', fontweight='bold', fontsize=12)
+            ax.set_title('Query Response Times', fontweight='bold', fontsize=14)
+            ax.grid(True, alpha=0.3)
+            
+        plt.tight_layout()
+        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
+        plt.close()
+    
+    def _plot_communication_costs_individual(self, result: Dict[str, Any], save_name: str):
+        """Plot communication costs as individual figure."""
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+        
+        if 'communication_mb' in result:
+            ax.bar(['System'], [result['communication_mb']], color='skyblue', alpha=0.7, width=0.5)
+            ax.set_ylabel('Communication Cost (MB)', fontweight='bold', fontsize=12)
+            ax.set_title('Communication Cost', fontweight='bold', fontsize=14)
+            ax.set_ylim(0, result['communication_mb'] * 1.1)
+            
+        plt.tight_layout()
+        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
+        plt.close()
+    
+    def _plot_step_breakdown_individual(self, result: Dict[str, Any], save_name: str):
+        """Plot step breakdown as individual figure."""
+        fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+        
+        # Extract step timing data
+        step_times = result.get('step_times', {})
+        if step_times:
+            steps = list(step_times.keys())
+            times = list(step_times.values())
+            colors = plt.cm.Set3(np.linspace(0, 1, len(steps)))
+            ax.pie(times, labels=steps, autopct='%1.1f%%', startangle=90, colors=colors)
+            ax.set_title('Step Breakdown (First Query)', fontweight='bold', fontsize=14)
+            
+        plt.tight_layout()
+        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
+        plt.close()
+    
+    def _plot_pir_rag_breakdown_individual(self, result: Dict[str, Any], save_name: str):
+        """Plot PIR-RAG breakdown as individual figure."""
+        fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+        
+        # Extract PIR-RAG timing data
+        pir_rag_times = result.get('pir_rag_step_times', {})
+        if pir_rag_times:
+            steps = list(pir_rag_times.keys())
+            times = list(pir_rag_times.values())
+            colors = plt.cm.Pastel1(np.linspace(0, 1, len(steps)))
+            ax.pie(times, labels=steps, autopct='%1.1f%%', startangle=90, colors=colors)
+            ax.set_title('PIR-RAG Step Breakdown (First Query)', fontweight='bold', fontsize=14)
+            
+        plt.tight_layout()
+        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
+        plt.close()
+    
+    def plot_individual_scalability(self, results: Dict[str, Any], save_name: str = "individual_scalability"):
+        """Generate individual scalability plots."""
+        # Extract data for different metrics
+        db_sizes = list(results.keys())
+        
+        # Individual figure 1: Query Times vs DB Size
+        self._plot_scalability_query_times(results, f"{save_name}_query_times")
+        
+        # Individual figure 2: Communication vs DB Size
+        self._plot_scalability_communication(results, f"{save_name}_communication")
+        
+        # Individual figure 3: Memory Usage vs DB Size
+        self._plot_scalability_memory(results, f"{save_name}_memory")
+        
+        # Individual figure 4: Computation Time vs DB Size
+        self._plot_scalability_computation(results, f"{save_name}_computation")
+    
+    def _plot_scalability_query_times(self, results: Dict[str, Any], save_name: str):
+        """Plot scalability query times as individual figure."""
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        db_sizes = sorted([int(k) for k in results.keys()])
+        avg_times = [np.mean(results[str(size)]['query_times']) for size in db_sizes]
+        
+        ax.plot(db_sizes, avg_times, 'ro-', linewidth=2, markersize=8)
+        ax.set_xlabel('Database Size', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Average Query Time (seconds)', fontweight='bold', fontsize=12)
+        ax.set_title('Query Time vs Database Size', fontweight='bold', fontsize=14)
+        ax.grid(True, alpha=0.3)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        
+        plt.tight_layout()
+        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
+        plt.close()
+    
+    def _plot_scalability_communication(self, results: Dict[str, Any], save_name: str):
+        """Plot scalability communication as individual figure."""
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        db_sizes = sorted([int(k) for k in results.keys()])
+        comm_costs = [results[str(size)].get('communication_mb', 0) for size in db_sizes]
+        
+        ax.plot(db_sizes, comm_costs, 'go-', linewidth=2, markersize=8)
+        ax.set_xlabel('Database Size', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Communication Cost (MB)', fontweight='bold', fontsize=12)
+        ax.set_title('Communication Cost vs Database Size', fontweight='bold', fontsize=14)
+        ax.grid(True, alpha=0.3)
+        ax.set_xscale('log')
+        
+        plt.tight_layout()
+        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
+        plt.close()
+    
+    def _plot_scalability_memory(self, results: Dict[str, Any], save_name: str):
+        """Plot scalability memory usage as individual figure."""
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        db_sizes = sorted([int(k) for k in results.keys()])
+        memory_usage = [results[str(size)].get('memory_mb', 0) for size in db_sizes]
+        
+        ax.plot(db_sizes, memory_usage, 'mo-', linewidth=2, markersize=8)
+        ax.set_xlabel('Database Size', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Memory Usage (MB)', fontweight='bold', fontsize=12)
+        ax.set_title('Memory Usage vs Database Size', fontweight='bold', fontsize=14)
+        ax.grid(True, alpha=0.3)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        
+        plt.tight_layout()
+        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
+        plt.close()
+    
+    def _plot_scalability_computation(self, results: Dict[str, Any], save_name: str):
+        """Plot scalability computation time as individual figure."""
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        db_sizes = sorted([int(k) for k in results.keys()])
+        comp_times = [results[str(size)].get('computation_time', 0) for size in db_sizes]
+        
+        ax.plot(db_sizes, comp_times, 'co-', linewidth=2, markersize=8)
+        ax.set_xlabel('Database Size', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Computation Time (seconds)', fontweight='bold', fontsize=12)
+        ax.set_title('Computation Time vs Database Size', fontweight='bold', fontsize=14)
+        ax.grid(True, alpha=0.3)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        
+        plt.tight_layout()
+        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
+        plt.close()
+
+
 if __name__ == "__main__":
     main()
