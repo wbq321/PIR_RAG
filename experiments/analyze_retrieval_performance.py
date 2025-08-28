@@ -116,23 +116,31 @@ class RetrievalAnalyzer:
             print("No valid system data found")
             return
             
-        # Generate only recall plot as individual figure
+        # Generate individual plots for each metric
+        self._plot_individual_metric(systems_data, 'precision', 'Precision@K Performance Comparison', save_path, '_precision')
+        self._plot_individual_metric(systems_data, 'recall', 'Recall@K Performance Comparison', save_path, '_recall') 
+        self._plot_individual_metric(systems_data, 'ndcg', 'NDCG@K Performance Comparison', save_path, '_ndcg')
+        self._plot_individual_metric(systems_data, 'query_time', 'Query Time Comparison', save_path, '_query_time')
+        self._plot_individual_metric(systems_data, 'qps', 'Queries Per Second Comparison', save_path, '_qps')
+    
+    def _plot_individual_metric(self, systems_data, metric_key, title, save_path, suffix):
+        """Generate individual plot for a specific metric."""
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         
         systems = list(systems_data.keys())
-        recall_values = [np.mean(systems_data[sys]['recall']) if systems_data[sys]['recall'] else 0 
-                        for sys in systems]
-        recall_errors = [np.std(systems_data[sys]['recall']) if len(systems_data[sys]['recall']) > 1 else 0 
-                        for sys in systems]
+        values = [np.mean(systems_data[sys][metric_key]) if systems_data[sys][metric_key] else 0 
+                 for sys in systems]
+        errors = [np.std(systems_data[sys][metric_key]) if len(systems_data[sys][metric_key]) > 1 else 0 
+                 for sys in systems]
         
-        bars = ax.bar(systems, recall_values, yerr=recall_errors, capsize=5, alpha=0.7,
+        bars = ax.bar(systems, values, yerr=errors, capsize=5, alpha=0.7,
                      color=['#2E86AB', '#A23B72', '#F18F01', '#C73E1D'])
-        ax.set_title('Recall@K Performance Comparison', fontweight='bold', fontsize=14)
-        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=12)
+        ax.set_title(title, fontweight='bold', fontsize=14)
+        ax.set_ylabel(metric_key.replace('_', ' ').title(), fontweight='bold', fontsize=12)
         ax.set_xlabel('System', fontweight='bold', fontsize=12)
         
         # Add value labels on bars
-        for bar, value in zip(bars, recall_values):
+        for bar, value in zip(bars, values):
             if value > 0:
                 ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + bar.get_height()*0.01,
                        f'{value:.3f}', ha='center', va='bottom', fontweight='bold')
@@ -140,21 +148,33 @@ class RetrievalAnalyzer:
         # Rotate x-axis labels for better readability
         ax.tick_params(axis='x', rotation=45)
         ax.grid(True, alpha=0.3, axis='y')
-        ax.set_ylim(0, max(recall_values) * 1.1 if recall_values else 1)
+        ax.set_ylim(0, max(values) * 1.1 if values else 1)
         
         plt.tight_layout()
         
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"Recall comparison plot saved to: {save_path}")
-        else:
-            plt.show()
+            # Create individual file name
+            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            individual_path = f"{base_path}{suffix}.png"
+            plt.savefig(individual_path, dpi=300, bbox_inches='tight')
+            individual_path_pdf = f"{base_path}{suffix}.pdf"  
+            plt.savefig(individual_path_pdf, bbox_inches='tight')
+            print(f"{metric_key.title()} plot saved to: {individual_path}")
+        
+        plt.close()
     
     def plot_precision_recall_curves(self, results: List[Dict], save_path: str = None):
-        """Plot only recall curves (modified to focus on recall performance)."""
+        """Plot precision and recall curves as separate figures."""
         if not results:
             return
-            
+        
+        # Generate separate plots for precision, recall, and precision-recall relationship
+        self._plot_precision_curves(results, save_path)
+        self._plot_recall_curves(results, save_path)
+        self._plot_precision_recall_scatter(results, save_path)
+    
+    def _plot_precision_curves(self, results: List[Dict], save_path: str = None):
+        """Plot precision curves across queries."""
         fig, ax = plt.subplots(figsize=(12, 6))
         
         for result in results:
@@ -162,18 +182,51 @@ class RetrievalAnalyzer:
                 if system_name in ['source_file', 'experiment_info']:
                     continue
                 
-                # Skip if system_data is None or not a dict
                 if system_data is None or not isinstance(system_data, dict):
                     continue
                     
                 if 'quality_metrics' in system_data:
-                    # Extract recall for each query
+                    precisions = [q['precision_at_k'] for q in system_data['quality_metrics']]
+                    query_ids = list(range(1, len(precisions) + 1))
+                    
+                    display_name = self.get_display_name(system_name)
+                    ax.plot(query_ids, precisions, 'o-', label=display_name, alpha=0.8, linewidth=2, markersize=4)
+        
+        ax.set_xlabel('Query Number', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Precision@K', fontweight='bold', fontsize=12)
+        ax.set_title('Precision@K Performance Across Queries', fontsize=14, fontweight='bold')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        ax.set_ylim(0, 1.0)
+        
+        plt.tight_layout()
+        
+        if save_path:
+            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            precision_path = f"{base_path}_precision_curves.png"
+            plt.savefig(precision_path, dpi=300, bbox_inches='tight')
+            plt.savefig(f"{base_path}_precision_curves.pdf", bbox_inches='tight')
+            print(f"Precision curves saved to: {precision_path}")
+        
+        plt.close()
+    
+    def _plot_recall_curves(self, results: List[Dict], save_path: str = None):
+        """Plot recall curves across queries."""
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                
+                if system_data is None or not isinstance(system_data, dict):
+                    continue
+                    
+                if 'quality_metrics' in system_data:
                     recalls = [q['recall_at_k'] for q in system_data['quality_metrics']]
                     query_ids = list(range(1, len(recalls) + 1))
                     
                     display_name = self.get_display_name(system_name)
-                    
-                    # Plot recall values over queries
                     ax.plot(query_ids, recalls, 'o-', label=display_name, alpha=0.8, linewidth=2, markersize=4)
         
         ax.set_xlabel('Query Number', fontweight='bold', fontsize=12)
@@ -186,16 +239,73 @@ class RetrievalAnalyzer:
         plt.tight_layout()
         
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"Precision-recall plot saved to: {save_path}")
-        else:
-            plt.show()
+            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            recall_path = f"{base_path}_recall_curves.png"
+            plt.savefig(recall_path, dpi=300, bbox_inches='tight')
+            plt.savefig(f"{base_path}_recall_curves.pdf", bbox_inches='tight')
+            print(f"Recall curves saved to: {recall_path}")
+        
+        plt.close()
+    
+    def _plot_precision_recall_scatter(self, results: List[Dict], save_path: str = None):
+        """Plot precision vs recall scatter plot."""
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                
+                if system_data is None or not isinstance(system_data, dict):
+                    continue
+                    
+                if 'quality_metrics' in system_data:
+                    precisions = [q['precision_at_k'] for q in system_data['quality_metrics']]
+                    recalls = [q['recall_at_k'] for q in system_data['quality_metrics']]
+                    
+                    display_name = self.get_display_name(system_name)
+                    
+                    # Plot scatter points
+                    ax.scatter(recalls, precisions, label=display_name, alpha=0.6, s=50)
+                    
+                    # Plot average point
+                    avg_precision = np.mean(precisions)
+                    avg_recall = np.mean(recalls)
+                    ax.scatter(avg_recall, avg_precision, 
+                             label=f'{display_name} (avg)', 
+                             s=200, marker='*', edgecolors='black', linewidth=2)
+        
+        ax.set_xlabel('Recall@K', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Precision@K', fontweight='bold', fontsize=12)
+        ax.set_title('Precision vs Recall Analysis', fontsize=14, fontweight='bold')
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim(0, 1.0)
+        ax.set_ylim(0, 1.0)
+        
+        plt.tight_layout()
+        
+        if save_path:
+            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            scatter_path = f"{base_path}_precision_recall_scatter.png"
+            plt.savefig(scatter_path, dpi=300, bbox_inches='tight')
+            plt.savefig(f"{base_path}_precision_recall_scatter.pdf", bbox_inches='tight')
+            print(f"Precision-recall scatter saved to: {scatter_path}")
+        
+        plt.close()
     
     def plot_query_distribution(self, results: List[Dict], save_path: str = None):
-        """Plot recall distribution across queries (modified to focus on recall only)."""
+        """Plot distribution of all retrieval quality metrics as separate figures."""
         if not results:
             return
-            
+        
+        # Generate separate distribution plots for each metric
+        self._plot_metric_distribution(results, 'precision_at_k', 'Precision@K Distribution', save_path, '_precision_dist')
+        self._plot_metric_distribution(results, 'recall_at_k', 'Recall@K Distribution', save_path, '_recall_dist')
+        self._plot_metric_distribution(results, 'ndcg_at_k', 'NDCG@K Distribution', save_path, '_ndcg_dist')
+    
+    def _plot_metric_distribution(self, results: List[Dict], metric_key: str, title: str, save_path: str, suffix: str):
+        """Plot distribution for a specific metric."""
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         
         colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']
@@ -206,20 +316,19 @@ class RetrievalAnalyzer:
                 if system_name in ['source_file', 'experiment_info']:
                     continue
                 
-                # Skip if system_data is None or not a dict
                 if system_data is None or not isinstance(system_data, dict):
                     continue
                     
                 if 'quality_metrics' in system_data:
                     display_name = self.get_display_name(system_name)
-                    recall_values = [q['recall_at_k'] for q in system_data['quality_metrics']]
+                    values = [q[metric_key] for q in system_data['quality_metrics']]
                     
-                    ax.hist(recall_values, bins=15, alpha=0.6, label=display_name, 
+                    ax.hist(values, bins=15, alpha=0.6, label=display_name, 
                            density=True, color=colors[color_idx % len(colors)])
                     color_idx += 1
         
-        ax.set_title('Recall@K Distribution Across Queries', fontweight='bold', fontsize=14)
-        ax.set_xlabel('Recall@K Values', fontweight='bold', fontsize=12)
+        ax.set_title(title, fontweight='bold', fontsize=14)
+        ax.set_xlabel(metric_key.replace('_', ' ').title(), fontweight='bold', fontsize=12)
         ax.set_ylabel('Density', fontweight='bold', fontsize=12)
         ax.legend()
         ax.grid(True, alpha=0.3)
@@ -228,10 +337,13 @@ class RetrievalAnalyzer:
         plt.tight_layout()
         
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"Query distribution plot saved to: {save_path}")
-        else:
-            plt.show()
+            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            dist_path = f"{base_path}{suffix}.png"
+            plt.savefig(dist_path, dpi=300, bbox_inches='tight')
+            plt.savefig(f"{base_path}{suffix}.pdf", bbox_inches='tight')
+            print(f"{metric_key.replace('_', ' ').title()} distribution saved to: {dist_path}")
+        
+        plt.close()
     
     def generate_retrieval_summary_report(self, results: List[Dict], save_path: str = None) -> str:
         """Generate a comprehensive text summary of retrieval performance."""

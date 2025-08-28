@@ -361,12 +361,13 @@ class PIRAnalyzer:
         print(f"Generated individual step timing plots: {save_name}_pir_rag, {save_name}_graph_pir, {save_name}_tiptoe")
         
     def plot_parameter_sensitivity(self, results: Dict[str, Any], save_name: str = "parameter_sensitivity"):
-        """Plot parameter sensitivity analysis."""
-        fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-        fig.suptitle('Parameter Sensitivity Analysis', fontsize=16, fontweight='bold')
+        """Plot parameter sensitivity analysis as separate figures."""
         
-        # PIR-RAG k_clusters sensitivity
+        # Individual figure 1: PIR-RAG k_clusters sensitivity
         if 'pir_rag_k_clusters' in results:
+            fig, ax1 = plt.subplots(1, 1, figsize=(10, 6))
+            ax1_twin = ax1.twinx()
+            
             k_values = []
             setup_times = []
             query_times = []
@@ -376,27 +377,32 @@ class PIRAnalyzer:
                 setup_times.append(result['setup_time'])
                 query_times.append(result['avg_query_time'])
             
-            ax1 = axes[0]
-            ax1_twin = ax1.twinx()
-            
             line1 = ax1.plot(k_values, setup_times, 'o-', color='#FF6B6B', 
                            linewidth=2, markersize=8, label='Setup Time')
             line2 = ax1_twin.plot(k_values, query_times, 's-', color='#4ECDC4', 
                                 linewidth=2, markersize=8, label='Query Time')
             
-            ax1.set_xlabel('Number of Clusters (k)')
-            ax1.set_ylabel('Setup Time (seconds)', color='#FF6B6B')
-            ax1_twin.set_ylabel('Query Time (seconds)', color='#4ECDC4')
-            ax1.set_title('PIR-RAG: Effect of k_clusters', fontweight='bold')
+            ax1.set_xlabel('Number of Clusters (k)', fontweight='bold', fontsize=12)
+            ax1.set_ylabel('Setup Time (seconds)', color='#FF6B6B', fontweight='bold', fontsize=12)
+            ax1_twin.set_ylabel('Query Time (seconds)', color='#4ECDC4', fontweight='bold', fontsize=12)
+            ax1.set_title('PIR-RAG: Effect of k_clusters', fontweight='bold', fontsize=14)
             ax1.grid(True, alpha=0.3)
             
             # Combine legends
             lines = line1 + line2
             labels = [l.get_label() for l in lines]
             ax1.legend(lines, labels, loc='upper left')
+            
+            plt.tight_layout()
+            plt.savefig(self.figures_dir / f"{save_name}_pir_rag_k_clusters.png", dpi=300, bbox_inches='tight')
+            plt.savefig(self.figures_dir / f"{save_name}_pir_rag_k_clusters.pdf", bbox_inches='tight')
+            plt.close()
         
-        # Graph-PIR k_neighbors sensitivity
+        # Individual figure 2: Graph-PIR k_neighbors sensitivity
         if 'graph_pir_k_neighbors' in results:
+            fig, ax2 = plt.subplots(1, 1, figsize=(10, 6))
+            ax2_twin = ax2.twinx()
+            
             k_values = []
             setup_times = []
             query_times = []
@@ -406,29 +412,28 @@ class PIRAnalyzer:
                 setup_times.append(result['setup_time'])
                 query_times.append(result['avg_query_time'])
             
-            ax2 = axes[1]
-            ax2_twin = ax2.twinx()
-            
             line1 = ax2.plot(k_values, setup_times, 'o-', color='#FF6B6B', 
                            linewidth=2, markersize=8, label='Setup Time')
             line2 = ax2_twin.plot(k_values, query_times, 's-', color='#4ECDC4', 
                                 linewidth=2, markersize=8, label='Query Time')
             
-            ax2.set_xlabel('Number of Neighbors (k)')
-            ax2.set_ylabel('Setup Time (seconds)', color='#FF6B6B')
-            ax2_twin.set_ylabel('Query Time (seconds)', color='#4ECDC4')
-            ax2.set_title('Graph-PIR: Effect of k_neighbors', fontweight='bold')
+            ax2.set_xlabel('Number of Neighbors (k)', fontweight='bold', fontsize=12)
+            ax2.set_ylabel('Setup Time (seconds)', color='#FF6B6B', fontweight='bold', fontsize=12)
+            ax2_twin.set_ylabel('Query Time (seconds)', color='#4ECDC4', fontweight='bold', fontsize=12)
+            ax2.set_title('Graph-PIR: Effect of k_neighbors', fontweight='bold', fontsize=14)
             ax2.grid(True, alpha=0.3)
             
             # Combine legends
             lines = line1 + line2
             labels = [l.get_label() for l in lines]
             ax2.legend(lines, labels, loc='upper left')
+            
+            plt.tight_layout()
+            plt.savefig(self.figures_dir / f"{save_name}_graph_pir_k_neighbors.png", dpi=300, bbox_inches='tight')
+            plt.savefig(self.figures_dir / f"{save_name}_graph_pir_k_neighbors.pdf", bbox_inches='tight')
+            plt.close()
         
-        plt.tight_layout()
-        plt.savefig(self.figures_dir / f"{save_name}.png", dpi=300, bbox_inches='tight')
-        plt.savefig(self.figures_dir / f"{save_name}.pdf", bbox_inches='tight')
-        plt.show()
+        print(f"Generated individual parameter sensitivity plots: {save_name}_pir_rag_k_clusters, {save_name}_graph_pir_k_neighbors")
         
     def generate_summary_report(self, results: Dict[str, Any], output_file: str = "summary_report.txt"):
         """Generate a comprehensive text summary report."""
