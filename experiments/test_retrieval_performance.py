@@ -373,33 +373,40 @@ class RetrievalPerformanceTester:
     
     def test_retrieval_performance(self, system_name: str, system, embeddings: np.ndarray, 
                                   documents: List[str], queries: List[np.ndarray], 
-                                  top_k: int = 10) -> Dict[str, Any]:
+                                  top_k: int = 10, pir_rag_k_clusters: int = None,
+                                  tiptoe_k_clusters: int = None) -> Dict[str, Any]:
         """
         Hybrid test: Plaintext simulation for retrieval quality + Real PIR for performance metrics.
         
         This approach ensures:
         1. Accurate retrieval quality metrics (no PIR corruption)
         2. Realistic performance and communication measurements
+        
+        FIXED: Setup only happens once per system, not per query.
         """
         
         print(f"\n=== Testing {system_name} with Hybrid Approach ===")
         
-        # Setup system for performance measurements
+        # Setup system for performance measurements (ONCE per system)
         setup_start = time.perf_counter()
         if system_name == "PIR-RAG":
             client, server = system
-            k_clusters = min(32, max(5, len(documents)//20))
+            k_clusters = pir_rag_k_clusters or min(32, max(5, len(documents)//20))
+            print(f"  Setting up PIR-RAG with {k_clusters} clusters...")
             server.setup(embeddings, documents, k_clusters)
             client.setup(server.centroids)
         elif system_name == "Graph-PIR":
+            print(f"  Setting up Graph-PIR...")
             system.setup(embeddings, documents)
         elif system_name == "Tiptoe":
-            k_clusters = min(32, max(5, len(documents)//20))
+            k_clusters = tiptoe_k_clusters or min(32, max(5, len(documents)//20))
+            print(f"  Setting up Tiptoe with {k_clusters} clusters...")
             system.setup(embeddings, documents, k_clusters=k_clusters)
         setup_time = time.perf_counter() - setup_start
         
-        print(f"  System setup completed in {setup_time:.3f}s")
         
+        print(f"  System setup completed in {setup_time:.3f}s")
+
         # Initialize results tracking
         results = {
             'system': system_name,
@@ -410,12 +417,12 @@ class RetrievalPerformanceTester:
             'communication_costs': [],
             'hybrid_approach': True  # Flag to indicate this uses hybrid testing
         }
-        
+
         total_quality_time = 0
         total_performance_time = 0
         total_communication = 0
-        
-        print(f"  Testing {len(queries)} queries...")
+
+        print(f"  Testing {len(queries)} queries against the SAME setup (no per-query setup)...")
         
         for query_idx, query_embedding in enumerate(queries):
             print(f"\n  Query {query_idx + 1}/{len(queries)}:")

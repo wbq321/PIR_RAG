@@ -590,17 +590,12 @@ class PIRExperimentRunner:
         try:
             pir_rag_client = PIRRAGClient()
             pir_rag_server = PIRRAGServer()
-
-            # Setup server first (it does the clustering)
-            k_clusters = self.get_default_k_clusters(len(documents), pir_rag_k_clusters)
-            server_setup_result = pir_rag_server.setup(embeddings, documents, k_clusters)
-
-            # Setup client with centroids from server
-            client_setup_result = pir_rag_client.setup(pir_rag_server.centroids)
-
             pir_rag_system = (pir_rag_client, pir_rag_server)
+            
+            # FIXED: Remove redundant setup - let test_retrieval_performance handle it
             pir_rag_results = tester.test_retrieval_performance(
-                "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k
+                "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k,
+                pir_rag_k_clusters=pir_rag_k_clusters
             )
             retrieval_results['pir_rag'] = pir_rag_results
             print(f"✅ PIR-RAG retrieval test completed")
@@ -611,6 +606,7 @@ class PIRExperimentRunner:
         # Test Graph-PIR
         try:
             graph_pir_system = GraphPIRSystem()
+            # FIXED: Remove redundant setup - let test_retrieval_performance handle it
             graph_pir_results = tester.test_retrieval_performance(
                 "Graph-PIR", graph_pir_system, embeddings, documents, queries, top_k
             )
@@ -623,6 +619,7 @@ class PIRExperimentRunner:
         # Test Tiptoe
         try:
             tiptoe_system = TiptoeSystem()
+            # FIXED: Remove redundant setup - let test_retrieval_performance handle it
             tiptoe_results = tester.test_retrieval_performance(
                 "Tiptoe", tiptoe_system, embeddings, documents, queries, top_k
             )
