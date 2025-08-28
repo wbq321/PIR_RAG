@@ -69,9 +69,6 @@ class RetrievalAnalyzer:
                 if system_name in ['source_file', 'experiment_info']:
                     continue
                 
-                # Debug output
-                print(f"Processing system: {system_name}, data type: {type(system_data)}")
-                
                 # Skip if system_data is None or not a dict
                 if system_data is None or not isinstance(system_data, dict):
                     print(f"Warning: Skipping {system_name} - invalid data (None or not dict)")
@@ -349,7 +346,7 @@ class RetrievalAnalyzer:
         
         return report_text
     
-    def generate_all_retrieval_plots(self, output_dir: str = None):
+    def generate_all_retrieval_plots(self, output_dir: str = None, pattern: str = "*retrieval_performance*.json"):
         """Generate all retrieval performance plots and reports."""
         if output_dir is None:
             output_dir = self.results_dir / "retrieval_analysis"
@@ -360,7 +357,7 @@ class RetrievalAnalyzer:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Load results
-        results = self.load_retrieval_results()
+        results = self.load_retrieval_results(pattern)
         
         if not results:
             print("❌ No retrieval results found to analyze")
@@ -402,6 +399,7 @@ def main():
     """Main analysis runner."""
     parser = argparse.ArgumentParser(description="Analyze retrieval performance results")
     parser.add_argument("--results-dir", default="results", help="Directory containing result files")
+    parser.add_argument("--data-pattern", default="*retrieval_performance*.json", help="Pattern to match result files")
     parser.add_argument("--output-dir", default=None, help="Output directory for analysis")
     parser.add_argument("--generate-all", action="store_true", help="Generate all plots and reports")
     parser.add_argument("--generate-comparison", action="store_true", help="Generate quality comparison plot")
@@ -414,12 +412,22 @@ def main():
     analyzer = RetrievalAnalyzer(args.results_dir)
     
     if args.generate_all:
-        analyzer.generate_all_retrieval_plots(args.output_dir)
+        analyzer.generate_all_retrieval_plots(args.output_dir, args.data_pattern)
     else:
-        results = analyzer.load_retrieval_results()
+        results = analyzer.load_retrieval_results(args.data_pattern)
         
         if args.generate_comparison:
             analyzer.plot_retrieval_quality_comparison(results)
+        
+        if args.generate_curves:
+            analyzer.plot_precision_recall_curves(results)
+            
+        if args.generate_distribution:
+            analyzer.plot_query_distribution(results)
+            
+        if args.generate_report:
+            report = analyzer.generate_retrieval_summary_report(results)
+            print(report)
         
         if args.generate_curves:
             analyzer.plot_precision_recall_curves(results)
