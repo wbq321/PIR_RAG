@@ -116,53 +116,46 @@ class RetrievalAnalyzer:
             print("No valid system data found")
             return
             
-        # Create subplots
-        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-        fig.suptitle('Retrieval Performance Comparison', fontsize=16, fontweight='bold')
+        # Generate only recall plot as individual figure
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         
-        metrics = ['precision', 'recall', 'ndcg', 'query_time', 'qps']
-        metric_names = ['Precision@K', 'Recall@K', 'NDCG@K', 'Query Time (s)', 'Queries/Second']
+        systems = list(systems_data.keys())
+        recall_values = [np.mean(systems_data[sys]['recall']) if systems_data[sys]['recall'] else 0 
+                        for sys in systems]
+        recall_errors = [np.std(systems_data[sys]['recall']) if len(systems_data[sys]['recall']) > 1 else 0 
+                        for sys in systems]
         
-        for i, (metric, title) in enumerate(zip(metrics, metric_names)):
-            ax = axes[i // 3, i % 3]
-            
-            systems = list(systems_data.keys())
-            values = [np.mean(systems_data[sys][metric]) if systems_data[sys][metric] else 0 
-                     for sys in systems]
-            errors = [np.std(systems_data[sys][metric]) if len(systems_data[sys][metric]) > 1 else 0 
-                     for sys in systems]
-            
-            bars = ax.bar(systems, values, yerr=errors, capsize=5, alpha=0.7)
-            ax.set_title(title, fontweight='bold')
-            ax.set_ylabel(title)
-            
-            # Add value labels on bars
-            for bar, value in zip(bars, values):
-                if value > 0:
-                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + bar.get_height()*0.01,
-                           f'{value:.3f}', ha='center', va='bottom', fontweight='bold')
-            
-            # Rotate x-axis labels for better readability
-            ax.tick_params(axis='x', rotation=45)
+        bars = ax.bar(systems, recall_values, yerr=recall_errors, capsize=5, alpha=0.7,
+                     color=['#2E86AB', '#A23B72', '#F18F01', '#C73E1D'])
+        ax.set_title('Recall@K Performance Comparison', fontweight='bold', fontsize=14)
+        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=12)
+        ax.set_xlabel('System', fontweight='bold', fontsize=12)
         
-        # Remove empty subplot
-        if len(metrics) < 6:
-            axes[1, 2].remove()
+        # Add value labels on bars
+        for bar, value in zip(bars, recall_values):
+            if value > 0:
+                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + bar.get_height()*0.01,
+                       f'{value:.3f}', ha='center', va='bottom', fontweight='bold')
+        
+        # Rotate x-axis labels for better readability
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3, axis='y')
+        ax.set_ylim(0, max(recall_values) * 1.1 if recall_values else 1)
         
         plt.tight_layout()
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"Retrieval quality plot saved to: {save_path}")
+            print(f"Recall comparison plot saved to: {save_path}")
         else:
             plt.show()
     
     def plot_precision_recall_curves(self, results: List[Dict], save_path: str = None):
-        """Plot precision-recall curves for different systems."""
+        """Plot only recall curves (modified to focus on recall performance)."""
         if not results:
             return
             
-        fig, ax = plt.subplots(figsize=(10, 8))
+        fig, ax = plt.subplots(figsize=(12, 6))
         
         for result in results:
             for system_name, system_data in result.items():
@@ -174,27 +167,21 @@ class RetrievalAnalyzer:
                     continue
                     
                 if 'quality_metrics' in system_data:
-                    # Extract precision and recall for each query
-                    precisions = [q['precision_at_k'] for q in system_data['quality_metrics']]
+                    # Extract recall for each query
                     recalls = [q['recall_at_k'] for q in system_data['quality_metrics']]
+                    query_ids = list(range(1, len(recalls) + 1))
                     
                     display_name = self.get_display_name(system_name)
                     
-                    # Plot scatter points
-                    ax.scatter(recalls, precisions, label=display_name, alpha=0.6, s=50)
-                    
-                    # Plot average point
-                    avg_precision = np.mean(precisions)
-                    avg_recall = np.mean(recalls)
-                    ax.scatter(avg_recall, avg_precision, 
-                             label=f'{display_name} (avg)', 
-                             s=200, marker='*', edgecolors='black', linewidth=2)
+                    # Plot recall values over queries
+                    ax.plot(query_ids, recalls, 'o-', label=display_name, alpha=0.8, linewidth=2, markersize=4)
         
-        ax.set_xlabel('Recall@K', fontweight='bold')
-        ax.set_ylabel('Precision@K', fontweight='bold')
-        ax.set_title('Precision-Recall Analysis', fontsize=14, fontweight='bold')
-        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.set_xlabel('Query Number', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=12)
+        ax.set_title('Recall@K Performance Across Queries', fontsize=14, fontweight='bold')
+        ax.legend()
         ax.grid(True, alpha=0.3)
+        ax.set_ylim(0, 1.0)
         
         plt.tight_layout()
         
@@ -205,38 +192,38 @@ class RetrievalAnalyzer:
             plt.show()
     
     def plot_query_distribution(self, results: List[Dict], save_path: str = None):
-        """Plot query performance distribution across systems."""
+        """Plot recall distribution across queries (modified to focus on recall only)."""
         if not results:
             return
             
-        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-        fig.suptitle('Query Performance Distribution', fontsize=16, fontweight='bold')
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         
-        metrics = ['precision_at_k', 'recall_at_k', 'ndcg_at_k']
-        titles = ['Precision@K Distribution', 'Recall@K Distribution', 'NDCG@K Distribution']
+        colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']
+        color_idx = 0
         
-        for i, (metric, title) in enumerate(zip(metrics, titles)):
-            ax = axes[i]
-            
-            for result in results:
-                for system_name, system_data in result.items():
-                    if system_name in ['source_file', 'experiment_info']:
-                        continue
+        for result in results:
+            for system_name, system_data in result.items():
+                if system_name in ['source_file', 'experiment_info']:
+                    continue
+                
+                # Skip if system_data is None or not a dict
+                if system_data is None or not isinstance(system_data, dict):
+                    continue
                     
-                    # Skip if system_data is None or not a dict
-                    if system_data is None or not isinstance(system_data, dict):
-                        continue
-                        
-                    if 'quality_metrics' in system_data:
-                        display_name = self.get_display_name(system_name)
-                        values = [q[metric] for q in system_data['quality_metrics']]
-                        ax.hist(values, bins=15, alpha=0.6, label=display_name, density=True)
-            
-            ax.set_title(title, fontweight='bold')
-            ax.set_xlabel(metric.replace('_', ' ').title())
-            ax.set_ylabel('Density')
-            ax.legend()
-            ax.grid(True, alpha=0.3)
+                if 'quality_metrics' in system_data:
+                    display_name = self.get_display_name(system_name)
+                    recall_values = [q['recall_at_k'] for q in system_data['quality_metrics']]
+                    
+                    ax.hist(recall_values, bins=15, alpha=0.6, label=display_name, 
+                           density=True, color=colors[color_idx % len(colors)])
+                    color_idx += 1
+        
+        ax.set_title('Recall@K Distribution Across Queries', fontweight='bold', fontsize=14)
+        ax.set_xlabel('Recall@K Values', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Density', fontweight='bold', fontsize=12)
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim(0, 1.0)
         
         plt.tight_layout()
         
