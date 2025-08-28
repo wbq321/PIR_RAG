@@ -88,6 +88,20 @@ class RetrievalPerformanceTester:
         print(f"  Query types: {n_queries//3} composite, {n_queries//3} random, {n_queries - 2*(n_queries//3)} noisy variants")
         return queries
     
+    def _precompute_pir_rag_clusters(self, embeddings: np.ndarray, n_clusters: int) -> Dict:
+        """Pre-compute PIR-RAG clustering to avoid doing it per query."""
+        from sklearn.cluster import KMeans
+        
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
+        cluster_labels = kmeans.fit_predict(embeddings)
+        centroids = kmeans.cluster_centers_
+        
+        return {
+            'cluster_labels': cluster_labels,
+            'centroids': centroids,
+            'n_clusters': n_clusters
+        }
+    
     def calculate_retrieval_quality(self, query_embedding: np.ndarray, 
                                    retrieved_doc_indices: List[int], 
                                    all_embeddings: np.ndarray, top_k: int = 10) -> Dict[str, float]:
@@ -140,24 +154,30 @@ class RetrievalPerformanceTester:
 
     def _simulate_pir_rag_search(self, query_embedding: np.ndarray, 
                                 documents: List[str], embeddings: np.ndarray,
-                                n_clusters: int = 32, top_k_clusters: int = 3) -> List[int]:
+                                n_clusters: int = 32, top_k_clusters: int = 3,
+                                precomputed_clusters: Dict = None) -> List[int]:
         """
         Simulate PIR-RAG search strategy in plaintext for accurate retrieval metrics.
         
         Strategy:
-        1. K-means clustering on embeddings (same as actual PIR-RAG)
+        1. Use pre-computed K-means clustering (efficient)
         2. Find top-k clusters by centroid similarity
         3. Compute similarities with all documents in selected clusters
         4. Return ranked document indices
+        
+        FIXED: Uses pre-computed clustering instead of clustering per query.
         """
-        from sklearn.cluster import KMeans
         
-        print(f"    [PIR-RAG Simulation] Clustering {len(embeddings)} docs into {n_clusters} clusters...")
-        
-        # 1. Perform K-means clustering (same as actual system)
-        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
-        cluster_labels = kmeans.fit_predict(embeddings)
-        centroids = kmeans.cluster_centers_
+        if precomputed_clusters is not None:
+            print(f"    [PIR-RAG Simulation] Using pre-computed clusters (efficient)")
+            cluster_labels = precomputed_clusters['cluster_labels']
+            centroids = precomputed_clusters['centroids']
+        else:
+            print(f"    [PIR-RAG Simulation] Computing clusters (inefficient fallback)")
+            from sklearn.cluster import KMeans
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
+            cluster_labels = kmeans.fit_predict(embeddings)
+            centroids = kmeans.cluster_centers_
         
         # 2. Find top-k clusters by centroid similarity
         centroid_similarities = cosine_similarity([query_embedding], centroids)[0]
@@ -189,7 +209,7 @@ class RetrievalPerformanceTester:
     def _simulate_graph_pir_search(self, query_embedding: np.ndarray,
                                   documents: List[str], embeddings: np.ndarray,
                                   k_neighbors: int = 16, max_iterations: int = 5,
-                                  parallel: int = 1, **kwargs) -> List[int]:
+                                  parallel: int = 1, prebuilt_graph: Dict = None, **kwargs) -> List[int]:
         """
         Simulate Graph-PIR search using the GraphANN SearchKNN algorithm (UPDATED implementation).
         
@@ -199,6 +219,8 @@ class RetrievalPerformanceTester:
         3. Each step: pop 'parallel' closest vertices, explore ALL their neighbors in batch
         4. Batch query neighbors, add new vertices to priority queue
         5. Return all discovered vertices sorted by L2 distance
+        
+        FIXED: Uses pre-built graph instead of building for every query.
         """
         import heapq
         
@@ -207,8 +229,13 @@ class RetrievalPerformanceTester:
         
         print(f"    [Graph-PIR Simulation] GraphANN SearchKNN: n={n_docs}, m={m}, maxStep={max_iterations}, parallel={parallel}")
         
-        # 1. Build k-NN graph structure  
-        graph = self._build_simple_graph(embeddings, k_neighbors)
+        # 1. Use pre-built graph OR build if not provided (fallback)
+        if prebuilt_graph is not None:
+            print(f"    [Graph-PIR Simulation] Using pre-built graph (efficient)")
+            graph = prebuilt_graph
+        else:
+            print(f"    [Graph-PIR Simulation] Building graph (inefficient fallback)")
+            graph = self._build_simple_graph(embeddings, k_neighbors)
         
         # 2. Initialize GraphANN SearchKNN state
         reach_step = {}         # vertex_id -> step when discovered  
@@ -383,12 +410,31 @@ class RetrievalPerformanceTester:
         2. Realistic performance and communication measurements
         
         FIXED: Setup only happens once per system, not per query.
+        FIXED: Graph building only happens once for Graph-PIR, not per query.
         """
         
         print(f"\n=== Testing {system_name} with Hybrid Approach ===")
         
         # Setup system for performance measurements (ONCE per system)
         setup_start = time.perf_counter()
+        
+        # Pre-build graph for Graph-PIR simulation (ONCE, not per query)
+        graph_pir_graph = None
+        pir_rag_clusters = None
+        if system_name == "Graph-PIR":
+            print(f"  Pre-building k-NN graph for Graph-PIR simulation...")
+            graph_build_start = time.perf_counter()
+            graph_pir_graph = self._build_simple_graph(embeddings, k_neighbors=32)
+            graph_build_time = time.perf_counter() - graph_build_start
+            print(f"  Graph built in {graph_build_time:.3f}s (will be reused for all queries)")
+        elif system_name == "PIR-RAG":
+            print(f"  Pre-computing clustering for PIR-RAG simulation...")
+            cluster_start = time.perf_counter()
+            k_clusters = pir_rag_k_clusters or min(32, max(5, len(documents)//20))
+            pir_rag_clusters = self._precompute_pir_rag_clusters(embeddings, k_clusters)
+            cluster_time = time.perf_counter() - cluster_start
+            print(f"  Clustering completed in {cluster_time:.3f}s (will be reused for all queries)")
+        
         if system_name == "PIR-RAG":
             client, server = system
             k_clusters = pir_rag_k_clusters or min(32, max(5, len(documents)//20))
@@ -434,12 +480,14 @@ class RetrievalPerformanceTester:
             if system_name == "PIR-RAG":
                 retrieved_doc_indices = self._simulate_pir_rag_search(
                     query_embedding, documents, embeddings, 
-                    n_clusters=k_clusters, top_k_clusters=3
+                    n_clusters=k_clusters, top_k_clusters=3,
+                    precomputed_clusters=pir_rag_clusters  # FIXED: Pass pre-computed clusters
                 )
             elif system_name == "Graph-PIR":
                 retrieved_doc_indices = self._simulate_graph_pir_search(
                     query_embedding, documents, embeddings,
-                    k_neighbors=32, max_iterations=20, nodes_per_step=5  # YOUR actual parameters
+                    k_neighbors=32, max_iterations=20, nodes_per_step=5,  # YOUR actual parameters
+                    prebuilt_graph=graph_pir_graph  # FIXED: Pass pre-built graph
                 )
             elif system_name == "Tiptoe":
                 retrieved_doc_indices = self._simulate_tiptoe_search(
