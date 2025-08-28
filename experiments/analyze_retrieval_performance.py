@@ -23,6 +23,16 @@ class RetrievalAnalyzer:
         self.results_dir = Path(results_dir)
         plt.style.use('seaborn-v0_8')
         sns.set_palette("husl")
+        # System name mapping for display
+        self.system_display_names = {
+            'pir_rag': 'PIR-RAG',
+            'graph_pir': 'Graph-PIR', 
+            'tiptoe': 'Tiptoe'
+        }
+    
+    def get_display_name(self, system_name: str) -> str:
+        """Get the display name for a system."""
+        return self.system_display_names.get(system_name, system_name)
         
     def load_retrieval_results(self, pattern: str = "*retrieval_performance*.json") -> List[Dict[str, Any]]:
         """Load retrieval performance results from JSON files."""
@@ -58,9 +68,15 @@ class RetrievalAnalyzer:
             for system_name, system_data in result.items():
                 if system_name in ['source_file', 'experiment_info']:
                     continue
+                
+                # Skip if system_data is None or not a dict
+                if system_data is None or not isinstance(system_data, dict):
+                    print(f"Warning: Skipping {system_name} - invalid data")
+                    continue
                     
                 if system_name not in systems_data:
-                    systems_data[system_name] = {
+                    display_name = self.get_display_name(system_name)
+                    systems_data[display_name] = {
                         'precision': [],
                         'recall': [],
                         'ndcg': [],
@@ -69,15 +85,16 @@ class RetrievalAnalyzer:
                     }
                 
                 if 'avg_precision_at_k' in system_data:
-                    systems_data[system_name]['precision'].append(system_data['avg_precision_at_k'])
-                    systems_data[system_name]['recall'].append(system_data['avg_recall_at_k'])
-                    systems_data[system_name]['ndcg'].append(system_data['avg_ndcg_at_k'])
+                    display_name = self.get_display_name(system_name)
+                    systems_data[display_name]['precision'].append(system_data['avg_precision_at_k'])
+                    systems_data[display_name]['recall'].append(system_data['avg_recall_at_k'])
+                    systems_data[display_name]['ndcg'].append(system_data['avg_ndcg_at_k'])
                     # Use the correct field name for query time
                     query_time = system_data.get('avg_total_query_time', system_data.get('avg_query_time', 0))
-                    systems_data[system_name]['query_time'].append(query_time)
+                    systems_data[display_name]['query_time'].append(query_time)
                     # Calculate QPS from query time if not available
                     qps = system_data.get('queries_per_second', 1.0 / query_time if query_time > 0 else 0)
-                    systems_data[system_name]['qps'].append(qps)
+                    systems_data[display_name]['qps'].append(qps)
         
         if not systems_data:
             print("No valid system data found")
@@ -135,20 +152,26 @@ class RetrievalAnalyzer:
             for system_name, system_data in result.items():
                 if system_name in ['source_file', 'experiment_info']:
                     continue
+                
+                # Skip if system_data is None or not a dict
+                if system_data is None or not isinstance(system_data, dict):
+                    continue
                     
                 if 'quality_metrics' in system_data:
                     # Extract precision and recall for each query
                     precisions = [q['precision_at_k'] for q in system_data['quality_metrics']]
                     recalls = [q['recall_at_k'] for q in system_data['quality_metrics']]
                     
+                    display_name = self.get_display_name(system_name)
+                    
                     # Plot scatter points
-                    ax.scatter(recalls, precisions, label=system_name, alpha=0.6, s=50)
+                    ax.scatter(recalls, precisions, label=display_name, alpha=0.6, s=50)
                     
                     # Plot average point
                     avg_precision = np.mean(precisions)
                     avg_recall = np.mean(recalls)
                     ax.scatter(avg_recall, avg_precision, 
-                             label=f'{system_name} (avg)', 
+                             label=f'{display_name} (avg)', 
                              s=200, marker='*', edgecolors='black', linewidth=2)
         
         ax.set_xlabel('Recall@K', fontweight='bold')
@@ -183,10 +206,15 @@ class RetrievalAnalyzer:
                 for system_name, system_data in result.items():
                     if system_name in ['source_file', 'experiment_info']:
                         continue
+                    
+                    # Skip if system_data is None or not a dict
+                    if system_data is None or not isinstance(system_data, dict):
+                        continue
                         
                     if 'quality_metrics' in system_data:
+                        display_name = self.get_display_name(system_name)
                         values = [q[metric] for q in system_data['quality_metrics']]
-                        ax.hist(values, bins=15, alpha=0.6, label=system_name, density=True)
+                        ax.hist(values, bins=15, alpha=0.6, label=display_name, density=True)
             
             ax.set_title(title, fontweight='bold')
             ax.set_xlabel(metric.replace('_', ' ').title())
@@ -222,9 +250,15 @@ class RetrievalAnalyzer:
             for system_name, system_data in result.items():
                 if system_name in ['source_file', 'experiment_info']:
                     continue
+                
+                # Skip if system_data is None or not a dict
+                if system_data is None or not isinstance(system_data, dict):
+                    print(f"Warning: Skipping {system_name} - invalid data")
+                    continue
                     
                 if system_name not in system_stats:
-                    system_stats[system_name] = {
+                    display_name = self.get_display_name(system_name)
+                    system_stats[display_name] = {
                         'precision_scores': [],
                         'recall_scores': [],
                         'ndcg_scores': [],
@@ -234,16 +268,17 @@ class RetrievalAnalyzer:
                     }
                 
                 if 'avg_precision_at_k' in system_data:
-                    system_stats[system_name]['precision_scores'].append(system_data['avg_precision_at_k'])
-                    system_stats[system_name]['recall_scores'].append(system_data['avg_recall_at_k'])
-                    system_stats[system_name]['ndcg_scores'].append(system_data['avg_ndcg_at_k'])
+                    display_name = self.get_display_name(system_name)
+                    system_stats[display_name]['precision_scores'].append(system_data['avg_precision_at_k'])
+                    system_stats[display_name]['recall_scores'].append(system_data['avg_recall_at_k'])
+                    system_stats[display_name]['ndcg_scores'].append(system_data['avg_ndcg_at_k'])
                     # Use the correct field name for query time
                     query_time = system_data.get('avg_total_query_time', system_data.get('avg_query_time', 0))
-                    system_stats[system_name]['query_times'].append(query_time)
+                    system_stats[display_name]['query_times'].append(query_time)
                     # Calculate QPS from query time if not available
                     qps = system_data.get('queries_per_second', 1.0 / query_time if query_time > 0 else 0)
-                    system_stats[system_name]['qps_scores'].append(qps)
-                    system_stats[system_name]['total_queries'] += len(system_data.get('quality_metrics', []))
+                    system_stats[display_name]['qps_scores'].append(qps)
+                    system_stats[display_name]['total_queries'] += len(system_data.get('quality_metrics', []))
         
         # Generate system comparison
         report.append("SYSTEM PERFORMANCE SUMMARY")
