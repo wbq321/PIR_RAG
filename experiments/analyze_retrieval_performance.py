@@ -72,8 +72,12 @@ class RetrievalAnalyzer:
                     systems_data[system_name]['precision'].append(system_data['avg_precision_at_k'])
                     systems_data[system_name]['recall'].append(system_data['avg_recall_at_k'])
                     systems_data[system_name]['ndcg'].append(system_data['avg_ndcg_at_k'])
-                    systems_data[system_name]['query_time'].append(system_data['avg_query_time'])
-                    systems_data[system_name]['qps'].append(system_data['queries_per_second'])
+                    # Use the correct field name for query time
+                    query_time = system_data.get('avg_total_query_time', system_data.get('avg_query_time', 0))
+                    systems_data[system_name]['query_time'].append(query_time)
+                    # Calculate QPS from query time if not available
+                    qps = system_data.get('queries_per_second', 1.0 / query_time if query_time > 0 else 0)
+                    systems_data[system_name]['qps'].append(qps)
         
         if not systems_data:
             print("No valid system data found")
@@ -233,8 +237,12 @@ class RetrievalAnalyzer:
                     system_stats[system_name]['precision_scores'].append(system_data['avg_precision_at_k'])
                     system_stats[system_name]['recall_scores'].append(system_data['avg_recall_at_k'])
                     system_stats[system_name]['ndcg_scores'].append(system_data['avg_ndcg_at_k'])
-                    system_stats[system_name]['query_times'].append(system_data['avg_query_time'])
-                    system_stats[system_name]['qps_scores'].append(system_data['queries_per_second'])
+                    # Use the correct field name for query time
+                    query_time = system_data.get('avg_total_query_time', system_data.get('avg_query_time', 0))
+                    system_stats[system_name]['query_times'].append(query_time)
+                    # Calculate QPS from query time if not available
+                    qps = system_data.get('queries_per_second', 1.0 / query_time if query_time > 0 else 0)
+                    system_stats[system_name]['qps_scores'].append(qps)
                     system_stats[system_name]['total_queries'] += len(system_data.get('quality_metrics', []))
         
         # Generate system comparison
