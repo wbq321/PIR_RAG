@@ -401,7 +401,7 @@ class RetrievalPerformanceTester:
     def test_retrieval_performance(self, system_name: str, system, embeddings: np.ndarray, 
                                   documents: List[str], queries: List[np.ndarray], 
                                   top_k: int = 10, pir_rag_k_clusters: int = None,
-                                  tiptoe_k_clusters: int = None) -> Dict[str, Any]:
+                                  tiptoe_k_clusters: int = None, graph_params: Dict = None) -> Dict[str, Any]:
         """
         Hybrid test: Plaintext simulation for retrieval quality + Real PIR for performance metrics.
         
@@ -443,7 +443,11 @@ class RetrievalPerformanceTester:
             client.setup(server.centroids)
         elif system_name == "Graph-PIR":
             print(f"  Setting up Graph-PIR...")
-            system.setup(embeddings, documents)
+            if graph_params is not None:
+                print(f"    Using custom graph_params: {graph_params}")
+                system.setup(embeddings, documents, graph_params=graph_params)
+            else:
+                system.setup(embeddings, documents)
         elif system_name == "Tiptoe":
             k_clusters = tiptoe_k_clusters or min(32, max(5, len(documents)//20))
             print(f"  Setting up Tiptoe with {k_clusters} clusters...")

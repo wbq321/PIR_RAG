@@ -549,7 +549,9 @@ class PIRExperimentRunner:
                                            embeddings_path: str = None, corpus_path: str = None,
                                            embed_dim: int = 384, top_k: int = 10,
                                            pir_rag_k_clusters: int = 5,
-                                           pir_rag_cluster_top_k: int = 3) -> Dict[str, Any]:
+                                           pir_rag_cluster_top_k: int = 3,
+                                           graph_params: Dict = None,
+                                           tiptoe_k_clusters: int = None) -> Dict[str, Any]:
         """Run retrieval performance experiments measuring IR quality metrics."""
         if not RETRIEVAL_TESTING_AVAILABLE:
             print("❌ Retrieval performance testing not available")
@@ -606,9 +608,10 @@ class PIRExperimentRunner:
         # Test Graph-PIR
         try:
             graph_pir_system = GraphPIRSystem()
-            # FIXED: Remove redundant setup - let test_retrieval_performance handle it
+            # Pass graph_params to the test method instead of pre-setting up
             graph_pir_results = tester.test_retrieval_performance(
-                "Graph-PIR", graph_pir_system, embeddings, documents, queries, top_k
+                "Graph-PIR", graph_pir_system, embeddings, documents, queries, top_k,
+                graph_params=graph_params
             )
             retrieval_results['graph_pir'] = graph_pir_results
             print(f"✅ Graph-PIR retrieval test completed")
@@ -621,7 +624,8 @@ class PIRExperimentRunner:
             tiptoe_system = TiptoeSystem()
             # FIXED: Remove redundant setup - let test_retrieval_performance handle it
             tiptoe_results = tester.test_retrieval_performance(
-                "Tiptoe", tiptoe_system, embeddings, documents, queries, top_k
+                "Tiptoe", tiptoe_system, embeddings, documents, queries, top_k,
+                tiptoe_k_clusters=tiptoe_k_clusters
             )
             retrieval_results['tiptoe'] = tiptoe_results
             print(f"✅ Tiptoe retrieval test completed")
@@ -985,6 +989,18 @@ def main():
 
     if args.experiment in ["retrieval", "all"]:
         print("Running retrieval performance experiments...")
+        
+        # Prepare graph_params for Graph-PIR
+        graph_params = {
+            'k_neighbors': args.graph_pir_k_neighbors,
+            'ef_construction': args.graph_pir_ef_construction,
+            'max_connections': args.graph_pir_max_connections,
+            'ef_search': args.graph_pir_ef_search,
+            'max_iterations': args.graph_pir_max_iterations,
+            'parallel': args.graph_pir_parallel,
+            'max_neighbors_per_step': args.graph_pir_max_neighbors_per_step
+        }
+        
         retrieval_results = runner.run_retrieval_performance_experiment(
             n_docs=args.n_docs,
             n_queries=args.n_queries,  # Use exact number specified by user
@@ -993,7 +1009,9 @@ def main():
             embed_dim=args.embed_dim,
             top_k=args.top_k,
             pir_rag_k_clusters=args.pir_rag_k_clusters,
-            pir_rag_cluster_top_k=args.pir_rag_cluster_top_k
+            pir_rag_cluster_top_k=args.pir_rag_cluster_top_k,
+            graph_params=graph_params,
+            tiptoe_k_clusters=runner.get_default_k_clusters(args.n_docs, args.tiptoe_k_clusters)
         )
         if retrieval_results:
             runner.save_results(retrieval_results, "retrieval_performance")
