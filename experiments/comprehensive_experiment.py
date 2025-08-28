@@ -225,7 +225,7 @@ class PIRExperimentRunner:
         print(f"Running Graph-PIR experiment with {len(documents)} docs")
 
         if graph_params is None:
-            graph_params = {'k_neighbors': 8, 'ef_construction': 20, 'max_connections': 8,
+            graph_params = {'k_neighbors': 16, 'ef_construction': 20, 'max_connections': 16,
                            'max_iterations': 5, 'parallel': 1, 'ef_search': 30}
 
         print(f"  Graph params: {graph_params}")
@@ -593,7 +593,7 @@ class PIRExperimentRunner:
             pir_rag_client = PIRRAGClient()
             pir_rag_server = PIRRAGServer()
             pir_rag_system = (pir_rag_client, pir_rag_server)
-            
+
             # FIXED: Remove redundant setup - let test_retrieval_performance handle it
             pir_rag_results = tester.test_retrieval_performance(
                 "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k,
@@ -989,7 +989,7 @@ def main():
 
     if args.experiment in ["retrieval", "all"]:
         print("Running retrieval performance experiments...")
-        
+
         # Prepare graph_params for Graph-PIR
         graph_params = {
             'k_neighbors': args.graph_pir_k_neighbors,
@@ -1000,7 +1000,7 @@ def main():
             'parallel': args.graph_pir_parallel,
             'max_neighbors_per_step': args.graph_pir_max_neighbors_per_step
         }
-        
+
         retrieval_results = runner.run_retrieval_performance_experiment(
             n_docs=args.n_docs,
             n_queries=args.n_queries,  # Use exact number specified by user
