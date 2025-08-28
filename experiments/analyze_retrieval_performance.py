@@ -37,6 +37,21 @@ class RetrievalAnalyzer:
     def load_retrieval_results(self, pattern: str = "*retrieval_performance*.json") -> List[Dict[str, Any]]:
         """Load retrieval performance results from JSON files."""
         results = []
+        
+        # Check if results_dir is actually a specific file
+        if self.results_dir.is_file() and self.results_dir.suffix == '.json':
+            # Single file case
+            try:
+                with open(self.results_dir, 'r') as f:
+                    data = json.load(f)
+                    data['source_file'] = self.results_dir.name
+                    results.append(data)
+                    print(f"Loaded: {self.results_dir.name}")
+            except Exception as e:
+                print(f"Error loading {self.results_dir}: {e}")
+            return results
+        
+        # Directory case (original behavior)
         result_files = list(self.results_dir.glob(pattern))
         
         if not result_files:
@@ -398,8 +413,9 @@ class RetrievalAnalyzer:
 def main():
     """Main analysis runner."""
     parser = argparse.ArgumentParser(description="Analyze retrieval performance results")
-    parser.add_argument("--results-dir", default="results", help="Directory containing result files")
-    parser.add_argument("--data-pattern", default="*retrieval_performance*.json", help="Pattern to match result files")
+    parser.add_argument("--results-dir", default="results", help="Directory containing result files OR path to single JSON file")
+    parser.add_argument("--input-file", help="Path to a specific JSON result file (alternative to --results-dir)")
+    parser.add_argument("--data-pattern", default="*retrieval_performance*.json", help="Pattern to match result files (only used with --results-dir)")
     parser.add_argument("--output-dir", default=None, help="Output directory for analysis")
     parser.add_argument("--generate-all", action="store_true", help="Generate all plots and reports")
     parser.add_argument("--generate-comparison", action="store_true", help="Generate quality comparison plot")
@@ -409,7 +425,11 @@ def main():
     
     args = parser.parse_args()
     
-    analyzer = RetrievalAnalyzer(args.results_dir)
+    # Handle input file vs directory
+    if args.input_file:
+        analyzer = RetrievalAnalyzer(args.input_file)
+    else:
+        analyzer = RetrievalAnalyzer(args.results_dir)
     
     if args.generate_all:
         analyzer.generate_all_retrieval_plots(args.output_dir, args.data_pattern)
@@ -420,7 +440,7 @@ def main():
             analyzer.plot_retrieval_quality_comparison(results)
         
         if args.generate_curves:
-            analyzer.plot_precision_recall_curves(results)
+            analyzer.plot_retrieval_curves(results)
             
         if args.generate_distribution:
             analyzer.plot_query_distribution(results)
