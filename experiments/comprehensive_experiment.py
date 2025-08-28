@@ -832,7 +832,7 @@ def main():
                        help="Maximum connections per node in HNSW graph")
     parser.add_argument("--graph-pir-ef-search", type=int, default=30,
                        help="ef parameter for graph search")
-    parser.add_argument("--graph-pir-max-iterations", type=int, default=5,
+    parser.add_argument("--graph-pir-max-iterations", type=int, default=10,
                        help="Maximum number of graph traversal iterations/turns (GraphANN maxStep)")
     parser.add_argument("--graph-pir-parallel", type=int, default=1,
                        help="Number of parallel explorations per step (GraphANN parallel)")

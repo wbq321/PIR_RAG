@@ -208,7 +208,7 @@ class RetrievalPerformanceTester:
 
     def _simulate_graph_pir_search(self, query_embedding: np.ndarray,
                                   documents: List[str], embeddings: np.ndarray,
-                                  k_neighbors: int = 16, max_iterations: int = 5,
+                                  k_neighbors: int = 16, max_iterations: int = 10,
                                   parallel: int = 1, prebuilt_graph: Dict = None, **kwargs) -> List[int]:
         """
         Simulate Graph-PIR search using the GraphANN SearchKNN algorithm (UPDATED implementation).
@@ -488,9 +488,22 @@ class RetrievalPerformanceTester:
                     precomputed_clusters=pir_rag_clusters  # FIXED: Pass pre-computed clusters
                 )
             elif system_name == "Graph-PIR":
+                # Use parameters from graph_params if available, otherwise use real PIR defaults
+                k_neighbors = 16  # Default (matches real PIR default)
+                max_iterations = 10  # Default (matches real PIR default)
+                parallel = 1  # Default (matches real PIR default)
+                
+                if graph_params is not None:
+                    k_neighbors = graph_params.get('k_neighbors', 16)
+                    max_iterations = graph_params.get('max_iterations', 10)
+                    parallel = graph_params.get('parallel', 1)
+                    print(f"    [DEBUG] Simulation using graph_params: k_neighbors={k_neighbors}, max_iterations={max_iterations}, parallel={parallel}")
+                else:
+                    print(f"    [DEBUG] Simulation using defaults: k_neighbors={k_neighbors}, max_iterations={max_iterations}, parallel={parallel}")
+                
                 retrieved_doc_indices = self._simulate_graph_pir_search(
                     query_embedding, documents, embeddings,
-                    k_neighbors=32, max_iterations=20, nodes_per_step=5,  # YOUR actual parameters
+                    k_neighbors=k_neighbors, max_iterations=max_iterations, parallel=parallel,
                     prebuilt_graph=graph_pir_graph  # FIXED: Pass pre-built graph
                 )
             elif system_name == "Tiptoe":
