@@ -16,6 +16,13 @@ from analyze_results import IndividualPlotAnalyzer, RETRIEVAL_ANALYSIS_AVAILABLE
 if RETRIEVAL_ANALYSIS_AVAILABLE:
     from analyze_retrieval_performance import RetrievalAnalyzer
 
+# Import the new recall-only analyzer
+try:
+    from analyze_recall_only import RecallOnlyAnalyzer
+    RECALL_ANALYSIS_AVAILABLE = True
+except ImportError:
+    RECALL_ANALYSIS_AVAILABLE = False
+
 
 def main():
     """Generate individual plots from PIR experiment results."""
@@ -24,6 +31,7 @@ def main():
     parser.add_argument("--single-file", help="JSON file for single experiment analysis")
     parser.add_argument("--scalability-file", help="JSON file for scalability analysis")
     parser.add_argument("--generate-all", action="store_true", help="Generate all individual plots from latest files")
+    parser.add_argument("--recall-only", action="store_true", help="Generate only recall-focused plots for retrieval analysis")
     
     args = parser.parse_args()
     
@@ -76,16 +84,24 @@ def main():
                 print(f"❌ Failed to analyze {args.scalability_file}: {e}")
     
     # Generate individual retrieval performance plots if available
-    if args.generate_all and RETRIEVAL_ANALYSIS_AVAILABLE:
+    if args.generate_all and args.recall_only and RECALL_ANALYSIS_AVAILABLE:
+        print("Generating individual recall-only plots...")
+        recall_analyzer = RecallOnlyAnalyzer(args.results_dir)
+        recall_analyzer.generate_all_recall_plots("individual_recall_analysis")
+    elif args.generate_all and RETRIEVAL_ANALYSIS_AVAILABLE:
         print("Generating individual retrieval performance plots...")
         retrieval_analyzer = RetrievalAnalyzer(args.results_dir)
-        retrieval_analyzer.generate_individual_retrieval_plots(analyzer.figures_dir)
+        retrieval_analyzer.generate_all_retrieval_plots(analyzer.figures_dir)
     
     print("Individual plot generation complete! Check the 'figures' directory for separate plot files.")
     print("Generated files will have names like:")
     print("  - single_experiment_individual_query_times.png")
     print("  - single_experiment_individual_communication_costs.png")
     print("  - scalability_individual_query_times.png")
+    if args.recall_only:
+        print("  - individual_recall_analysis_comparison.png")
+        print("  - individual_recall_analysis_by_k.png")
+        print("  - individual_recall_analysis_distribution.png")
     print("  - etc.")
 
 
