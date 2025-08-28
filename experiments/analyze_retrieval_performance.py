@@ -3,7 +3,9 @@
 Retrieval Performance Analysis Script
 
 This script analyzes retrieval quality results from test_retrieval_performance.py
-and generates comprehensive plots and reports for IR metrics.
+and generates comprehensive plots and reports for         if save_path:
+            base_path = str(save_path).replace('.png', '').replace('.pdf', '')
+            prec_path = f"{base_path}_precision_curves.png"metrics.
 """
 
 import json
@@ -154,7 +156,7 @@ class RetrievalAnalyzer:
         
         if save_path:
             # Create individual file name
-            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            base_path = str(save_path).replace('.png', '').replace('.pdf', '')
             individual_path = f"{base_path}{suffix}.png"
             plt.savefig(individual_path, dpi=300, bbox_inches='tight')
             individual_path_pdf = f"{base_path}{suffix}.pdf"  
@@ -202,7 +204,7 @@ class RetrievalAnalyzer:
         plt.tight_layout()
         
         if save_path:
-            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            base_path = str(save_path).replace('.png', '').replace('.pdf', '')
             precision_path = f"{base_path}_precision_curves.png"
             plt.savefig(precision_path, dpi=300, bbox_inches='tight')
             plt.savefig(f"{base_path}_precision_curves.pdf", bbox_inches='tight')
@@ -239,7 +241,7 @@ class RetrievalAnalyzer:
         plt.tight_layout()
         
         if save_path:
-            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            base_path = str(save_path).replace('.png', '').replace('.pdf', '')
             recall_path = f"{base_path}_recall_curves.png"
             plt.savefig(recall_path, dpi=300, bbox_inches='tight')
             plt.savefig(f"{base_path}_recall_curves.pdf", bbox_inches='tight')
@@ -286,7 +288,7 @@ class RetrievalAnalyzer:
         plt.tight_layout()
         
         if save_path:
-            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            base_path = str(save_path).replace('.png', '').replace('.pdf', '')
             scatter_path = f"{base_path}_precision_recall_scatter.png"
             plt.savefig(scatter_path, dpi=300, bbox_inches='tight')
             plt.savefig(f"{base_path}_precision_recall_scatter.pdf", bbox_inches='tight')
@@ -337,7 +339,7 @@ class RetrievalAnalyzer:
         plt.tight_layout()
         
         if save_path:
-            base_path = save_path.replace('.png', '').replace('.pdf', '')
+            base_path = str(save_path).replace('.png', '').replace('.pdf', '')
             dist_path = f"{base_path}{suffix}.png"
             plt.savefig(dist_path, dpi=300, bbox_inches='tight')
             plt.savefig(f"{base_path}{suffix}.pdf", bbox_inches='tight')
