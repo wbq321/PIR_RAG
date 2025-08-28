@@ -355,7 +355,7 @@ class PIRExperimentRunner:
             'embedding_dim': embeddings.shape[1]
         }
 
-    def run_scalability_experiment(self, doc_sizes: List[int] = [1000, 2000, 3000, 4000],
+    def run_scalability_experiment(self, doc_sizes: List[int] = [500, 1000, 2000, 5000],
                                   n_queries: int = 5, embed_dim: int = 384,
                                   embeddings_path: str = None, corpus_path: str = None,
                                   pir_rag_params: Dict = None, graph_pir_params: Dict = None,
@@ -368,14 +368,14 @@ class PIRExperimentRunner:
             pir_rag_params = {'k_clusters': None, 'cluster_top_k': 3}  # None will be calculated per doc size
         if graph_pir_params is None:
             graph_pir_params = {'k_neighbors': 16, 'ef_construction': 100, 'max_connections': 16,
-                               'max_iterations': 10, 'parallel': 1, 'ef_search': 30, 
+                               'max_iterations': 10, 'parallel': 1, 'ef_search': 30,
                                'max_neighbors_per_step': 10}  # FIXED: Limit PIR queries per step for consistent performance
         if tiptoe_params is None:
             # FIXED: Use fixed cluster count for fair scalability comparison
             # PIR-RAG scales clusters with dataset size (adaptive clustering)
             # Tiptoe uses fixed clusters to test scaling performance with constant cluster complexity
             tiptoe_params = {'k_clusters': 50, 'use_real_crypto': True}  # Fixed 50 clusters for all sizes
-        
+
         # OVERRIDE: Force fixed cluster count for scalability testing even if provided via args
         # This ensures fair comparison across dataset sizes
         if 'k_clusters' not in tiptoe_params or tiptoe_params['k_clusters'] is None:
@@ -394,7 +394,7 @@ class PIRExperimentRunner:
             print("Using real dataset - generating realistic queries from actual embeddings...")
             sample_embeddings = np.load(embeddings_path)[:max(doc_sizes)]  # Load largest needed size
             sample_documents = pd.read_csv(corpus_path)['text'].iloc[:max(doc_sizes)].tolist()
-            
+
             # Generate realistic queries by sampling from actual embeddings
             np.random.seed(12345)  # Fixed seed for consistency
             query_indices = np.random.choice(len(sample_embeddings), size=n_queries, replace=False)
@@ -495,7 +495,7 @@ class PIRExperimentRunner:
         # Calculate default k_clusters if not provided
         if base_pir_rag_params['k_clusters'] is None:
             base_pir_rag_params['k_clusters'] = self.get_default_k_clusters(n_docs, None)
-            
+
         # Generate consistent test queries with fixed seed
         np.random.seed(54321)  # Fixed seed for parameter sensitivity testing
         queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(n_queries)]
@@ -864,7 +864,7 @@ def main():
             n_docs=args.n_docs,
             embed_dim=args.embed_dim
         )
-        
+
         # Generate consistent test queries with fixed seed
         np.random.seed(98765)  # Fixed seed for main experiment testing
         queries = [np.random.randn(embeddings.shape[1]).astype(np.float32) for _ in range(args.n_queries)]
