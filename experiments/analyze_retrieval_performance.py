@@ -69,9 +69,12 @@ class RetrievalAnalyzer:
                 if system_name in ['source_file', 'experiment_info']:
                     continue
                 
+                # Debug output
+                print(f"Processing system: {system_name}, data type: {type(system_data)}")
+                
                 # Skip if system_data is None or not a dict
                 if system_data is None or not isinstance(system_data, dict):
-                    print(f"Warning: Skipping {system_name} - invalid data")
+                    print(f"Warning: Skipping {system_name} - invalid data (None or not dict)")
                     continue
                     
                 if system_name not in systems_data:
@@ -84,7 +87,8 @@ class RetrievalAnalyzer:
                         'qps': []
                     }
                 
-                if 'avg_precision_at_k' in system_data:
+                # Check if system_data is still valid before checking keys
+                if system_data is not None and isinstance(system_data, dict) and 'avg_precision_at_k' in system_data:
                     display_name = self.get_display_name(system_name)
                     systems_data[display_name]['precision'].append(system_data['avg_precision_at_k'])
                     systems_data[display_name]['recall'].append(system_data['avg_recall_at_k'])
