@@ -25,6 +25,18 @@ class RetrievalAnalyzer:
         self.results_dir = Path(results_dir)
         plt.style.use('seaborn-v0_8')
         sns.set_palette("husl")
+        
+        # Set global font sizes for all plots
+        plt.rcParams.update({
+            'font.size': 14,           # Base font size
+            'axes.titlesize': 18,      # Title font size
+            'axes.labelsize': 16,      # Axis label font size
+            'xtick.labelsize': 14,     # X-axis tick labels
+            'ytick.labelsize': 14,     # Y-axis tick labels
+            'legend.fontsize': 14,     # Legend font size
+            'figure.titlesize': 20     # Figure title font size
+        })
+        
         # System name mapping for display
         self.system_display_names = {
             'pir_rag': 'PIR-RAG',
@@ -137,9 +149,9 @@ class RetrievalAnalyzer:
         
         bars = ax.bar(systems, values, yerr=errors, capsize=5, alpha=0.7,
                      color=['#2E86AB', '#A23B72', '#F18F01', '#C73E1D'])
-        ax.set_title(title, fontweight='bold', fontsize=14)
-        ax.set_ylabel(metric_key.replace('_', ' ').title(), fontweight='bold', fontsize=12)
-        ax.set_xlabel('System', fontweight='bold', fontsize=12)
+        ax.set_title(title, fontweight='bold', fontsize=18)
+        ax.set_ylabel(metric_key.replace('_', ' ').title(), fontweight='bold', fontsize=16)
+        ax.set_xlabel('System', fontweight='bold', fontsize=16)
         
         # Add value labels on bars
         for bar, value in zip(bars, values):
@@ -194,9 +206,9 @@ class RetrievalAnalyzer:
                     display_name = self.get_display_name(system_name)
                     ax.plot(query_ids, precisions, 'o-', label=display_name, alpha=0.8, linewidth=2, markersize=4)
         
-        ax.set_xlabel('Query Number', fontweight='bold', fontsize=12)
-        ax.set_ylabel('Precision@K', fontweight='bold', fontsize=12)
-        ax.set_title('Precision@K Performance Across Queries', fontsize=14, fontweight='bold')
+        ax.set_xlabel('Query Number', fontweight='bold', fontsize=16)
+        ax.set_ylabel('Precision@K', fontweight='bold', fontsize=16)
+        ax.set_title('Precision@K Performance Across Queries', fontsize=18, fontweight='bold')
         ax.legend()
         ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 1.0)
@@ -231,9 +243,9 @@ class RetrievalAnalyzer:
                     display_name = self.get_display_name(system_name)
                     ax.plot(query_ids, recalls, 'o-', label=display_name, alpha=0.8, linewidth=2, markersize=4)
         
-        ax.set_xlabel('Query Number', fontweight='bold', fontsize=12)
-        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=12)
-        ax.set_title('Recall@K Performance Across Queries', fontsize=14, fontweight='bold')
+        ax.set_xlabel('Query Number', fontweight='bold', fontsize=16)
+        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=16)
+        ax.set_title('Recall@K Performance Across Queries', fontsize=18, fontweight='bold')
         ax.legend()
         ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 1.0)
@@ -277,9 +289,9 @@ class RetrievalAnalyzer:
                              label=f'{display_name} (avg)', 
                              s=200, marker='*', edgecolors='black', linewidth=2)
         
-        ax.set_xlabel('Recall@K', fontweight='bold', fontsize=12)
-        ax.set_ylabel('Precision@K', fontweight='bold', fontsize=12)
-        ax.set_title('Precision vs Recall Analysis', fontsize=14, fontweight='bold')
+        ax.set_xlabel('Recall@K', fontweight='bold', fontsize=16)
+        ax.set_ylabel('Precision@K', fontweight='bold', fontsize=16)
+        ax.set_title('Precision vs Recall Analysis', fontsize=18, fontweight='bold')
         ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         ax.grid(True, alpha=0.3)
         ax.set_xlim(0, 1.0)
@@ -329,9 +341,9 @@ class RetrievalAnalyzer:
                            density=True, color=colors[color_idx % len(colors)])
                     color_idx += 1
         
-        ax.set_title(title, fontweight='bold', fontsize=14)
-        ax.set_xlabel(metric_key.replace('_', ' ').title(), fontweight='bold', fontsize=12)
-        ax.set_ylabel('Density', fontweight='bold', fontsize=12)
+        ax.set_title(title, fontweight='bold', fontsize=18)
+        ax.set_xlabel(metric_key.replace('_', ' ').title(), fontweight='bold', fontsize=16)
+        ax.set_ylabel('Density', fontweight='bold', fontsize=16)
         ax.legend()
         ax.grid(True, alpha=0.3)
         ax.set_xlim(0, 1.0)
@@ -612,9 +624,9 @@ class RecallOnlyAnalyzer(RetrievalAnalyzer):
                         for sys in systems]
         
         bars = ax.bar(systems, recall_values, yerr=recall_errors, capsize=5, alpha=0.7, color='skyblue')
-        ax.set_title('Recall@K Comparison', fontweight='bold', fontsize=14)
-        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=12)
-        ax.set_xlabel('Systems', fontweight='bold', fontsize=12)
+        ax.set_title('Recall@K Comparison', fontweight='bold', fontsize=18)
+        ax.set_ylabel('Recall@K', fontweight='bold', fontsize=16)
+        ax.set_xlabel('Systems', fontweight='bold', fontsize=16)
         
         # Add value labels on bars
         for bar, value in zip(bars, recall_values):
@@ -682,9 +694,9 @@ class RecallOnlyAnalyzer(RetrievalAnalyzer):
             ax.annotate(system, (avg_query_time, avg_recall), 
                        xytext=(5, 5), textcoords='offset points', fontweight='bold')
         
-        ax.set_xlabel('Average Query Time (seconds)', fontweight='bold', fontsize=12)
-        ax.set_ylabel('Average Recall@K', fontweight='bold', fontsize=12)
-        ax.set_title('Recall vs Query Time Trade-off', fontweight='bold', fontsize=14)
+        ax.set_xlabel('Average Query Time (seconds)', fontweight='bold', fontsize=16)
+        ax.set_ylabel('Average Recall@K', fontweight='bold', fontsize=16)
+        ax.set_title('Recall vs Query Time Trade-off', fontweight='bold', fontsize=18)
         ax.grid(True, alpha=0.3)
         ax.legend()
         
