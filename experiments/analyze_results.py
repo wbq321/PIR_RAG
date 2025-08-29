@@ -21,13 +21,13 @@ sns.set_palette("husl")
 
 # Set global font sizes for all plots
 plt.rcParams.update({
-    'font.size': 18,           # Base font size
-    'axes.titlesize': 22,      # Title font size
-    'axes.labelsize': 20,      # Axis label font size
-    'xtick.labelsize': 18,     # X-axis tick labels
-    'ytick.labelsize': 18,     # Y-axis tick labels
-    'legend.fontsize': 18,     # Legend font size
-    'figure.titlesize': 24     # Figure title font size
+    'font.size': 26,           # Base font size
+    'axes.titlesize': 28,      # Title font size
+    'axes.labelsize': 26,      # Axis label font size
+    'xtick.labelsize': 26,     # X-axis tick labels
+    'ytick.labelsize': 26,     # Y-axis tick labels
+    'legend.fontsize': 26,     # Legend font size
+    'figure.titlesize': 28     # Figure title font size
 })
 
 # Import retrieval analysis
