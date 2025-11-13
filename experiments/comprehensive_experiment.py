@@ -597,7 +597,8 @@ class PIRExperimentRunner:
             # FIXED: Remove redundant setup - let test_retrieval_performance handle it
             pir_rag_results = tester.test_retrieval_performance(
                 "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k,
-                pir_rag_k_clusters=pir_rag_k_clusters
+                pir_rag_k_clusters=pir_rag_k_clusters,
+                pir_rag_cluster_top_k=pir_rag_cluster_top_k
             )
             retrieval_results['pir_rag'] = pir_rag_results
             print(f"✅ PIR-RAG retrieval test completed")

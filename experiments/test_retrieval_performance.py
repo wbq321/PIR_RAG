@@ -401,6 +401,7 @@ class RetrievalPerformanceTester:
     def test_retrieval_performance(self, system_name: str, system, embeddings: np.ndarray,
                                   documents: List[str], queries: List[np.ndarray],
                                   top_k: int = 10, pir_rag_k_clusters: int = None,
+                                  pir_rag_cluster_top_k: int = 3,
                                   tiptoe_k_clusters: int = None, graph_params: Dict = None) -> Dict[str, Any]:
         """
         Hybrid test: Plaintext simulation for retrieval quality + Real PIR for performance metrics.
@@ -484,7 +485,7 @@ class RetrievalPerformanceTester:
             if system_name == "PIR-RAG":
                 retrieved_doc_indices = self._simulate_pir_rag_search(
                     query_embedding, documents, embeddings,
-                    n_clusters=k_clusters, top_k_clusters=3,
+                    n_clusters=k_clusters, top_k_clusters=pir_rag_cluster_top_k,
                     precomputed_clusters=pir_rag_clusters  # FIXED: Pass pre-computed clusters
                 )
             elif system_name == "Graph-PIR":
@@ -533,7 +534,7 @@ class RetrievalPerformanceTester:
                 if system_name == "PIR-RAG":
                     # Run actual PIR operations to measure performance
                     query_tensor = torch.from_numpy(query_embedding).unsqueeze(0)
-                    relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=3)
+                    relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=pir_rag_cluster_top_k)
                     doc_tuples, pir_metrics = client.pir_retrieve(relevant_clusters, server)
 
                     communication_cost = pir_metrics.get('upload_bytes', 0) + pir_metrics.get('download_bytes', 0)
