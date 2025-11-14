@@ -1,0 +1,1167 @@
+{
+  "doc_sizes": [
+    500,
+    1000,
+    2000,
+    5000
+  ],
+  "dataset_name": null,
+  "pir_rag_results": [
+    {
+      "system": "PIR-RAG",
+      "dataset_name": null,
+      "setup_time": 1.4720633999968413,
+      "clustering_time": 1.4719034000008833,
+      "server_setup_time": 0.00015499998698942363,
+      "avg_query_time": 0.9313117200043053,
+      "std_query_time": 0.019689532331355016,
+      "query_times": [
+        0.9370399000181351,
+        0.936752500012517,
+        0.923876199987717,
+        0.899330899992492,
+        0.9595591000106651
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0.0008871000027284026,
+          "pir_retrieval_time": 0.9281068000127561,
+          "reranking_time": 0.008042600005865097,
+          "query_gen_time": 0.00011910000466741621,
+          "server_time": 0.4627962000085972,
+          "decode_time": 0.19813360000262037
+        },
+        {
+          "cluster_selection_time": 0.00031289999606087804,
+          "pir_retrieval_time": 0.935449200012954,
+          "reranking_time": 0.000988499989034608,
+          "query_gen_time": 0.0001412999990861863,
+          "server_time": 0.5335851999989245,
+          "decode_time": 0.1252305000089109
+        },
+        {
+          "cluster_selection_time": 0.0001981999957934022,
+          "pir_retrieval_time": 0.9221265999949537,
+          "reranking_time": 0.0015502999885939062,
+          "query_gen_time": 0.0001362999901175499,
+          "server_time": 0.5033759999787435,
+          "decode_time": 0.13482290002866648
+        },
+        {
+          "cluster_selection_time": 0.0001996000064536929,
+          "pir_retrieval_time": 0.8979167999932542,
+          "reranking_time": 0.0012125000066589564,
+          "query_gen_time": 0.00014530002954415977,
+          "server_time": 0.4937011000001803,
+          "decode_time": 0.11837379995267838
+        },
+        {
+          "cluster_selection_time": 0.00020939999376423657,
+          "pir_retrieval_time": 0.958192499994766,
+          "reranking_time": 0.0011556000099517405,
+          "query_gen_time": 0.00015479998546652496,
+          "server_time": 0.5239135000156239,
+          "decode_time": 0.1304291000124067
+        }
+      ],
+      "avg_upload_bytes": 2400.0,
+      "avg_download_bytes": 23836643.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 2400,
+          "download_bytes": 23963077
+        },
+        {
+          "upload_bytes": 2400,
+          "download_bytes": 23786900
+        },
+        {
+          "upload_bytes": 2400,
+          "download_bytes": 23819757
+        },
+        {
+          "upload_bytes": 2400,
+          "download_bytes": 23819700
+        },
+        {
+          "upload_bytes": 2400,
+          "download_bytes": 23793781
+        }
+      ],
+      "parameters": {
+        "k_clusters": 25,
+        "cluster_top_k": 3,
+        "top_k": 10
+      },
+      "n_documents": 500,
+      "embedding_dim": 384
+    },
+    {
+      "system": "PIR-RAG",
+      "dataset_name": null,
+      "setup_time": 0.08418710000114515,
+      "clustering_time": 0.08395569998538122,
+      "server_setup_time": 0.00022410001838579774,
+      "avg_query_time": 1.7437671400024555,
+      "std_query_time": 0.0950384152521315,
+      "query_times": [
+        1.8239395999989938,
+        1.7362834000086877,
+        1.5628152000135742,
+        1.803973500005668,
+        1.791823999985354
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0.0004986999847460538,
+          "pir_retrieval_time": 1.8216457000235096,
+          "reranking_time": 0.0017933000053744763,
+          "query_gen_time": 0.00053190000471659,
+          "server_time": 1.0191741999587975,
+          "decode_time": 0.24557849997654557
+        },
+        {
+          "cluster_selection_time": 0.0002145000034943223,
+          "pir_retrieval_time": 1.7353278000082355,
+          "reranking_time": 0.0007395999855361879,
+          "query_gen_time": 0.0002571999793872237,
+          "server_time": 0.9644211999839172,
+          "decode_time": 0.22362209999118932
+        },
+        {
+          "cluster_selection_time": 0.00020929999300278723,
+          "pir_retrieval_time": 1.5607462000043597,
+          "reranking_time": 0.0018585000070743263,
+          "query_gen_time": 0.00026050000451505184,
+          "server_time": 0.851504800026305,
+          "decode_time": 0.21657600000617094
+        },
+        {
+          "cluster_selection_time": 0.00015589999384246767,
+          "pir_retrieval_time": 1.802040600014152,
+          "reranking_time": 0.0017752999847289175,
+          "query_gen_time": 0.00021319999359548092,
+          "server_time": 1.014740399987204,
+          "decode_time": 0.22453550004865974
+        },
+        {
+          "cluster_selection_time": 0.0003192999865859747,
+          "pir_retrieval_time": 1.790528000012273,
+          "reranking_time": 0.0009748000011313707,
+          "query_gen_time": 0.00038499999209307134,
+          "server_time": 0.9789402000023983,
+          "decode_time": 0.2448197999910917
+        }
+      ],
+      "avg_upload_bytes": 4800.0,
+      "avg_download_bytes": 47584237.4,
+      "communication_costs": [
+        {
+          "upload_bytes": 4800,
+          "download_bytes": 47610111
+        },
+        {
+          "upload_bytes": 4800,
+          "download_bytes": 47544516
+        },
+        {
+          "upload_bytes": 4800,
+          "download_bytes": 47575591
+        },
+        {
+          "upload_bytes": 4800,
+          "download_bytes": 47622235
+        },
+        {
+          "upload_bytes": 4800,
+          "download_bytes": 47568734
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "cluster_top_k": 3,
+        "top_k": 10
+      },
+      "n_documents": 1000,
+      "embedding_dim": 384
+    },
+    {
+      "system": "PIR-RAG",
+      "dataset_name": null,
+      "setup_time": 0.3677949999982957,
+      "clustering_time": 0.36760540000977926,
+      "server_setup_time": 0.00018370000179857016,
+      "avg_query_time": 3.4100648200022987,
+      "std_query_time": 0.06419236716483046,
+      "query_times": [
+        3.398960300022736,
+        3.4263810999982525,
+        3.475261199986562,
+        3.456972100015264,
+        3.292749399988679
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0.0005525000160560012,
+          "pir_retrieval_time": 3.396827399992617,
+          "reranking_time": 0.0015789000026416034,
+          "query_gen_time": 0.000982600002316758,
+          "server_time": 1.902664699970046,
+          "decode_time": 0.4694646999705583
+        },
+        {
+          "cluster_selection_time": 0.0004084999964106828,
+          "pir_retrieval_time": 3.424940199998673,
+          "reranking_time": 0.0010305999894626439,
+          "query_gen_time": 0.0008936999947763979,
+          "server_time": 1.8756419999990612,
+          "decode_time": 0.4228119000326842
+        },
+        {
+          "cluster_selection_time": 0.0005956999957561493,
+          "pir_retrieval_time": 3.4732362999930046,
+          "reranking_time": 0.0014273999840952456,
+          "query_gen_time": 0.0007310999790206552,
+          "server_time": 1.883686699991813,
+          "decode_time": 0.43230199997196905
+        },
+        {
+          "cluster_selection_time": 0.0003347000165376812,
+          "pir_retrieval_time": 3.4555939999991097,
+          "reranking_time": 0.0010417000157758594,
+          "query_gen_time": 0.00038479999057017267,
+          "server_time": 1.9074918999685906,
+          "decode_time": 0.4253185000270605
+        },
+        {
+          "cluster_selection_time": 0.000544899987289682,
+          "pir_retrieval_time": 3.2910140000167303,
+          "reranking_time": 0.001188700000056997,
+          "query_gen_time": 0.0006617000326514244,
+          "server_time": 1.7846851999638602,
+          "decode_time": 0.4262200999946799
+        }
+      ],
+      "avg_upload_bytes": 9600.0,
+      "avg_download_bytes": 95049002.6,
+      "communication_costs": [
+        {
+          "upload_bytes": 9600,
+          "download_bytes": 95114905
+        },
+        {
+          "upload_bytes": 9600,
+          "download_bytes": 95021825
+        },
+        {
+          "upload_bytes": 9600,
+          "download_bytes": 95087403
+        },
+        {
+          "upload_bytes": 9600,
+          "download_bytes": 95023362
+        },
+        {
+          "upload_bytes": 9600,
+          "download_bytes": 94997518
+        }
+      ],
+      "parameters": {
+        "k_clusters": 100,
+        "cluster_top_k": 3,
+        "top_k": 10
+      },
+      "n_documents": 2000,
+      "embedding_dim": 384
+    },
+    {
+      "system": "PIR-RAG",
+      "dataset_name": null,
+      "setup_time": 2.2694363000045996,
+      "clustering_time": 2.2692067999741994,
+      "server_setup_time": 0.000225499999942258,
+      "avg_query_time": 9.018887320009526,
+      "std_query_time": 0.2068610347639795,
+      "query_times": [
+        8.845286100025987,
+        9.411220900015905,
+        9.038642899977276,
+        8.922728900011862,
+        8.876557800016599
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0.0027362000255379826,
+          "pir_retrieval_time": 8.834379000007175,
+          "reranking_time": 0.00816810000105761,
+          "query_gen_time": 0.0007116000051610172,
+          "server_time": 4.718422699981602,
+          "decode_time": 1.1088071000413038
+        },
+        {
+          "cluster_selection_time": 0.0034386999905109406,
+          "pir_retrieval_time": 9.406573699990986,
+          "reranking_time": 0.0012060000153724104,
+          "query_gen_time": 0.0005581000295933336,
+          "server_time": 5.16696710002725,
+          "decode_time": 1.157460300019011
+        },
+        {
+          "cluster_selection_time": 0.00048149999929592013,
+          "pir_retrieval_time": 9.03650019998895,
+          "reranking_time": 0.0016593999753240496,
+          "query_gen_time": 0.00034340002457611263,
+          "server_time": 4.90594870003406,
+          "decode_time": 1.2112933999742381
+        },
+        {
+          "cluster_selection_time": 0.00036910001654177904,
+          "pir_retrieval_time": 8.920785099995555,
+          "reranking_time": 0.0015727999852970243,
+          "query_gen_time": 0.00031900001340545714,
+          "server_time": 4.928463200019905,
+          "decode_time": 1.1728704000124708
+        },
+        {
+          "cluster_selection_time": 0.0007344000041484833,
+          "pir_retrieval_time": 8.873465499986196,
+          "reranking_time": 0.002354700001887977,
+          "query_gen_time": 0.00028410000959411263,
+          "server_time": 4.971171300014248,
+          "decode_time": 1.1725883999897633
+        }
+      ],
+      "avg_upload_bytes": 24000.0,
+      "avg_download_bytes": 237563184.2,
+      "communication_costs": [
+        {
+          "upload_bytes": 24000,
+          "download_bytes": 237582646
+        },
+        {
+          "upload_bytes": 24000,
+          "download_bytes": 237525912
+        },
+        {
+          "upload_bytes": 24000,
+          "download_bytes": 237572701
+        },
+        {
+          "upload_bytes": 24000,
+          "download_bytes": 237455173
+        },
+        {
+          "upload_bytes": 24000,
+          "download_bytes": 237679489
+        }
+      ],
+      "parameters": {
+        "k_clusters": 250,
+        "cluster_top_k": 3,
+        "top_k": 10
+      },
+      "n_documents": 5000,
+      "embedding_dim": 384
+    }
+  ],
+  "graph_pir_results": [
+    {
+      "system": "Graph-PIR",
+      "dataset_name": null,
+      "setup_time": 1.4529838000016753,
+      "graph_setup_time": 1.430456400004914,
+      "vector_pir_setup_time": 0.021198300004471093,
+      "doc_pir_setup_time": 5.989999044686556e-05,
+      "avg_query_time": 2.32459415999474,
+      "std_query_time": 0.03746602883865162,
+      "query_times": [
+        2.3776667999918573,
+        2.3307004000234883,
+        2.3396095999924,
+        2.311855399981141,
+        2.2631385999848135
+      ],
+      "step_times": [
+        {
+          "phase1_time": 2.0890151000057813,
+          "phase2_time": 0.2880891000095289,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.00377820004359819,
+          "decryption_time": 0.0002251000260002911
+        },
+        {
+          "phase1_time": 2.038316800026223,
+          "phase2_time": 0.29169750001165085,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.002426299935905263,
+          "decryption_time": 0.00022210003226064146
+        },
+        {
+          "phase1_time": 2.071757099998649,
+          "phase2_time": 0.2673907999997027,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0022085000236984342,
+          "decryption_time": 0.00020169990602880716
+        },
+        {
+          "phase1_time": 2.0346850999922026,
+          "phase2_time": 0.27630120000685565,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.002251300000352785,
+          "decryption_time": 0.00020599993877112865
+        },
+        {
+          "phase1_time": 1.996443400013959,
+          "phase2_time": 0.26611660001799464,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.002441900025587529,
+          "decryption_time": 0.00020629994105547667
+        }
+      ],
+      "avg_upload_bytes": 332339.2,
+      "avg_download_bytes": 109120.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 332544,
+          "download_bytes": 110400,
+          "phase1_upload": 12544,
+          "phase1_download": 78400,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 332288,
+          "download_bytes": 108800,
+          "phase1_upload": 12288,
+          "phase1_download": 76800,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 332544,
+          "download_bytes": 110400,
+          "phase1_upload": 12544,
+          "phase1_download": 78400,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 332288,
+          "download_bytes": 108800,
+          "phase1_upload": 12288,
+          "phase1_download": 76800,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 332032,
+          "download_bytes": 107200,
+          "phase1_upload": 12032,
+          "phase1_download": 75200,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        }
+      ],
+      "parameters": {
+        "k_neighbors": 16,
+        "ef_construction": 100,
+        "max_connections": 16,
+        "ef_search": 30,
+        "max_iterations": 10,
+        "parallel": 1,
+        "max_neighbors_per_step": 5
+      },
+      "n_documents": 500,
+      "embedding_dim": 384
+    },
+    {
+      "system": "Graph-PIR",
+      "dataset_name": null,
+      "setup_time": 3.998520599998301,
+      "graph_setup_time": 3.9432213000254706,
+      "vector_pir_setup_time": 0.0539678999921307,
+      "doc_pir_setup_time": 0.00013269999180920422,
+      "avg_query_time": 2.762703559995862,
+      "std_query_time": 0.09474033543172387,
+      "query_times": [
+        2.755767900001956,
+        2.7006588999938685,
+        2.7136510999989696,
+        2.9474358999868855,
+        2.696003999997629
+      ],
+      "step_times": [
+        {
+          "phase1_time": 2.1341740999778267,
+          "phase2_time": 0.6209833000029903,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.005648200050927699,
+          "decryption_time": 0.0003551999689079821
+        },
+        {
+          "phase1_time": 2.0938466000079643,
+          "phase2_time": 0.6062348000123166,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.007726000068942085,
+          "decryption_time": 0.0002559000567998737
+        },
+        {
+          "phase1_time": 2.0880117999913637,
+          "phase2_time": 0.6250695000053383,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.005681900045601651,
+          "decryption_time": 0.00026460003573447466
+        },
+        {
+          "phase1_time": 2.125021399988327,
+          "phase2_time": 0.821574600005988,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.006942399952095002,
+          "decryption_time": 0.0003597000613808632
+        },
+        {
+          "phase1_time": 2.092003800004022,
+          "phase2_time": 0.6030051999841817,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0052361999987624586,
+          "decryption_time": 0.00024189995019696653
+        }
+      ],
+      "avg_upload_bytes": 652646.4,
+      "avg_download_bytes": 111040.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 652800,
+          "download_bytes": 112000,
+          "phase1_upload": 12800,
+          "phase1_download": 80000,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 652544,
+          "download_bytes": 110400,
+          "phase1_upload": 12544,
+          "phase1_download": 78400,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 652544,
+          "download_bytes": 110400,
+          "phase1_upload": 12544,
+          "phase1_download": 78400,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 652800,
+          "download_bytes": 112000,
+          "phase1_upload": 12800,
+          "phase1_download": 80000,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 652544,
+          "download_bytes": 110400,
+          "phase1_upload": 12544,
+          "phase1_download": 78400,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        }
+      ],
+      "parameters": {
+        "k_neighbors": 16,
+        "ef_construction": 100,
+        "max_connections": 16,
+        "ef_search": 30,
+        "max_iterations": 10,
+        "parallel": 1,
+        "max_neighbors_per_step": 5
+      },
+      "n_documents": 1000,
+      "embedding_dim": 384
+    },
+    {
+      "system": "Graph-PIR",
+      "dataset_name": null,
+      "setup_time": 11.566060200013453,
+      "graph_setup_time": 11.433870199980447,
+      "vector_pir_setup_time": 0.13085819999105297,
+      "doc_pir_setup_time": 5.3099996875971556e-05,
+      "avg_query_time": 3.373095379996812,
+      "std_query_time": 0.11907180250152176,
+      "query_times": [
+        3.3073307999875396,
+        3.4517075000039767,
+        3.174050500005251,
+        3.5076189000101294,
+        3.4247691999771632
+      ],
+      "step_times": [
+        {
+          "phase1_time": 2.042155500006629,
+          "phase2_time": 1.2644082000188064,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.010972899995977059,
+          "decryption_time": 0.00036880007246509194
+        },
+        {
+          "phase1_time": 2.0964371000009123,
+          "phase2_time": 1.3545970999985002,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.011196100036613643,
+          "decryption_time": 0.0002871000615414232
+        },
+        {
+          "phase1_time": 2.0013157000066712,
+          "phase2_time": 1.1721414999919944,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.010464100079843774,
+          "decryption_time": 0.00025549999554641545
+        },
+        {
+          "phase1_time": 2.131096199998865,
+          "phase2_time": 1.375802399998065,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.01206009992165491,
+          "decryption_time": 0.00031419997685588896
+        },
+        {
+          "phase1_time": 2.1025392999872565,
+          "phase2_time": 1.3215436000027694,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.01222910001524724,
+          "decryption_time": 0.0002901999687310308
+        }
+      ],
+      "avg_upload_bytes": 1292441.6,
+      "avg_download_bytes": 109760.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 1292288,
+          "download_bytes": 108800,
+          "phase1_upload": 12288,
+          "phase1_download": 76800,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 1292544,
+          "download_bytes": 110400,
+          "phase1_upload": 12544,
+          "phase1_download": 78400,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 1292032,
+          "download_bytes": 107200,
+          "phase1_upload": 12032,
+          "phase1_download": 75200,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 1292800,
+          "download_bytes": 112000,
+          "phase1_upload": 12800,
+          "phase1_download": 80000,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 1292544,
+          "download_bytes": 110400,
+          "phase1_upload": 12544,
+          "phase1_download": 78400,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        }
+      ],
+      "parameters": {
+        "k_neighbors": 16,
+        "ef_construction": 100,
+        "max_connections": 16,
+        "ef_search": 30,
+        "max_iterations": 10,
+        "parallel": 1,
+        "max_neighbors_per_step": 5
+      },
+      "n_documents": 2000,
+      "embedding_dim": 384
+    },
+    {
+      "system": "Graph-PIR",
+      "dataset_name": null,
+      "setup_time": 41.49855970000499,
+      "graph_setup_time": 41.1799306999892,
+      "vector_pir_setup_time": 0.31619849998969585,
+      "doc_pir_setup_time": 0.0001168999879155308,
+      "avg_query_time": 4.608291499991902,
+      "std_query_time": 0.10979772498192136,
+      "query_times": [
+        4.699851300014416,
+        4.499401499982923,
+        4.677324599993881,
+        4.712699999974575,
+        4.452180099993711
+      ],
+      "step_times": [
+        {
+          "phase1_time": 1.4976648000010755,
+          "phase2_time": 3.201545299991267,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.03661359995021485,
+          "decryption_time": 0.00028440001187846065
+        },
+        {
+          "phase1_time": 1.4697503999923356,
+          "phase2_time": 3.02907689998392,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.02627929995651357,
+          "decryption_time": 0.00028139998903498054
+        },
+        {
+          "phase1_time": 1.493316700012656,
+          "phase2_time": 3.183646999998018,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.027804500015918165,
+          "decryption_time": 0.00029470003210008144
+        },
+        {
+          "phase1_time": 1.5001652000064496,
+          "phase2_time": 3.2117782999994233,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.028365800011670217,
+          "decryption_time": 0.0002923999563790858
+        },
+        {
+          "phase1_time": 1.4593826000054833,
+          "phase2_time": 2.992090800020378,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.02699500002199784,
+          "decryption_time": 0.000291000003926456
+        }
+      ],
+      "avg_upload_bytes": 3208857.6,
+      "avg_download_bytes": 87360.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 3208960,
+          "download_bytes": 88000,
+          "phase1_upload": 8960,
+          "phase1_download": 56000,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 3208704,
+          "download_bytes": 86400,
+          "phase1_upload": 8704,
+          "phase1_download": 54400,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 3208960,
+          "download_bytes": 88000,
+          "phase1_upload": 8960,
+          "phase1_download": 56000,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 3208960,
+          "download_bytes": 88000,
+          "phase1_upload": 8960,
+          "phase1_download": 56000,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 3208704,
+          "download_bytes": 86400,
+          "phase1_upload": 8704,
+          "phase1_download": 54400,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        }
+      ],
+      "parameters": {
+        "k_neighbors": 16,
+        "ef_construction": 100,
+        "max_connections": 16,
+        "ef_search": 30,
+        "max_iterations": 10,
+        "parallel": 1,
+        "max_neighbors_per_step": 5
+      },
+      "n_documents": 5000,
+      "embedding_dim": 384
+    }
+  ],
+  "tiptoe_results": [
+    {
+      "system": "Tiptoe",
+      "dataset_name": null,
+      "setup_time": 0.33445180000853725,
+      "crypto_setup_time": 0,
+      "clustering_time": 0.13004680001176894,
+      "avg_query_time": 0.002878600003896281,
+      "std_query_time": 0.0016508205717617277,
+      "query_times": [
+        0.006145999999716878,
+        0.001829599990742281,
+        0.0024010000051930547,
+        0.001777500001480803,
+        0.002238900022348389
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0023942999832797796,
+          "pir_retrieval_time": 0.0023911999887786806,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0005441000103019178,
+          "pir_retrieval_time": 0.00035039999056607485,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0003794000076595694,
+          "pir_retrieval_time": 0.0010264999873470515,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00045319998753257096,
+          "pir_retrieval_time": 0.00012430001515895128,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00046969999675638974,
+          "pir_retrieval_time": 0.0006302999972831458,
+          "total_ranking_time": 0
+        }
+      ],
+      "avg_upload_bytes": 1184.0,
+      "avg_download_bytes": 1184.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 1728,
+          "download_bytes": 1728,
+          "pir_communication": 1920
+        },
+        {
+          "upload_bytes": 960,
+          "download_bytes": 960,
+          "pir_communication": 384
+        },
+        {
+          "upload_bytes": 1280,
+          "download_bytes": 1280,
+          "pir_communication": 1024
+        },
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        },
+        {
+          "upload_bytes": 1104,
+          "download_bytes": 1104,
+          "pir_communication": 672
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "use_real_crypto": true,
+        "poly_degree": 8192,
+        "plain_modulus": 1024
+      },
+      "n_documents": 500,
+      "embedding_dim": 384
+    },
+    {
+      "system": "Tiptoe",
+      "dataset_name": null,
+      "setup_time": 0.4698031000152696,
+      "crypto_setup_time": 0,
+      "clustering_time": 0.2365118000016082,
+      "avg_query_time": 0.005851040006382391,
+      "std_query_time": 0.006379470023954945,
+      "query_times": [
+        0.003253900009440258,
+        0.0030304999963846058,
+        0.001573500019731,
+        0.0028408000071067363,
+        0.018556499999249354
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00037009999505244195,
+          "pir_retrieval_time": 0.0017806999967433512,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0003721999819390476,
+          "pir_retrieval_time": 0.0016402000037487596,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00029090000316500664,
+          "pir_retrieval_time": 0.0005065000150352716,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0002701000194065273,
+          "pir_retrieval_time": 0.0016772000235505402,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0019391999812796712,
+          "pir_retrieval_time": 0.015564800007268786,
+          "total_ranking_time": 0
+        }
+      ],
+      "avg_upload_bytes": 2659.2,
+      "avg_download_bytes": 2659.2,
+      "communication_costs": [
+        {
+          "upload_bytes": 1728,
+          "download_bytes": 1728,
+          "pir_communication": 1920
+        },
+        {
+          "upload_bytes": 1728,
+          "download_bytes": 1728,
+          "pir_communication": 1920
+        },
+        {
+          "upload_bytes": 1104,
+          "download_bytes": 1104,
+          "pir_communication": 672
+        },
+        {
+          "upload_bytes": 1728,
+          "download_bytes": 1728,
+          "pir_communication": 1920
+        },
+        {
+          "upload_bytes": 7008,
+          "download_bytes": 7008,
+          "pir_communication": 12480
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "use_real_crypto": true,
+        "poly_degree": 8192,
+        "plain_modulus": 1024
+      },
+      "n_documents": 1000,
+      "embedding_dim": 384
+    },
+    {
+      "system": "Tiptoe",
+      "dataset_name": null,
+      "setup_time": 0.5980522999889217,
+      "crypto_setup_time": 0,
+      "clustering_time": 0.3521894000004977,
+      "avg_query_time": 0.008769259986001999,
+      "std_query_time": 0.009438824222553734,
+      "query_times": [
+        0.02741119998972863,
+        0.003342899988638237,
+        0.0038626999885309488,
+        0.00683909998042509,
+        0.002390399982687086
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0006138000171631575,
+          "pir_retrieval_time": 0.025292900012573227,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0005936000088695437,
+          "pir_retrieval_time": 0.001051500003086403,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.000448200007667765,
+          "pir_retrieval_time": 0.0021628999966196716,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0005028000159654766,
+          "pir_retrieval_time": 0.005274100025417283,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0004802000185009092,
+          "pir_retrieval_time": 0.0007444999937433749,
+          "total_ranking_time": 0
+        }
+      ],
+      "avg_upload_bytes": 3465.6,
+      "avg_download_bytes": 3465.6,
+      "communication_costs": [
+        {
+          "upload_bytes": 10208,
+          "download_bytes": 10208,
+          "pir_communication": 18880
+        },
+        {
+          "upload_bytes": 1280,
+          "download_bytes": 1280,
+          "pir_communication": 1024
+        },
+        {
+          "upload_bytes": 1728,
+          "download_bytes": 1728,
+          "pir_communication": 1920
+        },
+        {
+          "upload_bytes": 3008,
+          "download_bytes": 3008,
+          "pir_communication": 4480
+        },
+        {
+          "upload_bytes": 1104,
+          "download_bytes": 1104,
+          "pir_communication": 672
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "use_real_crypto": true,
+        "poly_degree": 8192,
+        "plain_modulus": 1024
+      },
+      "n_documents": 2000,
+      "embedding_dim": 384
+    },
+    {
+      "system": "Tiptoe",
+      "dataset_name": null,
+      "setup_time": 0.7464529999997467,
+      "crypto_setup_time": 0,
+      "clustering_time": 0.4054945000098087,
+      "avg_query_time": 0.0016392400022596121,
+      "std_query_time": 0.0002884583527153943,
+      "query_times": [
+        0.0021727000130340457,
+        0.0014232000103220344,
+        0.0013556999911088496,
+        0.0015786000003572553,
+        0.0016659999964758754
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00047480000648647547,
+          "pir_retrieval_time": 0.00014230000670067966,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0003436999977566302,
+          "pir_retrieval_time": 0.0001306000049225986,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00031590001890435815,
+          "pir_retrieval_time": 0.00012549999519251287,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0004516999761108309,
+          "pir_retrieval_time": 0.00012769998284056783,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.000458099995739758,
+          "pir_retrieval_time": 0.0001154000055976212,
+          "total_ranking_time": 0
+        }
+      ],
+      "avg_upload_bytes": 848.0,
+      "avg_download_bytes": 848.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        },
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        },
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        },
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        },
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "use_real_crypto": true,
+        "poly_degree": 8192,
+        "plain_modulus": 1024
+      },
+      "n_documents": 5000,
+      "embedding_dim": 384
+    }
+  ]
+}

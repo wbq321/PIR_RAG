@@ -1,0 +1,4 @@
+n_documents,n_queries,top_k,embed_dim,data_type,system,setup_time,avg_query_time,std_query_time,avg_upload_bytes,avg_download_bytes,recall_at_1,recall_at_5,recall_at_10,precision_at_1,precision_at_5,precision_at_10,ndcg_at_10,mrr
+1000,10,10,192,dataset,PIR-RAG,1.8002793999912683,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A
+1000,10,10,192,dataset,Graph-PIR,4.2546800000127405,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A
+1000,10,10,192,dataset,Tiptoe,0.448520500009181,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A

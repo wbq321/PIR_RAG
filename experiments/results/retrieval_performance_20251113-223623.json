@@ -1,0 +1,80 @@
+{
+  "experiment_info": {
+    "timestamp": "20251113-223623",
+    "dataset_name": "LAION",
+    "n_docs": 2,
+    "n_queries": 2,
+    "top_k": 10,
+    "embed_dim": 512,
+    "data_type": "dataset"
+  },
+  "pir_rag": null,
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 0.0017389999993611127,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.0006068999937269837,
+        "pir_performance_time": 2.549738600006094,
+        "total_query_time": 2.550345499999821,
+        "communication_bytes": 112256,
+        "num_retrieved_simulated": 2,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 1.0,
+        "avg_similarity": 0.22392032809779577,
+        "num_retrieved": 2
+      },
+      {
+        "query_idx": 1,
+        "quality_simulation_time": 0.0010220000112894922,
+        "pir_performance_time": 2.5346983000054024,
+        "total_query_time": 2.535720300016692,
+        "communication_bytes": 112256,
+        "num_retrieved_simulated": 1,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.6131471927654584,
+        "avg_similarity": 0.12701845387722446,
+        "num_retrieved": 1
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 1.0,
+        "avg_similarity": 0.22392032809779577,
+        "num_retrieved": 2
+      },
+      {
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.6131471927654584,
+        "avg_similarity": 0.12701845387722446,
+        "num_retrieved": 1
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      112256,
+      112256
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.000814450002508238,
+    "avg_pir_performance_time": 2.5422184500057483,
+    "avg_total_query_time": 2.5430329000082565,
+    "avg_communication_bytes": 112256.0,
+    "total_communication_kb": 219.25,
+    "avg_precision_at_k": 1.0,
+    "std_precision_at_k": 0.0,
+    "avg_recall_at_k": 0.15000000000000002,
+    "std_recall_at_k": 0.05,
+    "avg_ndcg_at_k": 0.8065735963827292,
+    "std_ndcg_at_k": 0.19342640361727081,
+    "avg_avg_similarity": 0.17546939098751013,
+    "std_avg_similarity": 0.048450937110285655
+  },
+  "tiptoe": null
+}

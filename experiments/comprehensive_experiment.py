@@ -36,6 +36,14 @@ except ImportError:
     RETRIEVAL_TESTING_AVAILABLE = False
     print("⚠️  Retrieval performance testing not available. Install required dependencies.")
 
+# Import dataset loader
+try:
+    from dataset_loader import DatasetLoader
+    DATASET_LOADER_AVAILABLE = True
+except ImportError:
+    DATASET_LOADER_AVAILABLE = False
+    print("⚠️  Dataset loader not available.")
+
 
 def generate_test_queries(documents: List[str], n_queries: int = 10, seed: int = 42) -> List[str]:
     """Generate realistic test queries by sampling from corpus documents."""
@@ -135,11 +143,26 @@ class PIRExperimentRunner:
         ]
         return embeddings, documents
 
+    def generate_synthetic_dataset(self, n_docs: int, n_queries: int, embed_dim: int = 384, seed: int = 42) -> Tuple[np.ndarray, List[str], List[np.ndarray]]:
+        """Generate synthetic dataset with embeddings, documents and queries for testing."""
+        print(f"Generating synthetic dataset: {n_docs} docs, {n_queries} queries, {embed_dim}D embeddings")
+
+        # Generate documents and embeddings
+        embeddings, documents = self.generate_test_data(n_docs, embed_dim, seed)
+
+        # Generate queries using a different seed to avoid correlation
+        query_rng = np.random.RandomState(seed + 1000)
+        queries = [query_rng.randn(embed_dim).astype(np.float32) for _ in range(n_queries)]
+
+        return embeddings, documents, queries
+
     def run_pir_rag_experiment(self, embeddings: np.ndarray, documents: List[str],
                               queries: List[np.ndarray], k_clusters: int = 5,
-                              cluster_top_k: int = 3, top_k: int = 10) -> Dict[str, Any]:
+                              cluster_top_k: int = 3, top_k: int = 10,
+                              dataset_name: str = None) -> Dict[str, Any]:
         """Run PIR-RAG experiment with detailed timing."""
-        print(f"Running PIR-RAG experiment (k_clusters={k_clusters}, cluster_top_k={cluster_top_k})")
+        dataset_info = f" on {dataset_name}" if dataset_name else ""
+        print(f"Running PIR-RAG experiment{dataset_info} (k_clusters={k_clusters}, cluster_top_k={cluster_top_k})")
 
         # Setup phase
         setup_start = time.perf_counter()
@@ -203,6 +226,7 @@ class PIRExperimentRunner:
 
         return {
             'system': 'PIR-RAG',
+            'dataset_name': dataset_name,
             'setup_time': total_setup_time,
             'clustering_time': clustering_time,
             'server_setup_time': server_setup_time,
@@ -220,9 +244,10 @@ class PIRExperimentRunner:
 
     def run_graph_pir_experiment(self, embeddings: np.ndarray, documents: List[str],
                                 queries: List[np.ndarray], graph_params: Dict = None,
-                                top_k: int = 10) -> Dict[str, Any]:
+                                top_k: int = 10, dataset_name: str = None) -> Dict[str, Any]:
         """Run Graph-PIR experiment with detailed timing."""
-        print(f"Running Graph-PIR experiment with {len(documents)} docs")
+        dataset_info = f" on {dataset_name}" if dataset_name else ""
+        print(f"Running Graph-PIR experiment{dataset_info} with {len(documents)} docs")
 
         if graph_params is None:
             graph_params = {'k_neighbors': 16, 'ef_construction': 20, 'max_connections': 16,
@@ -274,6 +299,7 @@ class PIRExperimentRunner:
 
         return {
             'system': 'Graph-PIR',
+            'dataset_name': dataset_name,
             'setup_time': setup_time,
             'graph_setup_time': setup_metrics.get('graph_setup_time', 0),
             'vector_pir_setup_time': setup_metrics.get('vector_pir_setup_time', 0),
@@ -292,9 +318,10 @@ class PIRExperimentRunner:
 
     def run_tiptoe_experiment(self, embeddings: np.ndarray, documents: List[str],
                              queries: List[np.ndarray], tiptoe_params: Dict = None,
-                             top_k: int = 10) -> Dict[str, Any]:
+                             top_k: int = 10, dataset_name: str = None) -> Dict[str, Any]:
         """Run Tiptoe experiment with detailed timing."""
-        print(f"Running Tiptoe experiment with {len(documents)} docs")
+        dataset_info = f" on {dataset_name}" if dataset_name else ""
+        print(f"Running Tiptoe experiment{dataset_info} with {len(documents)} docs")
 
         if tiptoe_params is None:
             tiptoe_params = {'k_clusters': 5, 'use_real_crypto': True}
@@ -340,6 +367,7 @@ class PIRExperimentRunner:
 
         return {
             'system': 'Tiptoe',
+            'dataset_name': dataset_name,
             'setup_time': setup_time,
             'crypto_setup_time': setup_metrics.get('crypto_setup_time', 0),
             'clustering_time': setup_metrics.get('clustering_time', 0),
@@ -358,10 +386,15 @@ class PIRExperimentRunner:
     def run_scalability_experiment(self, doc_sizes: List[int] = [500, 1000, 2000, 5000],
                                   n_queries: int = 5, embed_dim: int = 384,
                                   embeddings_path: str = None, corpus_path: str = None,
+                                  dataset_name: str = None, max_dataset_docs: int = None,
                                   pir_rag_params: Dict = None, graph_pir_params: Dict = None,
                                   tiptoe_params: Dict = None) -> Dict[str, Any]:
         """Run scalability experiments across different dataset sizes."""
-        print("Running scalability experiments...")
+        dataset_info = f" using {dataset_name} dataset" if dataset_name else ""
+        print(f"Running scalability experiments{dataset_info}...")
+
+        # Save original dataset name for result tracking
+        original_dataset_name = dataset_name
 
         # Set default parameters if not provided
         if pir_rag_params is None:
@@ -383,37 +416,104 @@ class PIRExperimentRunner:
 
         scalability_results = {
             'doc_sizes': doc_sizes,
+            'dataset_name': original_dataset_name,
             'pir_rag_results': [],
             'graph_pir_results': [],
             'tiptoe_results': []
         }
 
-        # FIXED: For real data, generate realistic queries from actual embeddings
-        # First load a sample of embeddings to generate realistic queries
-        if embeddings_path and corpus_path and os.path.exists(embeddings_path):
-            print("Using real dataset - generating realistic queries from actual embeddings...")
-            sample_embeddings = np.load(embeddings_path)[:max(doc_sizes)]  # Load largest needed size
-            sample_documents = pd.read_csv(corpus_path)['text'].iloc[:max(doc_sizes)].tolist()
+        # Load data from dataset or use existing logic for embeddings_path/corpus_path
+        if dataset_name and DATASET_LOADER_AVAILABLE:
+            print(f"Using {dataset_name} dataset for scalability testing...")
+            try:
+                loader = DatasetLoader()
+                # Load based on the largest doc_size needed, not max_dataset_docs
+                max_docs_needed = max(doc_sizes)
 
-            # Generate realistic queries by sampling from actual embeddings
-            np.random.seed(12345)  # Fixed seed for consistency
-            query_indices = np.random.choice(len(sample_embeddings), size=n_queries, replace=False)
-            test_queries = [sample_embeddings[i] for i in query_indices]
-            print(f"Generated {len(test_queries)} realistic queries from dataset (indices: {query_indices})")
+                # If max_dataset_docs is provided, use it as an upper limit
+                if max_dataset_docs and max_dataset_docs < max_docs_needed:
+                    print(f"Warning: max_dataset_docs ({max_dataset_docs}) is smaller than largest doc_size ({max_docs_needed})")
+                    print(f"Adjusting doc_sizes to fit within max_dataset_docs limit...")
+                    # Filter doc_sizes to fit within max_dataset_docs
+                    doc_sizes = [size for size in doc_sizes if size <= max_dataset_docs]
+                    scalability_results['doc_sizes'] = doc_sizes
+                    max_docs_needed = max(doc_sizes) if doc_sizes else 100  # Fallback to 100
+                    print(f"Updated doc_sizes: {doc_sizes}")
+
+                print(f"Loading up to {max_docs_needed} documents for scalability testing...")
+                queries_array, all_embeddings, ground_truth = loader.load_dataset(
+                    dataset_name, max_queries=n_queries, max_docs=max_docs_needed
+                )
+
+                # Update embed_dim based on actual dataset dimension
+                actual_embed_dim = all_embeddings.shape[1]
+                if actual_embed_dim != embed_dim:
+                    print(f"Updating embed_dim from {embed_dim} to {actual_embed_dim} based on {dataset_name} dataset")
+                    embed_dim = actual_embed_dim
+
+                # Convert queries array to list of arrays
+                test_queries = [queries_array[i] for i in range(len(queries_array))]
+                print(f"✅ Loaded {len(test_queries)} queries and {len(all_embeddings)} documents from {dataset_name} dataset")
+
+                # Final check: ensure we have enough data for the largest doc size
+                if len(all_embeddings) < max(doc_sizes):
+                    available_docs = len(all_embeddings)
+                    print(f"⚠️  Dataset only has {available_docs} documents, but largest doc_size is {max(doc_sizes)}")
+                    # Adjust doc_sizes to fit available data
+                    doc_sizes = [size for size in doc_sizes if size <= available_docs]
+                    print(f"🔧 Adjusted doc_sizes to: {doc_sizes}")
+                    scalability_results['doc_sizes'] = doc_sizes
+
+                    if not doc_sizes:
+                        raise ValueError(f"No valid doc_sizes remaining after adjustment. Available docs: {available_docs}")
+
+            except Exception as e:
+                print(f"❌ Failed to load {dataset_name} dataset: {e}")
+                print("🔄 Falling back to synthetic data generation...")
+                dataset_name = None
+                all_embeddings = None
+                test_queries = None
         else:
-            # Fallback to synthetic queries for synthetic data
-            print("Using synthetic data - generating synthetic queries...")
-            np.random.seed(12345)  # Different seed from data generation to avoid conflicts
-            test_queries = [np.random.randn(embed_dim).astype(np.float32) for _ in range(n_queries)]
-            print(f"Generated {len(test_queries)} synthetic test queries (seed=12345)")
+            all_embeddings = None
+            test_queries = None
+
+        # Fallback to original logic if no dataset or dataset loading failed
+        if dataset_name is None:
+            # FIXED: For real data, generate realistic queries from actual embeddings
+            # First load a sample of embeddings to generate realistic queries
+            if embeddings_path and corpus_path and os.path.exists(embeddings_path):
+                print("Using real dataset - generating realistic queries from actual embeddings...")
+                sample_embeddings = np.load(embeddings_path)[:max(doc_sizes)]  # Load largest needed size
+                sample_documents = pd.read_csv(corpus_path)['text'].iloc[:max(doc_sizes)].tolist()
+
+                # Generate realistic queries by sampling from actual embeddings
+                np.random.seed(12345)  # Fixed seed for consistency
+                query_indices = np.random.choice(len(sample_embeddings), size=n_queries, replace=False)
+                test_queries = [sample_embeddings[i] for i in query_indices]
+                print(f"Generated {len(test_queries)} realistic queries from dataset (indices: {query_indices})")
+            else:
+                # Fallback to synthetic queries for synthetic data
+                print("Using synthetic data - generating synthetic queries...")
+                np.random.seed(12345)  # Different seed from data generation to avoid conflicts
+                test_queries = [np.random.randn(embed_dim).astype(np.float32) for _ in range(n_queries)]
+                print(f"Generated {len(test_queries)} synthetic test queries (seed=12345)")
 
         for n_docs in doc_sizes:
             print(f"\n=== Testing with {n_docs} documents ===")
 
             # Load or generate test data
-            embeddings, documents = self.load_or_generate_data(
-                embeddings_path, corpus_path, n_docs, embed_dim
-            )
+            if dataset_name and all_embeddings is not None:
+                # Use dataset: sample n_docs from the loaded embeddings
+                embeddings = all_embeddings[:n_docs]
+                # Generate placeholder documents (content doesn't matter for PIR systems)
+                documents = [f"Document {i} from {dataset_name}" for i in range(n_docs)]
+                print(f"Using {n_docs} documents from {dataset_name} dataset")
+            else:
+                # Use original logic for embeddings_path/corpus_path or synthetic data
+                embeddings, documents = self.load_or_generate_data(
+                    embeddings_path, corpus_path, n_docs, embed_dim
+                )
+
             # Use the pre-generated consistent queries
             queries = test_queries
 
@@ -428,7 +528,8 @@ class PIRExperimentRunner:
                 pir_rag_result = self.run_pir_rag_experiment(
                     embeddings, documents, queries,
                     k_clusters=adjusted_pir_rag_params['k_clusters'],
-                    cluster_top_k=adjusted_pir_rag_params['cluster_top_k']
+                    cluster_top_k=adjusted_pir_rag_params['cluster_top_k'],
+                    dataset_name=original_dataset_name
                 )
                 scalability_results['pir_rag_results'].append(pir_rag_result)
                 print(f"  ✅ PIR-RAG completed for {n_docs} docs")
@@ -442,7 +543,8 @@ class PIRExperimentRunner:
                 print(f"  Running Graph-PIR with {n_docs} documents...")
                 graph_pir_result = self.run_graph_pir_experiment(
                     embeddings, documents, queries,
-                    graph_params=graph_pir_params
+                    graph_params=graph_pir_params,
+                    dataset_name=original_dataset_name
                 )
                 scalability_results['graph_pir_results'].append(graph_pir_result)
                 print(f"  ✅ Graph-PIR completed for {n_docs} docs")
@@ -461,7 +563,8 @@ class PIRExperimentRunner:
 
                 tiptoe_result = self.run_tiptoe_experiment(
                     embeddings, documents, queries,
-                    tiptoe_params=adjusted_tiptoe_params
+                    tiptoe_params=adjusted_tiptoe_params,
+                    dataset_name=original_dataset_name
                 )
                 scalability_results['tiptoe_results'].append(tiptoe_result)
                 print(f"  ✅ Tiptoe completed for {n_docs} docs")
@@ -545,7 +648,11 @@ class PIRExperimentRunner:
 
         return sensitivity_results
 
-    def run_retrieval_performance_experiment(self, n_docs: int = 1000, n_queries: int = 50,
+    def run_retrieval_performance_experiment(self,
+                                           dataset_name: str = None,
+                                           max_dataset_docs: int = 500,
+                                           max_dataset_queries: int = 10,
+                                           n_docs: int = 1000, n_queries: int = 50,
                                            embeddings_path: str = None, corpus_path: str = None,
                                            embed_dim: int = 384, top_k: int = 10,
                                            pir_rag_k_clusters: int = 5,
@@ -558,33 +665,79 @@ class PIRExperimentRunner:
             return {}
 
         print(f"\n{'='*60}")
-        print(f"Running Retrieval Performance Experiment (HYBRID APPROACH)")
-        print(f"• Phase 1: Plaintext simulation for accurate retrieval quality")
-        print(f"• Phase 2: Real PIR operations for realistic performance metrics")
-        print(f"Documents: {n_docs}, Queries: {n_queries}, Top-K: {top_k}")
+        if dataset_name:
+            print(f"Running Dataset Retrieval Performance Experiment")
+            print(f"• Dataset: {dataset_name}")
+            print(f"• Max docs: {max_dataset_docs}, Max queries: {max_dataset_queries}")
+        else:
+            print(f"Running Retrieval Performance Experiment (HYBRID APPROACH)")
+            print(f"• Phase 1: Plaintext simulation for accurate retrieval quality")
+            print(f"• Phase 2: Real PIR operations for realistic performance metrics")
+            print(f"Documents: {n_docs}, Queries: {n_queries}, Top-K: {top_k}")
         print(f"{'='*60}")
 
-        # Load or generate data
-        embeddings, documents = self.load_or_generate_data(
-            embeddings_path, corpus_path, n_docs, embed_dim
-        )
+        # Load data - either from dataset or synthetic
+        ground_truth = None
+        if dataset_name and DATASET_LOADER_AVAILABLE:
+            print(f"Loading {dataset_name} dataset...")
+            try:
+                loader = DatasetLoader()
+                queries_array, embeddings, ground_truth = loader.load_dataset(
+                    dataset_name, max_queries=max_dataset_queries, max_docs=max_dataset_docs
+                )
+                # Convert queries array to list of arrays
+                queries = [queries_array[i] for i in range(len(queries_array))]
+                # Generate placeholder documents (content doesn't matter for PIR systems)
+                documents = [f"Document {i} from {dataset_name}" for i in range(len(embeddings))]
 
-        # Create retrieval performance tester
+                print(f"\u2705 Loaded {len(queries)} queries, {len(embeddings)} documents from {dataset_name}")
+                print(f"  Embeddings shape: {embeddings.shape}")
+                print(f"  Ground truth type: {type(ground_truth)}")
+
+                # DEBUG: Print ground truth information for debugging MRR issues
+                if isinstance(ground_truth, dict):
+                    print(f"  DEBUG: Ground truth dict has {len(ground_truth)} entries")
+                    print(f"  DEBUG: Sample keys: {list(ground_truth.keys())[:5]}")
+                    for i in range(min(3, max(len(ground_truth), 3))):
+                        key = str(i)
+                        docs = ground_truth.get(key, [])
+                        print(f"  DEBUG: Query {i} -> {len(docs)} relevant docs: {docs[:3]}{'...' if len(docs) > 3 else ''}")
+                elif isinstance(ground_truth, np.ndarray):
+                    print(f"  DEBUG: Ground truth array shape: {ground_truth.shape}")
+                    print(f"  DEBUG: First few entries: {ground_truth[:5]}")
+
+            except Exception as e:
+                print(f"\u274c Failed to load {dataset_name} dataset: {e}")
+                print("Falling back to synthetic data...")
+                dataset_name = None  # Reset to use synthetic data
+                ground_truth = None
+
+        if not dataset_name:
+            # Load or generate synthetic data
+            embeddings, documents = self.load_or_generate_data(
+                embeddings_path, corpus_path, n_docs, embed_dim
+            )
+
+            # Create retrieval performance tester
+            tester = RetrievalPerformanceTester()
+
+            # Generate queries for testing with fixed seed for consistency
+            np.random.seed(67890)  # Fixed seed for retrieval performance testing
+            queries = tester.generate_realistic_queries(embeddings, n_queries)
+
+        # Create retrieval performance tester (needed for both dataset and synthetic)
         tester = RetrievalPerformanceTester()
-
-        # Generate queries for testing with fixed seed for consistency
-        np.random.seed(67890)  # Fixed seed for retrieval performance testing
-        queries = tester.generate_realistic_queries(embeddings, n_queries)
 
         # Test each system individually and collect results
         retrieval_results = {
             'experiment_info': {
                 'timestamp': self.timestamp,
-                'n_docs': n_docs,
-                'n_queries': n_queries,
+                'dataset_name': dataset_name,
+                'n_docs': len(embeddings),
+                'n_queries': len(queries),
                 'top_k': top_k,
                 'embed_dim': embeddings.shape[1],
-                'data_type': 'real' if embeddings_path else 'synthetic'
+                'data_type': 'dataset' if dataset_name else ('real' if embeddings_path else 'synthetic')
             }
         }
 
@@ -598,7 +751,8 @@ class PIRExperimentRunner:
             pir_rag_results = tester.test_retrieval_performance(
                 "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k,
                 pir_rag_k_clusters=pir_rag_k_clusters,
-                pir_rag_cluster_top_k=pir_rag_cluster_top_k
+                pir_rag_cluster_top_k=pir_rag_cluster_top_k,
+                dataset_name=dataset_name, ground_truth=ground_truth
             )
             retrieval_results['pir_rag'] = pir_rag_results
             print(f"✅ PIR-RAG retrieval test completed")
@@ -612,7 +766,8 @@ class PIRExperimentRunner:
             # Pass graph_params to the test method instead of pre-setting up
             graph_pir_results = tester.test_retrieval_performance(
                 "Graph-PIR", graph_pir_system, embeddings, documents, queries, top_k,
-                graph_params=graph_params
+                graph_params=graph_params,
+                dataset_name=dataset_name, ground_truth=ground_truth
             )
             retrieval_results['graph_pir'] = graph_pir_results
             print(f"✅ Graph-PIR retrieval test completed")
@@ -626,7 +781,8 @@ class PIRExperimentRunner:
             # FIXED: Remove redundant setup - let test_retrieval_performance handle it
             tiptoe_results = tester.test_retrieval_performance(
                 "Tiptoe", tiptoe_system, embeddings, documents, queries, top_k,
-                tiptoe_k_clusters=tiptoe_k_clusters
+                tiptoe_k_clusters=tiptoe_k_clusters,
+                dataset_name=dataset_name, ground_truth=ground_truth
             )
             retrieval_results['tiptoe'] = tiptoe_results
             print(f"✅ Tiptoe retrieval test completed")
@@ -638,6 +794,221 @@ class PIRExperimentRunner:
         self._print_hybrid_retrieval_summary(retrieval_results)
 
         return retrieval_results
+
+    def run_retrieval_performance_simulate_experiment(self,
+                                                     dataset_name: str = None,
+                                                     max_dataset_docs: int = 500,
+                                                     max_dataset_queries: int = 10,
+                                                     n_docs: int = 1000, n_queries: int = 50,
+                                                     embeddings_path: str = None, corpus_path: str = None,
+                                                     embed_dim: int = 384, top_k: int = 10,
+                                                     pir_rag_k_clusters: int = 5,
+                                                     pir_rag_cluster_top_k: int = 3,
+                                                     graph_params: Dict = None,
+                                                     tiptoe_k_clusters: int = None) -> Dict[str, Any]:
+        """Run simulation-only retrieval performance experiments measuring IR quality metrics."""
+        if not RETRIEVAL_TESTING_AVAILABLE:
+            print("❌ Retrieval performance testing not available")
+            return {}
+
+        print(f"\n{'='*60}")
+        if dataset_name:
+            print(f"Running Dataset Retrieval Performance Simulation Experiment")
+            print(f"• Dataset: {dataset_name}")
+            print(f"• Max docs: {max_dataset_docs}, Max queries: {max_dataset_queries}")
+        else:
+            print(f"Running Retrieval Performance Simulation Experiment")
+            print(f"• Simulation-only approach: Only Phase 1 (plaintext quality calculation)")
+            print(f"• No PIR operations: Faster execution, no memory constraints")
+            print(f"Documents: {n_docs}, Queries: {n_queries}, Top-K: {top_k}")
+        print(f"{'='*60}")
+
+        # Load data - either from dataset or synthetic
+        ground_truth = None
+        if dataset_name and DATASET_LOADER_AVAILABLE:
+            print(f"Loading {dataset_name} dataset...")
+            try:
+                loader = DatasetLoader()
+                queries_array, embeddings, ground_truth = loader.load_dataset(
+                    dataset_name, max_queries=max_dataset_queries, max_docs=max_dataset_docs
+                )
+                # Convert queries array to list of arrays
+                queries = [queries_array[i] for i in range(len(queries_array))]
+                # Generate placeholder documents (content doesn't matter for PIR systems)
+                documents = [f"Document {i} from {dataset_name}" for i in range(len(embeddings))]
+
+                print(f"\u2705 Loaded {len(queries)} queries, {len(embeddings)} documents from {dataset_name}")
+                print(f"  Embeddings shape: {embeddings.shape}")
+                print(f"  Ground truth type: {type(ground_truth)}")
+
+                # DEBUG: Print ground truth information for debugging
+                if isinstance(ground_truth, dict):
+                    print(f"  DEBUG: Ground truth dict has {len(ground_truth)} entries")
+                    print(f"  DEBUG: Sample keys: {list(ground_truth.keys())[:5]}")
+                elif isinstance(ground_truth, np.ndarray):
+                    print(f"  DEBUG: Ground truth array shape: {ground_truth.shape}")
+                    print(f"  DEBUG: First few entries: {ground_truth[:3]}")
+
+                # Update experiment size based on loaded dataset
+                n_docs = len(embeddings)
+                n_queries = len(queries)
+
+            except Exception as e:
+                print(f"❌ Failed to load {dataset_name} dataset: {e}")
+                print(f"🔄 Falling back to synthetic data generation...")
+                dataset_name = None
+                ground_truth = None
+
+        # Generate synthetic data if dataset loading failed or not requested
+        if dataset_name is None:
+            print(f"Generating synthetic embeddings and documents...")
+            embeddings, documents, queries = self.generate_synthetic_dataset(
+                n_docs=n_docs, n_queries=n_queries, embed_dim=embed_dim
+            )
+            print(f"\u2705 Generated {len(queries)} queries and {len(embeddings)} embeddings")
+
+        # Initialize retrieval tester
+        tester = RetrievalPerformanceTester(dataset_loader=loader if DATASET_LOADER_AVAILABLE else None)
+
+        # Store experiment metadata
+        retrieval_results = {
+            'experiment_type': 'simulation_only_retrieval_performance',
+            'experiment_info': {
+                'n_docs': n_docs,
+                'n_queries': n_queries,
+                'embed_dim': embed_dim,
+                'top_k': top_k,
+                'dataset_name': dataset_name,
+                'data_type': 'dataset' if dataset_name else 'synthetic',
+                'simulation_only': True
+            }
+        }
+
+        # Test PIR-RAG
+        try:
+            pir_rag_client = PIRRAGClient()
+            pir_rag_server = PIRRAGServer()
+            pir_rag_system = (pir_rag_client, pir_rag_server)
+
+            pir_rag_results = tester.test_retrieval_performance_simulate(
+                "PIR-RAG", pir_rag_system, embeddings, documents, queries, top_k,
+                pir_rag_k_clusters=pir_rag_k_clusters,
+                pir_rag_cluster_top_k=pir_rag_cluster_top_k,
+                dataset_name=dataset_name, ground_truth=ground_truth
+            )
+            retrieval_results['pir_rag'] = pir_rag_results
+            print(f"✅ PIR-RAG simulation test completed")
+        except Exception as e:
+            print(f"❌ PIR-RAG simulation test failed: {e}")
+            retrieval_results['pir_rag'] = None
+
+        # Test Graph-PIR
+        try:
+            graph_pir_system = GraphPIRSystem()
+            graph_pir_results = tester.test_retrieval_performance_simulate(
+                "Graph-PIR", graph_pir_system, embeddings, documents, queries, top_k,
+                graph_params=graph_params,
+                dataset_name=dataset_name, ground_truth=ground_truth
+            )
+            retrieval_results['graph_pir'] = graph_pir_results
+            print(f"✅ Graph-PIR simulation test completed")
+        except Exception as e:
+            print(f"❌ Graph-PIR simulation test failed: {e}")
+            retrieval_results['graph_pir'] = None
+
+        # Test Tiptoe
+        try:
+            tiptoe_system = TiptoeSystem()
+            tiptoe_results = tester.test_retrieval_performance_simulate(
+                "Tiptoe", tiptoe_system, embeddings, documents, queries, top_k,
+                tiptoe_k_clusters=tiptoe_k_clusters,
+                dataset_name=dataset_name, ground_truth=ground_truth
+            )
+            retrieval_results['tiptoe'] = tiptoe_results
+            print(f"✅ Tiptoe simulation test completed")
+        except Exception as e:
+            print(f"❌ Tiptoe simulation test failed: {e}")
+            retrieval_results['tiptoe'] = None
+
+        # Print simulation-only summary
+        self._print_simulation_retrieval_summary(retrieval_results)
+
+        return retrieval_results
+
+    def _print_simulation_retrieval_summary(self, results: Dict[str, Any]):
+        """Print a summary of simulation-only retrieval performance results."""
+
+        print(f"\n{'='*70}")
+        print(f"SIMULATION-ONLY RETRIEVAL PERFORMANCE SUMMARY")
+        print(f"{'='*70}")
+
+        experiment_info = results.get('experiment_info', {})
+        dataset_name = experiment_info.get('dataset_name')
+        print(f"Test Configuration:")
+        print(f"  Documents: {experiment_info.get('n_docs', 'N/A'):,}")
+        print(f"  Queries: {experiment_info.get('n_queries', 'N/A')}")
+        print(f"  Top-K: {experiment_info.get('top_k', 'N/A')}")
+        print(f"  Data Type: {experiment_info.get('data_type', 'N/A')}")
+        if dataset_name:
+            print(f"  Dataset: {dataset_name}")
+
+        # Table header - adjusted for dataset-specific metrics
+        if dataset_name in ["LAION", "MS_MARCO"]:
+            print(f"\nSimulation Results (MRR@100 metric):")
+            print(f"{'System':<12} {'Sim.Time(s)':<12} {'MRR@100':<10} {'Total Queries':<12}")
+            print("-" * 46)
+        elif dataset_name == "SIFT":
+            print(f"\nSimulation Results (Recall@10 metric):")
+            print(f"{'System':<12} {'Sim.Time(s)':<12} {'Recall@10':<12} {'Total Queries':<12}")
+            print("-" * 48)
+        else:
+            print(f"\nSimulation Results (Standard IR metrics):")
+            print(f"{'System':<12} {'Sim.Time(s)':<12} {'P@K':<8} {'R@K':<8} {'NDCG@K':<10} {'Total Queries':<12}")
+            print("-" * 62)
+
+        for system_name in ['pir_rag', 'graph_pir', 'tiptoe']:
+            system_results = results.get(system_name)
+            if system_results is None:
+                if dataset_name in ["LAION", "MS_MARCO"]:
+                    print(f"{system_name.upper():<12} {'ERROR':<12} {'--':<10} {'--':<12}")
+                elif dataset_name == "SIFT":
+                    print(f"{system_name.upper():<12} {'ERROR':<12} {'--':<12} {'--':<12}")
+                else:
+                    print(f"{system_name.upper():<12} {'ERROR':<12} {'--':<8} {'--':<8} {'--':<10} {'--':<12}")
+                continue
+
+            # Check if this is simulation-only results
+            if system_results.get('simulation_only', False):
+                summary = system_results.get('summary', {})
+                sim_time = f"{summary.get('avg_simulation_time_per_query', 0):.3f}"
+                total_queries = summary.get('total_queries', 0)
+
+                if dataset_name in ["LAION", "MS_MARCO"]:
+                    mrr = f"{summary.get('avg_mrr_at_100', 0):.3f}"
+                    print(f"{system_name.upper():<12} {sim_time:<12} {mrr:<10} {total_queries:<12}")
+                elif dataset_name == "SIFT":
+                    recall = f"{summary.get('avg_recall_at_10', 0):.3f}"
+                    print(f"{system_name.upper():<12} {sim_time:<12} {recall:<12} {total_queries:<12}")
+                else:
+                    precision = f"{summary.get('avg_precision_at_k', 0):.3f}"
+                    recall = f"{summary.get('avg_recall_at_k', 0):.3f}"
+                    ndcg = f"{summary.get('avg_ndcg_at_k', 0):.3f}"
+                    print(f"{system_name.upper():<12} {sim_time:<12} {precision:<8} {recall:<8} {ndcg:<10} {total_queries:<12}")
+            else:
+                if dataset_name in ["LAION", "MS_MARCO"]:
+                    print(f"{system_name.upper():<12} {'N/A':<12} {'--':<10} {'--':<12}")
+                elif dataset_name == "SIFT":
+                    print(f"{system_name.upper():<12} {'N/A':<12} {'--':<12} {'--':<12}")
+                else:
+                    print(f"{system_name.upper():<12} {'N/A':<12} {'--':<8} {'--':<8} {'--':<10} {'--':<12}")
+
+        print(f"\nSimulation-Only Benefits:")
+        print(f"✅ Pure quality metric calculation (no PIR overhead)")
+        print(f"✅ Fast execution (no memory constraints)")
+        print(f"✅ Focus on retrieval algorithm performance")
+        print(f"✅ Ideal for quality comparison across systems")
+        if dataset_name:
+            print(f"✅ Dataset-specific metrics: {dataset_name}")
 
     def _print_hybrid_retrieval_summary(self, results: Dict[str, Any]):
         """Print a summary of hybrid retrieval performance results."""
@@ -806,7 +1177,7 @@ class PIRExperimentRunner:
 def main():
     """Main experiment runner."""
     parser = argparse.ArgumentParser(description="Comprehensive PIR Experiments")
-    parser.add_argument("--experiment", choices=["single", "scalability", "sensitivity", "retrieval", "all"],
+    parser.add_argument("--experiment", choices=["single", "scalability", "sensitivity", "retrieval", "retrieval_simulate", "all"],
                        default="all", help="Type of experiment to run")
     parser.add_argument("--output-dir", default="results", help="Output directory for results")
     parser.add_argument("--n-docs", type=int, default=1000, help="Number of documents for single experiment")
@@ -817,6 +1188,14 @@ def main():
     parser.add_argument("--corpus-path", type=str, default=None,
                        help="Path to corpus file (.csv format with 'text' column)")
     parser.add_argument("--top-k", type=int, default=10, help="Top-K for retrieval evaluation")
+
+    # Dataset specific arguments
+    parser.add_argument("--dataset", choices=["LAION", "MS_MARCO", "SIFT"], default=None,
+                       help="Dataset to use for evaluation (default: use synthetic data)")
+    parser.add_argument("--max-dataset-docs", type=int, default=10000,
+                       help="Maximum number of documents to load from dataset")
+    parser.add_argument("--max-dataset-queries", type=int, default=10,
+                       help="Maximum number of queries to load from dataset")
 
     # PIR-RAG specific arguments
     parser.add_argument("--pir-rag-k-clusters", type=int, default=None,
@@ -955,6 +1334,8 @@ def main():
             embed_dim=args.embed_dim,
             embeddings_path=args.embeddings_path,
             corpus_path=args.corpus_path,
+            dataset_name=args.dataset,
+            max_dataset_docs=args.max_dataset_docs,
             pir_rag_params=pir_rag_params,
             graph_pir_params=graph_pir_params,
             tiptoe_params=tiptoe_params
@@ -1003,6 +1384,9 @@ def main():
         }
 
         retrieval_results = runner.run_retrieval_performance_experiment(
+            dataset_name=args.dataset,
+            max_dataset_docs=args.max_dataset_docs,
+            max_dataset_queries=args.max_dataset_queries,
             n_docs=args.n_docs,
             n_queries=args.n_queries,  # Use exact number specified by user
             embeddings_path=args.embeddings_path,
@@ -1016,6 +1400,38 @@ def main():
         )
         if retrieval_results:
             runner.save_results(retrieval_results, "retrieval_performance")
+
+    if args.experiment in ["retrieval_simulate", "all"]:
+        print("Running simulation-only retrieval performance experiments...")
+
+        # Prepare graph_params for Graph-PIR
+        graph_params = {
+            'k_neighbors': args.graph_pir_k_neighbors,
+            'ef_construction': args.graph_pir_ef_construction,
+            'max_connections': args.graph_pir_max_connections,
+            'ef_search': args.graph_pir_ef_search,
+            'max_iterations': args.graph_pir_max_iterations,
+            'parallel': args.graph_pir_parallel,
+            'max_neighbors_per_step': args.graph_pir_max_neighbors_per_step
+        }
+
+        retrieval_simulate_results = runner.run_retrieval_performance_simulate_experiment(
+            dataset_name=args.dataset,
+            max_dataset_docs=args.max_dataset_docs,
+            max_dataset_queries=args.max_dataset_queries,
+            n_docs=args.n_docs,
+            n_queries=args.n_queries,
+            embeddings_path=args.embeddings_path,
+            corpus_path=args.corpus_path,
+            embed_dim=args.embed_dim,
+            top_k=args.top_k,
+            pir_rag_k_clusters=args.pir_rag_k_clusters,
+            pir_rag_cluster_top_k=args.pir_rag_cluster_top_k,
+            graph_params=graph_params,
+            tiptoe_k_clusters=runner.get_default_k_clusters(args.n_docs, args.tiptoe_k_clusters)
+        )
+        if retrieval_simulate_results:
+            runner.save_results(retrieval_simulate_results, "retrieval_performance_simulate")
 
     print("All experiments completed!")
 

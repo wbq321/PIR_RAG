@@ -1,0 +1,80 @@
+{
+  "experiment_info": {
+    "timestamp": "20251113-223306",
+    "dataset_name": "LAION",
+    "n_docs": 2,
+    "n_queries": 2,
+    "top_k": 10,
+    "embed_dim": 512,
+    "data_type": "dataset"
+  },
+  "pir_rag": null,
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 0.005968199984636158,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.002019900013692677,
+        "pir_performance_time": 2.6261820000072476,
+        "total_query_time": 2.6282019000209402,
+        "communication_bytes": 112256,
+        "num_retrieved_simulated": 1,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.6131471927654584,
+        "avg_similarity": 0.3303650406286204,
+        "num_retrieved": 1
+      },
+      {
+        "query_idx": 1,
+        "quality_simulation_time": 0.000575500016566366,
+        "pir_performance_time": 2.5129767000034917,
+        "total_query_time": 2.513552200020058,
+        "communication_bytes": 112256,
+        "num_retrieved_simulated": 1,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.6131471927654584,
+        "avg_similarity": 0.12701845387722446,
+        "num_retrieved": 1
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.6131471927654584,
+        "avg_similarity": 0.3303650406286204,
+        "num_retrieved": 1
+      },
+      {
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.6131471927654584,
+        "avg_similarity": 0.12701845387722446,
+        "num_retrieved": 1
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      112256,
+      112256
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.0012977000151295215,
+    "avg_pir_performance_time": 2.5695793500053696,
+    "avg_total_query_time": 2.570877050020499,
+    "avg_communication_bytes": 112256.0,
+    "total_communication_kb": 219.25,
+    "avg_precision_at_k": 1.0,
+    "std_precision_at_k": 0.0,
+    "avg_recall_at_k": 0.1,
+    "std_recall_at_k": 0.0,
+    "avg_ndcg_at_k": 0.6131471927654584,
+    "std_ndcg_at_k": 0.0,
+    "avg_avg_similarity": 0.2286917472529224,
+    "std_avg_similarity": 0.10167329337569796
+  },
+  "tiptoe": null
+}

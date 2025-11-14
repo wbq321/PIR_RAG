@@ -25,6 +25,14 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(current_dir, '..', 'src')
 sys.path.insert(0, src_dir)
 
+# Import dataset loader
+try:
+    from dataset_loader import DatasetLoader
+    DATASET_LOADER_AVAILABLE = True
+except ImportError:
+    DATASET_LOADER_AVAILABLE = False
+    print("⚠️  Dataset loader not available.")
+
 from pir_rag import PIRRAGClient, PIRRAGServer
 from graph_pir import GraphPIRSystem
 from tiptoe import TiptoeSystem
@@ -39,9 +47,10 @@ class RetrievalPerformanceTester:
     2. Actual PIR operations for realistic performance/communication metrics
     """
 
-    def __init__(self, output_dir: str = "results"):
+    def __init__(self, output_dir: str = "results", dataset_loader=None):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        self.dataset_loader = dataset_loader
 
     def generate_realistic_queries(self, embeddings: np.ndarray, n_queries: int = 20) -> List[np.ndarray]:
         """Generate realistic query embeddings that are independent of the document corpus."""
@@ -151,6 +160,77 @@ class RetrievalPerformanceTester:
             'avg_similarity': avg_similarity,
             'num_retrieved': len(retrieved_doc_indices)
         }
+
+    def calculate_dataset_metrics(self, retrieved_indices: List[int], ground_truth: Any,
+                                dataset_name: str, query_idx: int = 0) -> Dict[str, float]:
+        """Calculate dataset-specific evaluation metrics."""
+        if dataset_name in ["LAION", "MS_MARCO"]:
+            # For MRR calculation, need to handle query_idx properly
+            if isinstance(ground_truth, np.ndarray):
+                # LAION: ground truth is positional array
+                if query_idx < len(ground_truth):
+                    correct_doc_idx = ground_truth[query_idx]
+                    # DEBUG: Print detailed information
+                    print(f"      DEBUG MRR: Query {query_idx}, Ground Truth Doc ID: {correct_doc_idx}")
+                    print(f"      DEBUG MRR: Retrieved docs (first 10): {retrieved_indices[:10]}")
+
+                    # Check if ground truth is valid (not -1)
+                    if correct_doc_idx >= 0:
+                        try:
+                            rank = retrieved_indices[:100].index(correct_doc_idx) + 1
+                            mrr = 1.0 / rank
+                            print(f"      DEBUG MRR: Found correct doc at rank {rank}, MRR = {mrr:.3f}")
+                        except ValueError:
+                            mrr = 0.0
+                            print(f"      DEBUG MRR: Correct doc {correct_doc_idx} NOT found in top 100 results, MRR = 0.0")
+                    else:
+                        # No ground truth available for this query
+                        mrr = 0.0
+                        print(f"      DEBUG MRR: No ground truth available (correct_doc_idx = -1), MRR = 0.0")
+                else:
+                    mrr = 0.0
+                    print(f"      DEBUG MRR: Query index {query_idx} out of range (ground_truth length: {len(ground_truth)})")
+            elif isinstance(ground_truth, dict):
+                # MS_MARCO: ground truth is mapping dict
+                relevant_docs = ground_truth.get(str(query_idx), [])
+                # DEBUG: Print detailed information
+                print(f"      DEBUG MRR: Query {query_idx}, Relevant Doc IDs: {relevant_docs}")
+                print(f"      DEBUG MRR: Retrieved docs (first 10): {retrieved_indices[:10]}")
+
+                if not relevant_docs or len(retrieved_indices) == 0:
+                    mrr = 0.0
+                    print(f"      DEBUG MRR: No relevant docs or no retrieved docs, MRR = 0.0")
+                else:
+                    for rank, doc_idx in enumerate(retrieved_indices[:100], 1):
+                        if doc_idx in relevant_docs:
+                            mrr = 1.0 / rank
+                            print(f"      DEBUG MRR: Found relevant doc {doc_idx} at rank {rank}, MRR = {mrr:.3f}")
+                            break
+                    else:
+                        mrr = 0.0
+                        print(f"      DEBUG MRR: No relevant docs found in top 100 results, MRR = 0.0")
+            else:
+                mrr = 0.0
+                print(f"      DEBUG MRR: Unknown ground truth type: {type(ground_truth)}")
+            return {'mrr_at_100': mrr}
+
+        elif dataset_name == "SIFT":
+            # SIFT uses Recall@10
+            if len(retrieved_indices) == 0 or len(ground_truth) == 0:
+                return {'recall_at_10': 0.0}
+
+            if query_idx < len(ground_truth):
+                true_neighbors = set(ground_truth[query_idx][:10])  # Top 10 true neighbors
+                retrieved_set = set(retrieved_indices[:10])
+                overlap = len(retrieved_set.intersection(true_neighbors))
+                recall = overlap / len(true_neighbors) if len(true_neighbors) > 0 else 0.0
+            else:
+                recall = 0.0
+
+            return {'recall_at_10': recall}
+
+        else:
+            return {}
 
     def _simulate_pir_rag_search(self, query_embedding: np.ndarray,
                                 documents: List[str], embeddings: np.ndarray,
@@ -402,7 +482,8 @@ class RetrievalPerformanceTester:
                                   documents: List[str], queries: List[np.ndarray],
                                   top_k: int = 10, pir_rag_k_clusters: int = None,
                                   pir_rag_cluster_top_k: int = 3,
-                                  tiptoe_k_clusters: int = None, graph_params: Dict = None) -> Dict[str, Any]:
+                                  tiptoe_k_clusters: int = None, graph_params: Dict = None,
+                                  dataset_name: str = None, ground_truth: Any = None) -> Dict[str, Any]:
         """
         Hybrid test: Plaintext simulation for retrieval quality + Real PIR for performance metrics.
 
@@ -493,7 +574,7 @@ class RetrievalPerformanceTester:
                 k_neighbors = 16  # Default (matches real PIR default)
                 max_iterations = 10  # Default (matches real PIR default)
                 parallel = 1  # Default (matches real PIR default)
-                
+
                 if graph_params is not None:
                     k_neighbors = graph_params.get('k_neighbors', 16)
                     max_iterations = graph_params.get('max_iterations', 10)
@@ -501,7 +582,7 @@ class RetrievalPerformanceTester:
                     print(f"    [DEBUG] Simulation using graph_params: k_neighbors={k_neighbors}, max_iterations={max_iterations}, parallel={parallel}")
                 else:
                     print(f"    [DEBUG] Simulation using defaults: k_neighbors={k_neighbors}, max_iterations={max_iterations}, parallel={parallel}")
-                
+
                 retrieved_doc_indices = self._simulate_graph_pir_search(
                     query_embedding, documents, embeddings,
                     k_neighbors=k_neighbors, max_iterations=max_iterations, parallel=parallel,
@@ -517,14 +598,24 @@ class RetrievalPerformanceTester:
             quality_time = time.perf_counter() - quality_start
             total_quality_time += quality_time
 
-            # Calculate retrieval quality metrics
-            quality_metrics = self.calculate_retrieval_quality(
-                query_embedding, retrieved_doc_indices, embeddings, top_k
-            )
-
-            print(f"    Quality metrics: P@{top_k}={quality_metrics['precision_at_k']:.3f}, "
-                  f"R@{top_k}={quality_metrics['recall_at_k']:.3f}, "
-                  f"NDCG@{top_k}={quality_metrics['ndcg_at_k']:.3f}")
+            # Calculate quality metrics - use dataset-specific metrics if available
+            if dataset_name and ground_truth is not None:
+                quality_metrics = self.calculate_dataset_metrics(
+                    retrieved_doc_indices, ground_truth, dataset_name, query_idx
+                )
+                # Print dataset-specific metrics
+                if dataset_name in ["LAION", "MS_MARCO"]:
+                    print(f"    Quality metrics: MRR@100={quality_metrics.get('mrr_at_100', 0):.3f}")
+                elif dataset_name == "SIFT":
+                    print(f"    Quality metrics: Recall@10={quality_metrics.get('recall_at_10', 0):.3f}")
+            else:
+                # Fallback to original metrics for synthetic data
+                quality_metrics = self.calculate_retrieval_quality(
+                    query_embedding, retrieved_doc_indices, embeddings, top_k
+                )
+                print(f"    Quality metrics: P@{top_k}={quality_metrics['precision_at_k']:.3f}, "
+                      f"R@{top_k}={quality_metrics['recall_at_k']:.3f}, "
+                      f"NDCG@{top_k}={quality_metrics['ndcg_at_k']:.3f}")
 
             # === PHASE 2: ACTUAL PIR FOR PERFORMANCE METRICS ===
             performance_start = time.perf_counter()
@@ -533,7 +624,9 @@ class RetrievalPerformanceTester:
             try:
                 if system_name == "PIR-RAG":
                     # Run actual PIR operations to measure performance
-                    query_tensor = torch.from_numpy(query_embedding).unsqueeze(0)
+                    # Ensure consistent float32 data type to avoid dtype mismatches
+                    query_embedding_f32 = query_embedding.astype(np.float32)
+                    query_tensor = torch.from_numpy(query_embedding_f32).unsqueeze(0).float()
                     relevant_clusters = client.find_relevant_clusters(query_tensor, top_k=pir_rag_cluster_top_k)
                     doc_tuples, pir_metrics = client.pir_retrieve(relevant_clusters, server)
 
@@ -541,7 +634,9 @@ class RetrievalPerformanceTester:
 
                 elif system_name == "Graph-PIR":
                     # Run actual Graph-PIR query
-                    doc_tuples, pir_metrics = system.query(query_embedding, top_k=top_k)
+                    # Ensure consistent float32 data type
+                    query_embedding_f32 = query_embedding.astype(np.float32)
+                    doc_tuples, pir_metrics = system.query(query_embedding_f32, top_k=top_k)
 
                     communication_cost = (pir_metrics.get('phase1_upload_bytes', 0) +
                                         pir_metrics.get('phase1_download_bytes', 0) +
@@ -550,7 +645,9 @@ class RetrievalPerformanceTester:
 
                 elif system_name == "Tiptoe":
                     # Run actual Tiptoe query
-                    doc_tuples, pir_metrics = system.query(query_embedding, top_k=top_k)
+                    # Ensure consistent float32 data type
+                    query_embedding_f32 = query_embedding.astype(np.float32)
+                    doc_tuples, pir_metrics = system.query(query_embedding_f32, top_k=top_k)
 
                     communication_cost = pir_metrics.get('upload_bytes', 0) + pir_metrics.get('download_bytes', 0)
 
@@ -562,6 +659,10 @@ class RetrievalPerformanceTester:
 
             except Exception as e:
                 print(f"    Warning: PIR performance measurement failed: {e}")
+                print(f"    Error type: {type(e).__name__}")
+                if hasattr(e, '__traceback__'):
+                    import traceback
+                    print(f"    Error details: {traceback.format_exc().split('\\n')[-3:-1]}")
                 performance_time = 0
                 communication_cost = 0
                 pir_metrics = {}
@@ -612,6 +713,185 @@ class RetrievalPerformanceTester:
         print(f"  Avg Precision@{top_k}: {quality_metrics_agg.get('avg_precision_at_k', 0):.3f}")
         print(f"  Avg Recall@{top_k}: {quality_metrics_agg.get('avg_recall_at_k', 0):.3f}")
         print(f"  Avg NDCG@{top_k}: {quality_metrics_agg.get('avg_ndcg_at_k', 0):.3f}")
+
+        return results
+
+    def test_retrieval_performance_simulate(self, system_name: str, system, embeddings: np.ndarray,
+                                           documents: List[str], queries: List[np.ndarray],
+                                           top_k: int = 10, pir_rag_k_clusters: int = None,
+                                           pir_rag_cluster_top_k: int = 3,
+                                           tiptoe_k_clusters: int = None, graph_params: Dict = None,
+                                           dataset_name: str = None, ground_truth: Any = None) -> Dict[str, Any]:
+        """
+        Simulate-only test: Only executes Phase 1 (plaintext simulation) for retrieval quality metrics.
+
+        This approach focuses purely on retrieval quality analysis without PIR overhead:
+        1. Only plaintext simulation for accurate retrieval quality metrics
+        2. No actual PIR operations (faster execution, no memory constraints)
+        """
+
+        print(f"\n=== Testing {system_name} with Simulation-Only Approach ===")
+
+        # Pre-build graph for Graph-PIR simulation (ONCE, not per query)
+        graph_pir_graph = None
+        pir_rag_clusters = None
+        if system_name == "Graph-PIR":
+            print(f"  Pre-building k-NN graph for Graph-PIR simulation...")
+            graph_build_start = time.perf_counter()
+            graph_pir_graph = self._build_simple_graph(embeddings, k_neighbors=32)
+            graph_build_time = time.perf_counter() - graph_build_start
+            print(f"  Graph built in {graph_build_time:.3f}s (will be reused for all queries)")
+        elif system_name == "PIR-RAG":
+            print(f"  Pre-computing clustering for PIR-RAG simulation...")
+            cluster_start = time.perf_counter()
+            k_clusters = pir_rag_k_clusters or min(32, max(5, len(documents)//20))
+            pir_rag_clusters = self._precompute_pir_rag_clusters(embeddings, k_clusters)
+            cluster_time = time.perf_counter() - cluster_start
+            print(f"  Clustering completed in {cluster_time:.3f}s (will be reused for all queries)")
+
+        # Initialize results tracking
+        results = {
+            'system': system_name,
+            'query_results': [],
+            'quality_metrics': [],
+            'simulation_only': True  # Flag to indicate this uses simulation-only approach
+        }
+
+        total_quality_time = 0
+
+        print(f"  Testing {len(queries)} queries with simulation-only approach...")
+
+        for query_idx, query_embedding in enumerate(queries):
+            print(f"\n  Query {query_idx + 1}/{len(queries)}:")
+
+            # === PHASE 1: PLAINTEXT SIMULATION FOR RETRIEVAL QUALITY ===
+            quality_start = time.perf_counter()
+
+            print(f"    Plaintext simulation for retrieval quality...")
+            if system_name == "PIR-RAG":
+                k_clusters = pir_rag_k_clusters or min(32, max(5, len(documents)//20))
+                retrieved_doc_indices = self._simulate_pir_rag_search(
+                    query_embedding, documents, embeddings,
+                    n_clusters=k_clusters, top_k_clusters=pir_rag_cluster_top_k,
+                    precomputed_clusters=pir_rag_clusters
+                )
+            elif system_name == "Graph-PIR":
+                # Use parameters from graph_params if available, otherwise use defaults
+                k_neighbors = 16
+                max_iterations = 10
+                parallel = 1
+
+                if graph_params is not None:
+                    k_neighbors = graph_params.get('k_neighbors', 16)
+                    max_iterations = graph_params.get('max_iterations', 10)
+                    parallel = graph_params.get('parallel', 1)
+                    print(f"    [DEBUG] Simulation using graph_params: k_neighbors={k_neighbors}, max_iterations={max_iterations}, parallel={parallel}")
+                else:
+                    print(f"    [DEBUG] Simulation using defaults: k_neighbors={k_neighbors}, max_iterations={max_iterations}, parallel={parallel}")
+
+                retrieved_doc_indices = self._simulate_graph_pir_search(
+                    query_embedding, documents, embeddings,
+                    k_neighbors=k_neighbors, max_iterations=max_iterations, parallel=parallel,
+                    prebuilt_graph=graph_pir_graph
+                )
+            elif system_name == "Tiptoe":
+                k_clusters = tiptoe_k_clusters or min(32, max(5, len(documents)//20))
+                retrieved_doc_indices = self._simulate_tiptoe_search(
+                    query_embedding, documents, embeddings, n_clusters=k_clusters
+                )
+            else:
+                raise ValueError(f"Unknown system: {system_name}")
+
+            quality_time = time.perf_counter() - quality_start
+            total_quality_time += quality_time
+
+            # Calculate quality metrics - use dataset-specific metrics if available
+            if dataset_name and ground_truth is not None:
+                quality_metrics = self.calculate_dataset_metrics(
+                    retrieved_doc_indices, ground_truth, dataset_name, query_idx
+                )
+                # Print dataset-specific metrics
+                if dataset_name in ["LAION", "MS_MARCO"]:
+                    print(f"    Quality metrics: MRR@100={quality_metrics.get('mrr_at_100', 0):.3f}")
+                elif dataset_name == "SIFT":
+                    print(f"    Quality metrics: Recall@10={quality_metrics.get('recall_at_10', 0):.3f}")
+            else:
+                # Fallback to original metrics for synthetic data
+                quality_metrics = self.calculate_retrieval_quality(
+                    query_embedding, retrieved_doc_indices, embeddings, top_k
+                )
+                print(f"    Quality metrics: P@{top_k}={quality_metrics['precision_at_k']:.3f}, "
+                      f"R@{top_k}={quality_metrics['recall_at_k']:.3f}, "
+                      f"NDCG@{top_k}={quality_metrics['ndcg_at_k']:.3f}")
+
+            print(f"    Simulation time: {quality_time:.3f}s")
+
+            # Store results
+            query_result = {
+                'query_idx': query_idx,
+                'retrieved_doc_indices': retrieved_doc_indices,
+                'simulation_time': quality_time
+            }
+            results['query_results'].append(query_result)
+            results['quality_metrics'].append(quality_metrics)
+
+        # Summary statistics
+        total_queries = len(queries)
+        avg_quality_time = total_quality_time / total_queries if total_queries > 0 else 0
+
+        # Aggregate quality metrics
+        if dataset_name in ["LAION", "MS_MARCO"]:
+            mrr_scores = [m.get('mrr_at_100', 0) for m in results['quality_metrics']]
+            avg_mrr = np.mean(mrr_scores) if mrr_scores else 0
+            quality_metrics_agg = {
+                'avg_mrr_at_100': avg_mrr,
+                'all_mrr_scores': mrr_scores
+            }
+        elif dataset_name == "SIFT":
+            recall_scores = [m.get('recall_at_10', 0) for m in results['quality_metrics']]
+            avg_recall = np.mean(recall_scores) if recall_scores else 0
+            quality_metrics_agg = {
+                'avg_recall_at_10': avg_recall,
+                'all_recall_scores': recall_scores
+            }
+        else:
+            precision_scores = [m.get('precision_at_k', 0) for m in results['quality_metrics']]
+            recall_scores = [m.get('recall_at_k', 0) for m in results['quality_metrics']]
+            ndcg_scores = [m.get('ndcg_at_k', 0) for m in results['quality_metrics']]
+            quality_metrics_agg = {
+                'avg_precision_at_k': np.mean(precision_scores) if precision_scores else 0,
+                'avg_recall_at_k': np.mean(recall_scores) if recall_scores else 0,
+                'avg_ndcg_at_k': np.mean(ndcg_scores) if ndcg_scores else 0,
+                'all_precision_scores': precision_scores,
+                'all_recall_scores': recall_scores,
+                'all_ndcg_scores': ndcg_scores
+            }
+
+        results.update({
+            'summary': {
+                'total_queries': total_queries,
+                'total_simulation_time': total_quality_time,
+                'avg_simulation_time_per_query': avg_quality_time,
+                'simulation_only': True,
+                **quality_metrics_agg
+            }
+        })
+
+        print(f"\n=== {system_name} Simulation Results Summary ===")
+        print(f"  Total queries: {total_queries}")
+        print(f"  Total simulation time: {total_quality_time:.3f}s")
+        print(f"  Average simulation time per query: {avg_quality_time:.3f}s")
+
+        # Print aggregated quality metrics
+        if dataset_name in ["LAION", "MS_MARCO"]:
+            print(f"  Average MRR@100: {avg_mrr:.3f}")
+        elif dataset_name == "SIFT":
+            print(f"  Average Recall@10: {avg_recall:.3f}")
+        else:
+            if precision_scores:
+                print(f"  Average P@{top_k}: {quality_metrics_agg['avg_precision_at_k']:.3f}")
+                print(f"  Average R@{top_k}: {quality_metrics_agg['avg_recall_at_k']:.3f}")
+                print(f"  Average NDCG@{top_k}: {quality_metrics_agg['avg_ndcg_at_k']:.3f}")
 
         return results
 

@@ -1,0 +1,452 @@
+{
+  "experiment_info": {
+    "timestamp": "20251113-230803",
+    "dataset_name": "MS_MARCO",
+    "n_docs": 1000,
+    "n_queries": 10,
+    "top_k": 10,
+    "embed_dim": 192,
+    "data_type": "dataset"
+  },
+  "pir_rag": {
+    "system": "PIR-RAG",
+    "setup_time": 1.7124221000121906,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.002433199988445267,
+        "pir_performance_time": 0.96693170000799,
+        "total_query_time": 0.9693648999964353,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 133,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 1,
+        "quality_simulation_time": 0.001526599982753396,
+        "pir_performance_time": 0.922676499991212,
+        "total_query_time": 0.9242030999739654,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 163,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 2,
+        "quality_simulation_time": 0.0016413000121247023,
+        "pir_performance_time": 0.9222783999866806,
+        "total_query_time": 0.9239196999988053,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 96,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 3,
+        "quality_simulation_time": 0.0016885999939404428,
+        "pir_performance_time": 0.9233085000014398,
+        "total_query_time": 0.9249970999953803,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 153,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 4,
+        "quality_simulation_time": 0.002049700007773936,
+        "pir_performance_time": 0.8777240999916103,
+        "total_query_time": 0.8797737999993842,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 122,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 5,
+        "quality_simulation_time": 0.0013498000043909997,
+        "pir_performance_time": 0.8714815999846905,
+        "total_query_time": 0.8728313999890815,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 153,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 6,
+        "quality_simulation_time": 0.0018589000101201236,
+        "pir_performance_time": 0.8435860999743454,
+        "total_query_time": 0.8454449999844655,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 132,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 7,
+        "quality_simulation_time": 0.0014022999966982752,
+        "pir_performance_time": 0.8803113000176381,
+        "total_query_time": 0.8817136000143364,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 147,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 8,
+        "quality_simulation_time": 0.0015802000125404447,
+        "pir_performance_time": 0.8538207999954466,
+        "total_query_time": 0.855401000007987,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 115,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 9,
+        "quality_simulation_time": 0.0017479999805800617,
+        "pir_performance_time": 0.8950193999917246,
+        "total_query_time": 0.8967673999723047,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 120,
+        "mrr_at_100": 0.0
+      }
+    ],
+    "quality_metrics": [
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.001727859998936765,
+    "avg_pir_performance_time": 0.8957138399942778,
+    "avg_total_query_time": 0.8974416999932145,
+    "avg_communication_bytes": 0.0,
+    "total_communication_kb": 0.0
+  },
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 4.33163999998942,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.004746699996758252,
+        "pir_performance_time": 1.7364604999893345,
+        "total_query_time": 1.7412071999860927,
+        "communication_bytes": 726400,
+        "num_retrieved_simulated": 199,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 1,
+        "quality_simulation_time": 0.0034645000123418868,
+        "pir_performance_time": 1.8210897000099067,
+        "total_query_time": 1.8245542000222486,
+        "communication_bytes": 725312,
+        "num_retrieved_simulated": 218,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 2,
+        "quality_simulation_time": 0.003608600003644824,
+        "pir_performance_time": 1.831549199996516,
+        "total_query_time": 1.835157800000161,
+        "communication_bytes": 726400,
+        "num_retrieved_simulated": 145,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 3,
+        "quality_simulation_time": 0.004520099988440052,
+        "pir_performance_time": 1.7318405999976676,
+        "total_query_time": 1.7363606999861076,
+        "communication_bytes": 724224,
+        "num_retrieved_simulated": 196,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 4,
+        "quality_simulation_time": 0.0041452000150457025,
+        "pir_performance_time": 1.7731526000134181,
+        "total_query_time": 1.7772978000284638,
+        "communication_bytes": 726400,
+        "num_retrieved_simulated": 218,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 5,
+        "quality_simulation_time": 0.004898400016827509,
+        "pir_performance_time": 1.7090649000019766,
+        "total_query_time": 1.7139633000188041,
+        "communication_bytes": 725312,
+        "num_retrieved_simulated": 128,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 6,
+        "quality_simulation_time": 0.00365960001363419,
+        "pir_performance_time": 1.7086263000092003,
+        "total_query_time": 1.7122859000228345,
+        "communication_bytes": 725312,
+        "num_retrieved_simulated": 116,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 7,
+        "quality_simulation_time": 0.0028759999840985984,
+        "pir_performance_time": 1.880226599983871,
+        "total_query_time": 1.8831025999679696,
+        "communication_bytes": 726400,
+        "num_retrieved_simulated": 160,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 8,
+        "quality_simulation_time": 0.0035422999935690314,
+        "pir_performance_time": 1.740887100022519,
+        "total_query_time": 1.744429400016088,
+        "communication_bytes": 726400,
+        "num_retrieved_simulated": 99,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 9,
+        "quality_simulation_time": 0.0033079999848268926,
+        "pir_performance_time": 1.8582313999941107,
+        "total_query_time": 1.8615393999789376,
+        "communication_bytes": 726400,
+        "num_retrieved_simulated": 196,
+        "mrr_at_100": 0.0
+      }
+    ],
+    "quality_metrics": [
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      726400,
+      725312,
+      726400,
+      724224,
+      726400,
+      725312,
+      725312,
+      726400,
+      726400,
+      726400
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.0038769400009186937,
+    "avg_pir_performance_time": 1.779112890001852,
+    "avg_total_query_time": 1.7829898300027707,
+    "avg_communication_bytes": 725856.0,
+    "total_communication_kb": 7088.4375
+  },
+  "tiptoe": {
+    "system": "Tiptoe",
+    "setup_time": 0.4470751000044402,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.05091520000132732,
+        "pir_performance_time": 0.017718000017339364,
+        "total_query_time": 0.06863320001866668,
+        "communication_bytes": 9536,
+        "num_retrieved_simulated": 15,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 1,
+        "quality_simulation_time": 0.08894020001753233,
+        "pir_performance_time": 0.01825159997679293,
+        "total_query_time": 0.10719179999432527,
+        "communication_bytes": 10176,
+        "num_retrieved_simulated": 24,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 2,
+        "quality_simulation_time": 0.09057400000165217,
+        "pir_performance_time": 0.010738100012531504,
+        "total_query_time": 0.10131210001418367,
+        "communication_bytes": 6336,
+        "num_retrieved_simulated": 25,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 3,
+        "quality_simulation_time": 0.08984020000207238,
+        "pir_performance_time": 0.015363300015451387,
+        "total_query_time": 0.10520350001752377,
+        "communication_bytes": 7936,
+        "num_retrieved_simulated": 17,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 4,
+        "quality_simulation_time": 0.08441660000244156,
+        "pir_performance_time": 0.013718900008825585,
+        "total_query_time": 0.09813550001126714,
+        "communication_bytes": 7616,
+        "num_retrieved_simulated": 46,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 5,
+        "quality_simulation_time": 0.09094669998739846,
+        "pir_performance_time": 0.014406000002054498,
+        "total_query_time": 0.10535269998945296,
+        "communication_bytes": 7936,
+        "num_retrieved_simulated": 7,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 6,
+        "quality_simulation_time": 0.07882590001099743,
+        "pir_performance_time": 0.024470999982440844,
+        "total_query_time": 0.10329689999343827,
+        "communication_bytes": 12416,
+        "num_retrieved_simulated": 27,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 7,
+        "quality_simulation_time": 0.09208880001096986,
+        "pir_performance_time": 0.024457599996821955,
+        "total_query_time": 0.11654640000779182,
+        "communication_bytes": 12416,
+        "num_retrieved_simulated": 9,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 8,
+        "quality_simulation_time": 0.08994269999675453,
+        "pir_performance_time": 0.018835099996067584,
+        "total_query_time": 0.10877779999282211,
+        "communication_bytes": 10176,
+        "num_retrieved_simulated": 23,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 9,
+        "quality_simulation_time": 0.0861000000149943,
+        "pir_performance_time": 0.021319599996786565,
+        "total_query_time": 0.10741960001178086,
+        "communication_bytes": 11136,
+        "num_retrieved_simulated": 46,
+        "mrr_at_100": 0.0
+      }
+    ],
+    "quality_metrics": [
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      9536,
+      10176,
+      6336,
+      7936,
+      7616,
+      7936,
+      12416,
+      12416,
+      10176,
+      11136
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.08425903000461403,
+    "avg_pir_performance_time": 0.017927920000511223,
+    "avg_total_query_time": 0.10218695000512526,
+    "avg_communication_bytes": 9568.0,
+    "total_communication_kb": 93.4375
+  }
+}

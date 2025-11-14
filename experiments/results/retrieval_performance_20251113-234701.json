@@ -1,0 +1,179 @@
+{
+  "experiment_info": {
+    "timestamp": "20251113-234701",
+    "dataset_name": "MS_MARCO",
+    "n_docs": 1000,
+    "n_queries": 3,
+    "top_k": 10,
+    "embed_dim": 192,
+    "data_type": "dataset"
+  },
+  "pir_rag": {
+    "system": "PIR-RAG",
+    "setup_time": 2.286065599997528,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.00298689998453483,
+        "pir_performance_time": 1.07329880000907,
+        "total_query_time": 1.0762856999936048,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 133,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 1,
+        "quality_simulation_time": 0.001798400015104562,
+        "pir_performance_time": 0.9620307000004686,
+        "total_query_time": 0.9638291000155732,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 163,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 2,
+        "quality_simulation_time": 0.0016613999905530363,
+        "pir_performance_time": 0.9637567999889143,
+        "total_query_time": 0.9654181999794673,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 96,
+        "mrr_at_100": 0.0
+      }
+    ],
+    "quality_metrics": [
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      0,
+      0,
+      0
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.0021488999967308096,
+    "avg_pir_performance_time": 0.9996954333328176,
+    "avg_total_query_time": 1.0018443333295484,
+    "avg_communication_bytes": 0.0,
+    "total_communication_kb": 0.0
+  },
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 4.025697200006107,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.005388800025684759,
+        "pir_performance_time": 1.6735375000280328,
+        "total_query_time": 1.6789263000537176,
+        "communication_bytes": 723136,
+        "num_retrieved_simulated": 205,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 1,
+        "quality_simulation_time": 0.004423899983521551,
+        "pir_performance_time": 1.7550279000133742,
+        "total_query_time": 1.7594517999968957,
+        "communication_bytes": 726400,
+        "num_retrieved_simulated": 211,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 2,
+        "quality_simulation_time": 0.003874799993354827,
+        "pir_performance_time": 1.7461071999859996,
+        "total_query_time": 1.7499819999793544,
+        "communication_bytes": 726400,
+        "num_retrieved_simulated": 183,
+        "mrr_at_100": 0.0
+      }
+    ],
+    "quality_metrics": [
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      723136,
+      726400,
+      726400
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.004562500000853713,
+    "avg_pir_performance_time": 1.7248908666758023,
+    "avg_total_query_time": 1.729453366676656,
+    "avg_communication_bytes": 725312.0,
+    "total_communication_kb": 2124.9375
+  },
+  "tiptoe": {
+    "system": "Tiptoe",
+    "setup_time": 0.4343241000024136,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.056892799999332055,
+        "pir_performance_time": 0.022337300004437566,
+        "total_query_time": 0.07923010000376962,
+        "communication_bytes": 9536,
+        "num_retrieved_simulated": 15,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 1,
+        "quality_simulation_time": 0.08855859999312088,
+        "pir_performance_time": 0.01904330000979826,
+        "total_query_time": 0.10760190000291914,
+        "communication_bytes": 10176,
+        "num_retrieved_simulated": 24,
+        "mrr_at_100": 0.0
+      },
+      {
+        "query_idx": 2,
+        "quality_simulation_time": 0.0844230999937281,
+        "pir_performance_time": 0.008509200008120388,
+        "total_query_time": 0.09293230000184849,
+        "communication_bytes": 6336,
+        "num_retrieved_simulated": 25,
+        "mrr_at_100": 0.0
+      }
+    ],
+    "quality_metrics": [
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      },
+      {
+        "mrr_at_100": 0.0
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      9536,
+      10176,
+      6336
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.07662483332872701,
+    "avg_pir_performance_time": 0.016629933340785403,
+    "avg_total_query_time": 0.0932547666695124,
+    "avg_communication_bytes": 8682.666666666666,
+    "total_communication_kb": 25.4375
+  }
+}
