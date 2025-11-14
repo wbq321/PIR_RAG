@@ -1,0 +1,815 @@
+{
+  "doc_sizes": [
+    500,
+    1000,
+    2000,
+    5000
+  ],
+  "dataset_name": "LAION",
+  "pir_rag_results": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "graph_pir_results": [
+    {
+      "system": "Graph-PIR",
+      "dataset_name": "LAION",
+      "setup_time": 2.328281899972353,
+      "graph_setup_time": 2.2911755999957677,
+      "vector_pir_setup_time": 0.036147600010735914,
+      "doc_pir_setup_time": 4.1799998143687844e-05,
+      "avg_query_time": 3.0069890199985823,
+      "std_query_time": 0.048034327252389056,
+      "query_times": [
+        3.0107421999855433,
+        3.069856100017205,
+        2.9826719000120647,
+        2.9306829999841284,
+        3.040991899993969
+      ],
+      "step_times": [
+        {
+          "phase1_time": 2.700012599991169,
+          "phase2_time": 0.30993499999749474,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0026217000267934054,
+          "decryption_time": 0.0002525000018067658
+        },
+        {
+          "phase1_time": 2.7580986999964807,
+          "phase2_time": 0.31078359999810345,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0025635001074988395,
+          "decryption_time": 0.00024519997532479465
+        },
+        {
+          "phase1_time": 2.7051448000129312,
+          "phase2_time": 0.2766528000065591,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0024199000326916575,
+          "decryption_time": 0.000244999973801896
+        },
+        {
+          "phase1_time": 2.647863599995617,
+          "phase2_time": 0.2817989999894053,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0033869000617414713,
+          "decryption_time": 0.00027329998556524515
+        },
+        {
+          "phase1_time": 2.7583413000102155,
+          "phase2_time": 0.2817254999827128,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0023682000464759767,
+          "decryption_time": 0.000226600153837353
+        }
+      ],
+      "avg_upload_bytes": 332544.0,
+      "avg_download_bytes": 135488.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 332288,
+          "download_bytes": 133376,
+          "phase1_upload": 12288,
+          "phase1_download": 101376,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 332800,
+          "download_bytes": 137600,
+          "phase1_upload": 12800,
+          "phase1_download": 105600,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 332544,
+          "download_bytes": 135488,
+          "phase1_upload": 12544,
+          "phase1_download": 103488,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 332288,
+          "download_bytes": 133376,
+          "phase1_upload": 12288,
+          "phase1_download": 101376,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 332800,
+          "download_bytes": 137600,
+          "phase1_upload": 12800,
+          "phase1_download": 105600,
+          "phase2_upload": 320000,
+          "phase2_download": 32000
+        }
+      ],
+      "parameters": {
+        "k_neighbors": 16,
+        "ef_construction": 100,
+        "max_connections": 16,
+        "ef_search": 30,
+        "max_iterations": 10,
+        "parallel": 1,
+        "max_neighbors_per_step": 5
+      },
+      "n_documents": 500,
+      "embedding_dim": 512
+    },
+    {
+      "system": "Graph-PIR",
+      "dataset_name": "LAION",
+      "setup_time": 5.594525299995439,
+      "graph_setup_time": 5.522894399997313,
+      "vector_pir_setup_time": 0.06994570000097156,
+      "doc_pir_setup_time": 0.00011340001947246492,
+      "avg_query_time": 3.2963190399983433,
+      "std_query_time": 0.08015412604339146,
+      "query_times": [
+        3.207731900009094,
+        3.297153999999864,
+        3.2095464000012726,
+        3.3560487999930046,
+        3.411114099988481
+      ],
+      "step_times": [
+        {
+          "phase1_time": 2.674820800020825,
+          "phase2_time": 0.5323016000038479,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0048664999776519835,
+          "decryption_time": 0.00022609997540712357
+        },
+        {
+          "phase1_time": 2.769695699971635,
+          "phase2_time": 0.526701500028139,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.004775500041432679,
+          "decryption_time": 0.00023209999199025333
+        },
+        {
+          "phase1_time": 2.6134381000010762,
+          "phase2_time": 0.5953080000181217,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.005020800075726584,
+          "decryption_time": 0.0002415998314972967
+        },
+        {
+          "phase1_time": 2.725562199979322,
+          "phase2_time": 0.629888800001936,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.006122699996922165,
+          "decryption_time": 0.00025610000011511147
+        },
+        {
+          "phase1_time": 2.7892468000063673,
+          "phase2_time": 0.6213349000026938,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.0054506000597029924,
+          "decryption_time": 0.0002659000165294856
+        }
+      ],
+      "avg_upload_bytes": 652492.8,
+      "avg_download_bytes": 135065.6,
+      "communication_costs": [
+        {
+          "upload_bytes": 652288,
+          "download_bytes": 133376,
+          "phase1_upload": 12288,
+          "phase1_download": 101376,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 652800,
+          "download_bytes": 137600,
+          "phase1_upload": 12800,
+          "phase1_download": 105600,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 652032,
+          "download_bytes": 131264,
+          "phase1_upload": 12032,
+          "phase1_download": 99264,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 652544,
+          "download_bytes": 135488,
+          "phase1_upload": 12544,
+          "phase1_download": 103488,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 652800,
+          "download_bytes": 137600,
+          "phase1_upload": 12800,
+          "phase1_download": 105600,
+          "phase2_upload": 640000,
+          "phase2_download": 32000
+        }
+      ],
+      "parameters": {
+        "k_neighbors": 16,
+        "ef_construction": 100,
+        "max_connections": 16,
+        "ef_search": 30,
+        "max_iterations": 10,
+        "parallel": 1,
+        "max_neighbors_per_step": 5
+      },
+      "n_documents": 1000,
+      "embedding_dim": 512
+    },
+    {
+      "system": "Graph-PIR",
+      "dataset_name": "LAION",
+      "setup_time": 13.409999000024982,
+      "graph_setup_time": 13.233161899988772,
+      "vector_pir_setup_time": 0.17517299999599345,
+      "doc_pir_setup_time": 9.670000872574747e-05,
+      "avg_query_time": 4.0066148599958975,
+      "std_query_time": 0.05510398835639862,
+      "query_times": [
+        4.057446599996183,
+        3.9741161999991164,
+        3.9183534999901894,
+        4.0671443000028376,
+        4.016013699991163
+      ],
+      "step_times": [
+        {
+          "phase1_time": 2.7314186000148766,
+          "phase2_time": 1.3254037000006065,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.010760399978607893,
+          "decryption_time": 0.00030109990620985627
+        },
+        {
+          "phase1_time": 2.7256225000019185,
+          "phase2_time": 1.2478315999906044,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.010586299991700798,
+          "decryption_time": 0.0002865999995265156
+        },
+        {
+          "phase1_time": 2.728034200001275,
+          "phase2_time": 1.1894542000081856,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.011034399940399453,
+          "decryption_time": 0.00029150000773370266
+        },
+        {
+          "phase1_time": 2.7793968000041787,
+          "phase2_time": 1.2869082000106573,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.01072540003224276,
+          "decryption_time": 0.0003074999840464443
+        },
+        {
+          "phase1_time": 2.783789800014347,
+          "phase2_time": 1.2314680999843404,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.011752300022635609,
+          "decryption_time": 0.0002801000664476305
+        }
+      ],
+      "avg_upload_bytes": 1292646.4,
+      "avg_download_bytes": 136332.8,
+      "communication_costs": [
+        {
+          "upload_bytes": 1292544,
+          "download_bytes": 135488,
+          "phase1_upload": 12544,
+          "phase1_download": 103488,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 1292544,
+          "download_bytes": 135488,
+          "phase1_upload": 12544,
+          "phase1_download": 103488,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 1292544,
+          "download_bytes": 135488,
+          "phase1_upload": 12544,
+          "phase1_download": 103488,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 1292800,
+          "download_bytes": 137600,
+          "phase1_upload": 12800,
+          "phase1_download": 105600,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 1292800,
+          "download_bytes": 137600,
+          "phase1_upload": 12800,
+          "phase1_download": 105600,
+          "phase2_upload": 1280000,
+          "phase2_download": 32000
+        }
+      ],
+      "parameters": {
+        "k_neighbors": 16,
+        "ef_construction": 100,
+        "max_connections": 16,
+        "ef_search": 30,
+        "max_iterations": 10,
+        "parallel": 1,
+        "max_neighbors_per_step": 5
+      },
+      "n_documents": 2000,
+      "embedding_dim": 512
+    },
+    {
+      "system": "Graph-PIR",
+      "dataset_name": "LAION",
+      "setup_time": 41.436254300002474,
+      "graph_setup_time": 41.04776909999782,
+      "vector_pir_setup_time": 0.38657380000222474,
+      "doc_pir_setup_time": 0.0001188000023830682,
+      "avg_query_time": 5.928193040000042,
+      "std_query_time": 0.4820516738272313,
+      "query_times": [
+        5.319706299982499,
+        5.381237800000235,
+        6.277379600011045,
+        6.180493399995612,
+        6.482148100010818
+      ],
+      "step_times": [
+        {
+          "phase1_time": 2.119418299989775,
+          "phase2_time": 3.199512799998047,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.04132510005729273,
+          "decryption_time": 0.0002926998713519424
+        },
+        {
+          "phase1_time": 1.844999299995834,
+          "phase2_time": 3.5353739999991376,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.164398200053256,
+          "decryption_time": 0.00033120004809461534
+        },
+        {
+          "phase1_time": 1.8744206000119448,
+          "phase2_time": 4.401550899987342,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.04605890001403168,
+          "decryption_time": 0.000336099968990311
+        },
+        {
+          "phase1_time": 1.9725261999992654,
+          "phase2_time": 4.207227300008526,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.031085300026461482,
+          "decryption_time": 0.0003069999802391976
+        },
+        {
+          "phase1_time": 2.05456889999914,
+          "phase2_time": 4.425274200009881,
+          "graph_traversal_time": 0,
+          "pir_time": 0,
+          "encryption_time": 0.040009900054428726,
+          "decryption_time": 0.0003367000899743289
+        }
+      ],
+      "avg_upload_bytes": 3208857.6,
+      "avg_download_bytes": 105075.2,
+      "communication_costs": [
+        {
+          "upload_bytes": 3209728,
+          "download_bytes": 112256,
+          "phase1_upload": 9728,
+          "phase1_download": 80256,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 3208448,
+          "download_bytes": 101696,
+          "phase1_upload": 8448,
+          "phase1_download": 69696,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 3208192,
+          "download_bytes": 99584,
+          "phase1_upload": 8192,
+          "phase1_download": 67584,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 3208704,
+          "download_bytes": 103808,
+          "phase1_upload": 8704,
+          "phase1_download": 71808,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        },
+        {
+          "upload_bytes": 3209216,
+          "download_bytes": 108032,
+          "phase1_upload": 9216,
+          "phase1_download": 76032,
+          "phase2_upload": 3200000,
+          "phase2_download": 32000
+        }
+      ],
+      "parameters": {
+        "k_neighbors": 16,
+        "ef_construction": 100,
+        "max_connections": 16,
+        "ef_search": 30,
+        "max_iterations": 10,
+        "parallel": 1,
+        "max_neighbors_per_step": 5
+      },
+      "n_documents": 5000,
+      "embedding_dim": 512
+    }
+  ],
+  "tiptoe_results": [
+    {
+      "system": "Tiptoe",
+      "dataset_name": "LAION",
+      "setup_time": 0.41182050001225434,
+      "crypto_setup_time": 0,
+      "clustering_time": 0.18210979999275878,
+      "avg_query_time": 0.002357039996422827,
+      "std_query_time": 0.0012748936990549281,
+      "query_times": [
+        0.004893999983323738,
+        0.001874499983387068,
+        0.0015422000142280012,
+        0.0016242999990936369,
+        0.0018502000020816922
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0028771999932359904,
+          "pir_retrieval_time": 0.0006360999832395464,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.000433700013672933,
+          "pir_retrieval_time": 0.00013160001253709197,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00039969998761080205,
+          "pir_retrieval_time": 0.00012539999443106353,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0004885999951511621,
+          "pir_retrieval_time": 0.00012199999764561653,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00048710001283325255,
+          "pir_retrieval_time": 0.00033579999580979347,
+          "total_ranking_time": 0
+        }
+      ],
+      "avg_upload_bytes": 892.8,
+      "avg_download_bytes": 892.8,
+      "communication_costs": [
+        {
+          "upload_bytes": 960,
+          "download_bytes": 960,
+          "pir_communication": 384
+        },
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        },
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        },
+        {
+          "upload_bytes": 848,
+          "download_bytes": 848,
+          "pir_communication": 160
+        },
+        {
+          "upload_bytes": 960,
+          "download_bytes": 960,
+          "pir_communication": 384
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "use_real_crypto": true,
+        "poly_degree": 8192,
+        "plain_modulus": 1024
+      },
+      "n_documents": 500,
+      "embedding_dim": 512
+    },
+    {
+      "system": "Tiptoe",
+      "dataset_name": "LAION",
+      "setup_time": 0.5863833999901544,
+      "crypto_setup_time": 0,
+      "clustering_time": 0.2068243999965489,
+      "avg_query_time": 0.002290100004756823,
+      "std_query_time": 0.0012066109323226367,
+      "query_times": [
+        0.004699300014181063,
+        0.0018208999827038497,
+        0.0016248000029008836,
+        0.0016456000157631934,
+        0.0016599000082351267
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00211280002258718,
+          "pir_retrieval_time": 0.0012531000247690827,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.00047450000420212746,
+          "pir_retrieval_time": 0.00028730000485666096,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0004160999960731715,
+          "pir_retrieval_time": 0.00028810001094825566,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0003941000031773001,
+          "pir_retrieval_time": 0.00029889997676946223,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0003708000003825873,
+          "pir_retrieval_time": 0.0003572000132407993,
+          "total_ranking_time": 0
+        }
+      ],
+      "avg_upload_bytes": 1065.6,
+      "avg_download_bytes": 1065.6,
+      "communication_costs": [
+        {
+          "upload_bytes": 1488,
+          "download_bytes": 1488,
+          "pir_communication": 1440
+        },
+        {
+          "upload_bytes": 960,
+          "download_bytes": 960,
+          "pir_communication": 384
+        },
+        {
+          "upload_bytes": 960,
+          "download_bytes": 960,
+          "pir_communication": 384
+        },
+        {
+          "upload_bytes": 960,
+          "download_bytes": 960,
+          "pir_communication": 384
+        },
+        {
+          "upload_bytes": 960,
+          "download_bytes": 960,
+          "pir_communication": 384
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "use_real_crypto": true,
+        "poly_degree": 8192,
+        "plain_modulus": 1024
+      },
+      "n_documents": 1000,
+      "embedding_dim": 512
+    },
+    {
+      "system": "Tiptoe",
+      "dataset_name": "LAION",
+      "setup_time": 0.8891089000098873,
+      "crypto_setup_time": 0,
+      "clustering_time": 0.46479709999402985,
+      "avg_query_time": 0.016284280008403585,
+      "std_query_time": 0.0039037698820840816,
+      "query_times": [
+        0.017518000007839873,
+        0.010647999995853752,
+        0.019660500023746863,
+        0.020733300014398992,
+        0.012861600000178441
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0021723000099882483,
+          "pir_retrieval_time": 0.01400419999845326,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0004594000056385994,
+          "pir_retrieval_time": 0.00881270001991652,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0005372000159695745,
+          "pir_retrieval_time": 0.017504499992355704,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0007642999989911914,
+          "pir_retrieval_time": 0.017972800007555634,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0005785000103060156,
+          "pir_retrieval_time": 0.010075900005176663,
+          "total_ranking_time": 0
+        }
+      ],
+      "avg_upload_bytes": 6048.0,
+      "avg_download_bytes": 6048.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 7008,
+          "download_bytes": 7008,
+          "pir_communication": 12480
+        },
+        {
+          "upload_bytes": 4608,
+          "download_bytes": 4608,
+          "pir_communication": 7680
+        },
+        {
+          "upload_bytes": 7008,
+          "download_bytes": 7008,
+          "pir_communication": 12480
+        },
+        {
+          "upload_bytes": 7008,
+          "download_bytes": 7008,
+          "pir_communication": 12480
+        },
+        {
+          "upload_bytes": 4608,
+          "download_bytes": 4608,
+          "pir_communication": 7680
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "use_real_crypto": true,
+        "poly_degree": 8192,
+        "plain_modulus": 1024
+      },
+      "n_documents": 2000,
+      "embedding_dim": 512
+    },
+    {
+      "system": "Tiptoe",
+      "dataset_name": "LAION",
+      "setup_time": 1.4509211999829859,
+      "crypto_setup_time": 0,
+      "clustering_time": 0.5705046999792103,
+      "avg_query_time": 0.028324420005083083,
+      "std_query_time": 0.004340086534537915,
+      "query_times": [
+        0.0238938000111375,
+        0.028325699997367337,
+        0.03353409998817369,
+        0.032787400006782264,
+        0.023081100021954626
+      ],
+      "step_times": [
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0005604999896604568,
+          "pir_retrieval_time": 0.021217499976046383,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0005651999963447452,
+          "pir_retrieval_time": 0.02304209998692386,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0007999000081326813,
+          "pir_retrieval_time": 0.021821800008183345,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.0006422000005841255,
+          "pir_retrieval_time": 0.026327500003390014,
+          "total_ranking_time": 0
+        },
+        {
+          "cluster_selection_time": 0,
+          "ranking_time": 0.000967200001468882,
+          "pir_retrieval_time": 0.018116299994289875,
+          "total_ranking_time": 0
+        }
+      ],
+      "avg_upload_bytes": 7168.0,
+      "avg_download_bytes": 7168.0,
+      "communication_costs": [
+        {
+          "upload_bytes": 7168,
+          "download_bytes": 7168,
+          "pir_communication": 12800
+        },
+        {
+          "upload_bytes": 7168,
+          "download_bytes": 7168,
+          "pir_communication": 12800
+        },
+        {
+          "upload_bytes": 7168,
+          "download_bytes": 7168,
+          "pir_communication": 12800
+        },
+        {
+          "upload_bytes": 7168,
+          "download_bytes": 7168,
+          "pir_communication": 12800
+        },
+        {
+          "upload_bytes": 7168,
+          "download_bytes": 7168,
+          "pir_communication": 12800
+        }
+      ],
+      "parameters": {
+        "k_clusters": 50,
+        "use_real_crypto": true,
+        "poly_degree": 8192,
+        "plain_modulus": 1024
+      },
+      "n_documents": 5000,
+      "embedding_dim": 512
+    }
+  ]
+}
