@@ -662,7 +662,8 @@ class RetrievalPerformanceTester:
                 print(f"    Error type: {type(e).__name__}")
                 if hasattr(e, '__traceback__'):
                     import traceback
-                    print(f"    Error details: {traceback.format_exc().split('\\n')[-3:-1]}")
+                    error_lines = traceback.format_exc().split('\n')[-3:-1]
+                    print(f"    Error details: {error_lines}")
                 performance_time = 0
                 communication_cost = 0
                 pir_metrics = {}
