@@ -1,0 +1,4 @@
+n_documents,n_queries,top_k,embed_dim,data_type,system,setup_time,avg_query_time,std_query_time,avg_upload_bytes,avg_download_bytes,avg_communication_per_query,precision_at_k,recall_at_k,ndcg_at_k,avg_similarity,queries_per_second,communication_efficiency
+100,1,10,768,real,PIR-RAG,0.0031956881284713745,1.4085268070921302,N/A,N/A,N/A,37886940.0,0.0,0.0,0.0,0.0,0.7099616386176391,3788694.0
+100,1,10,768,real,Graph-PIR,0.4434119937941432,1.7972650341689587,N/A,N/A,N/A,170624.0,0.2,0.2,0.3589542101716347,0.18453910946846008,0.5564009653492158,17062.4
+100,1,10,768,real,Tiptoe,0.042014144361019135,1.7542218258604407,N/A,N/A,N/A,0.0,0.0,0.0,0.0,0.17736302316188812,0.5700533337678106,0.0

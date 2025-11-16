@@ -1,0 +1,164 @@
+{
+  "experiment_info": {
+    "timestamp": "20250827-091741",
+    "n_docs": 100,
+    "n_queries": 1,
+    "top_k": 10,
+    "embed_dim": 768,
+    "data_type": "real"
+  },
+  "pir_rag": {
+    "system": "PIR-RAG",
+    "setup_time": 0.003118431195616722,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          33,
+          68,
+          37,
+          72,
+          96,
+          71,
+          91,
+          22,
+          58,
+          46
+        ],
+        "query_time": 0.3760676942765713
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.11004588314904008,
+        "avg_similarity": 0.18790403008460999,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "cluster_selection": 0.0005834782496094704,
+        "pir_retrieval": 0.3750256886705756,
+        "reranking": 0.0004364084452390671,
+        "total": 0.3760645240545273
+      }
+    ],
+    "communication_costs": [
+      9737318
+    ],
+    "avg_metrics": {
+      "avg_query_time": 0.3760676942765713,
+      "avg_precision_at_k": 0.1,
+      "avg_recall_at_k": 0.1,
+      "avg_ndcg_at_k": 0.11004588314904008,
+      "avg_similarity": 0.18790403008460999,
+      "avg_communication_per_query": 9737318.0,
+      "queries_per_second": 2.6590957298889135,
+      "communication_efficiency": 973731.8
+    }
+  },
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 0.49409691523760557,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          25,
+          41,
+          2,
+          72,
+          4,
+          96,
+          43,
+          82,
+          17,
+          53
+        ],
+        "query_time": 1.4018276697024703
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.3589542101716347,
+        "avg_similarity": 0.183003231883049,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "phase1": 1.3459912417456508,
+        "phase2": 0.05564975459128618,
+        "total": 1.4018248543143272
+      }
+    ],
+    "communication_costs": [
+      153664
+    ],
+    "avg_metrics": {
+      "avg_query_time": 1.4018276697024703,
+      "avg_precision_at_k": 0.2,
+      "avg_recall_at_k": 0.2,
+      "avg_ndcg_at_k": 0.3589542101716347,
+      "avg_similarity": 0.183003231883049,
+      "avg_communication_per_query": 153664.0,
+      "queries_per_second": 0.7133544454948904,
+      "communication_efficiency": 15366.4
+    }
+  },
+  "tiptoe": {
+    "system": "Tiptoe",
+    "setup_time": 0.04176880046725273,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          16,
+          68,
+          22,
+          58,
+          71,
+          97,
+          90,
+          2,
+          1,
+          11
+        ],
+        "query_time": 1.748185177333653
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.17736302316188812,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "ranking": 1.7392606539651752,
+        "retrieval": 0.008346361108124256,
+        "total": 1.748181102797389
+      }
+    ],
+    "communication_costs": [
+      0
+    ],
+    "avg_metrics": {
+      "avg_query_time": 1.748185177333653,
+      "avg_precision_at_k": 0.0,
+      "avg_recall_at_k": 0.0,
+      "avg_ndcg_at_k": 0.0,
+      "avg_similarity": 0.17736302316188812,
+      "avg_communication_per_query": 0.0,
+      "queries_per_second": 0.5720217817686846,
+      "communication_efficiency": 0.0
+    }
+  }
+}

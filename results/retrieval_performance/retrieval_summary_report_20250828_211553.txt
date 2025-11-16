@@ -1,0 +1,43 @@
+================================================================================
+RETRIEVAL PERFORMANCE ANALYSIS REPORT
+================================================================================
+Generated: 2025-08-28 21:15:59
+Total result files analyzed: 1
+
+SYSTEM PERFORMANCE SUMMARY
+----------------------------------------
+
+📊 PIR-RAG
+   Precision@K:  0.7100 ± 0.0000
+   Recall@K:     0.7100 ± 0.0000
+   NDCG@K:       0.7988 ± 0.0000
+   Query Time:   18.3332s ± 0.0000s
+   Throughput:   0.05 queries/sec
+   Total Queries: 10
+
+📊 GRAPH-PIR
+   Precision@K:  0.8700 ± 0.0000
+   Recall@K:     0.8700 ± 0.0000
+   NDCG@K:       0.9145 ± 0.0000
+   Query Time:   18.5947s ± 0.0000s
+   Throughput:   0.05 queries/sec
+   Total Queries: 10
+
+📊 TIPTOE
+   Precision@K:  0.4200 ± 0.0000
+   Recall@K:     0.4200 ± 0.0000
+   NDCG@K:       0.5133 ± 0.0000
+   Query Time:   27.3384s ± 0.0000s
+   Throughput:   0.04 queries/sec
+   Total Queries: 10
+
+==================================================
+BEST PERFORMING SYSTEMS
+==================================================
+🏆 Best Precision@K: Graph-PIR (0.8700)
+🏆 Best Recall@K: Graph-PIR (0.8700)
+🏆 Best NDCG@K: Graph-PIR (0.9145)
+🏆 Best Query Speed: PIR-RAG (18.3332)
+🏆 Best Throughput: PIR-RAG (0.0545queries/sec)
+
+================================================================================

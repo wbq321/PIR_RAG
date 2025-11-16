@@ -71,7 +71,8 @@ class PIRRAGClient:
             raise ValueError("Client not set up. Call setup() first.")
         
         cluster_selection_start = time.perf_counter()
-        
+        query_embedding = query_embedding.float()
+        centroids = self.centroids.float()
         similarities = util.cos_sim(query_embedding, self.centroids)[0]
         best_cluster_indices = torch.topk(similarities, k=min(top_k, len(self.centroids))).indices.tolist()
         
@@ -353,7 +354,7 @@ class PIRRAGClient:
             raise
         
         # Compute similarities and get top-k
-        similarities = torch.mm(query_embedding.unsqueeze(0), doc_embeddings.T)[0]
+        similarities = torch.mm(query_embedding.to(torch.float32).unsqueeze(0), doc_embeddings.to(torch.float32).T)[0]
         top_k_value = min(top_k, len(urls))
         
         if top_k_value > 0:

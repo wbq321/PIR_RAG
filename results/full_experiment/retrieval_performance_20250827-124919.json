@@ -1,0 +1,148 @@
+{
+  "experiment_info": {
+    "timestamp": "20250827-124919",
+    "n_docs": 10000,
+    "n_queries": 1,
+    "top_k": 10,
+    "embed_dim": 768,
+    "data_type": "real"
+  },
+  "pir_rag": {
+    "system": "PIR-RAG",
+    "setup_time": 0.7851639268919826,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.9969831479247659,
+        "pir_performance_time": 38.38737231004052,
+        "total_query_time": 39.384355457965285,
+        "communication_bytes": 0,
+        "num_retrieved_simulated": 913,
+        "precision_at_k": 0.8,
+        "recall_at_k": 0.8,
+        "ndcg_at_k": 0.8701249883466593,
+        "avg_similarity": 0.273693710565567,
+        "num_retrieved": 913
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.8,
+        "recall_at_k": 0.8,
+        "ndcg_at_k": 0.8701249883466593,
+        "avg_similarity": 0.273693710565567,
+        "num_retrieved": 913
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      0
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.9969831479247659,
+    "avg_pir_performance_time": 38.38737231004052,
+    "avg_total_query_time": 39.384355457965285,
+    "avg_communication_bytes": 0.0,
+    "total_communication_kb": 0.0,
+    "avg_precision_at_k": 0.8,
+    "std_precision_at_k": 0.0,
+    "avg_recall_at_k": 0.8,
+    "std_recall_at_k": 0.0,
+    "avg_ndcg_at_k": 0.8701249883466593,
+    "std_ndcg_at_k": 0.0,
+    "avg_avg_similarity": 0.273693710565567,
+    "std_avg_similarity": 0.0
+  },
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 49.476153888972476,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 212.14908925094642,
+        "pir_performance_time": 14.865229228977114,
+        "total_query_time": 227.01431847992353,
+        "communication_bytes": 6791552,
+        "num_retrieved_simulated": 434,
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "ndcg_at_k": 1.0,
+        "avg_similarity": 0.2743151783943176,
+        "num_retrieved": 434
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "ndcg_at_k": 1.0,
+        "avg_similarity": 0.2743151783943176,
+        "num_retrieved": 434
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      6791552
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 212.14908925094642,
+    "avg_pir_performance_time": 14.865229228977114,
+    "avg_total_query_time": 227.01431847992353,
+    "avg_communication_bytes": 6791552.0,
+    "total_communication_kb": 6632.375,
+    "avg_precision_at_k": 1.0,
+    "std_precision_at_k": 0.0,
+    "avg_recall_at_k": 1.0,
+    "std_recall_at_k": 0.0,
+    "avg_ndcg_at_k": 1.0,
+    "std_ndcg_at_k": 0.0,
+    "avg_avg_similarity": 0.2743151783943176,
+    "std_avg_similarity": 0.0
+  },
+  "tiptoe": {
+    "system": "Tiptoe",
+    "setup_time": 1.2415246649179608,
+    "query_results": [
+      {
+        "query_idx": 0,
+        "quality_simulation_time": 0.8325127658899873,
+        "pir_performance_time": 39.10151228890754,
+        "total_query_time": 39.93402505479753,
+        "communication_bytes": 187396,
+        "num_retrieved_simulated": 336,
+        "precision_at_k": 0.8,
+        "recall_at_k": 0.8,
+        "ndcg_at_k": 0.8701249883466593,
+        "avg_similarity": 0.27338653802871704,
+        "num_retrieved": 336
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.8,
+        "recall_at_k": 0.8,
+        "ndcg_at_k": 0.8701249883466593,
+        "avg_similarity": 0.27338653802871704,
+        "num_retrieved": 336
+      }
+    ],
+    "timing_breakdown": [],
+    "communication_costs": [
+      187396
+    ],
+    "hybrid_approach": true,
+    "avg_quality_simulation_time": 0.8325127658899873,
+    "avg_pir_performance_time": 39.10151228890754,
+    "avg_total_query_time": 39.93402505479753,
+    "avg_communication_bytes": 187396.0,
+    "total_communication_kb": 183.00390625,
+    "avg_precision_at_k": 0.8,
+    "std_precision_at_k": 0.0,
+    "avg_recall_at_k": 0.8,
+    "std_recall_at_k": 0.0,
+    "avg_ndcg_at_k": 0.8701249883466593,
+    "std_ndcg_at_k": 0.0,
+    "avg_avg_similarity": 0.27338653802871704,
+    "std_avg_similarity": 0.0
+  }
+}

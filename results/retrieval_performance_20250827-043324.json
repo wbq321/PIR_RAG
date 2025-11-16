@@ -1,0 +1,1484 @@
+{
+  "experiment_info": {
+    "timestamp": "20250827-043324",
+    "n_docs": 1000,
+    "n_queries": 50,
+    "top_k": 10,
+    "embed_dim": 768,
+    "data_type": "synthetic"
+  },
+  "pir_rag": null,
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 4.049500009976327,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          2,
+          4,
+          3,
+          1,
+          0,
+          554,
+          713,
+          943,
+          734,
+          142
+        ],
+        "query_time": 2.6211392106488347
+      },
+      {
+        "query_id": 1,
+        "retrieved_indices": [
+          4,
+          2,
+          0,
+          3,
+          1,
+          734,
+          716,
+          610,
+          470,
+          554
+        ],
+        "query_time": 2.6018445445224643
+      },
+      {
+        "query_id": 2,
+        "retrieved_indices": [
+          2,
+          3,
+          4,
+          0,
+          1,
+          282,
+          470,
+          248,
+          830,
+          716
+        ],
+        "query_time": 2.600464659743011
+      },
+      {
+        "query_id": 3,
+        "retrieved_indices": [
+          0,
+          3,
+          1,
+          2,
+          4,
+          587,
+          247,
+          393,
+          830,
+          610
+        ],
+        "query_time": 2.6028287457302213
+      },
+      {
+        "query_id": 4,
+        "retrieved_indices": [
+          1,
+          3,
+          2,
+          0,
+          4,
+          622,
+          931,
+          554,
+          178,
+          830
+        ],
+        "query_time": 2.6022493755444884
+      },
+      {
+        "query_id": 5,
+        "retrieved_indices": [
+          4,
+          1,
+          2,
+          0,
+          3,
+          587,
+          142,
+          734,
+          447,
+          178
+        ],
+        "query_time": 2.603253249078989
+      },
+      {
+        "query_id": 6,
+        "retrieved_indices": [
+          2,
+          1,
+          4,
+          0,
+          3,
+          931,
+          393,
+          554,
+          987,
+          282
+        ],
+        "query_time": 2.598556648939848
+      },
+      {
+        "query_id": 7,
+        "retrieved_indices": [
+          1,
+          2,
+          3,
+          4,
+          0,
+          622,
+          830,
+          713,
+          620,
+          610
+        ],
+        "query_time": 2.601776398718357
+      },
+      {
+        "query_id": 8,
+        "retrieved_indices": [
+          0,
+          4,
+          2,
+          1,
+          3,
+          678,
+          972,
+          554,
+          943,
+          931
+        ],
+        "query_time": 2.5977372992783785
+      },
+      {
+        "query_id": 9,
+        "retrieved_indices": [
+          1,
+          0,
+          2,
+          3,
+          4,
+          610,
+          713,
+          587,
+          943,
+          734
+        ],
+        "query_time": 2.6001732209697366
+      },
+      {
+        "query_id": 10,
+        "retrieved_indices": [
+          0,
+          4,
+          2,
+          1,
+          3,
+          987,
+          142,
+          178,
+          972,
+          620
+        ],
+        "query_time": 2.5972899990156293
+      },
+      {
+        "query_id": 11,
+        "retrieved_indices": [
+          3,
+          1,
+          2,
+          0,
+          4,
+          716,
+          11,
+          447,
+          620,
+          622
+        ],
+        "query_time": 2.6067751739174128
+      },
+      {
+        "query_id": 12,
+        "retrieved_indices": [
+          0,
+          4,
+          3,
+          943,
+          1,
+          2,
+          282,
+          622,
+          178,
+          461
+        ],
+        "query_time": 2.5969275860115886
+      },
+      {
+        "query_id": 13,
+        "retrieved_indices": [
+          4,
+          0,
+          2,
+          3,
+          943,
+          1,
+          248,
+          931,
+          713,
+          282
+        ],
+        "query_time": 2.7937032971531153
+      },
+      {
+        "query_id": 14,
+        "retrieved_indices": [
+          0,
+          4,
+          2,
+          3,
+          1,
+          282,
+          972,
+          713,
+          290,
+          554
+        ],
+        "query_time": 2.6074436213821173
+      },
+      {
+        "query_id": 15,
+        "retrieved_indices": [
+          3,
+          0,
+          2,
+          4,
+          1,
+          610,
+          461,
+          931,
+          554,
+          987
+        ],
+        "query_time": 2.6013209857046604
+      },
+      {
+        "query_id": 16,
+        "retrieved_indices": [
+          2,
+          4,
+          716,
+          3,
+          987,
+          282,
+          0,
+          1,
+          470,
+          554
+        ],
+        "query_time": 2.6021356033161283
+      },
+      {
+        "query_id": 17,
+        "retrieved_indices": [
+          3,
+          4,
+          0,
+          1,
+          2,
+          931,
+          290,
+          248,
+          610,
+          554
+        ],
+        "query_time": 2.6029731640592217
+      },
+      {
+        "query_id": 18,
+        "retrieved_indices": [
+          1,
+          2,
+          3,
+          0,
+          554,
+          4,
+          178,
+          972,
+          587,
+          987
+        ],
+        "query_time": 2.6052376218140125
+      },
+      {
+        "query_id": 19,
+        "retrieved_indices": [
+          1,
+          2,
+          0,
+          3,
+          4,
+          393,
+          734,
+          461,
+          610,
+          987
+        ],
+        "query_time": 2.599467197433114
+      },
+      {
+        "query_id": 20,
+        "retrieved_indices": [
+          3,
+          0,
+          1,
+          4,
+          2,
+          830,
+          620,
+          290,
+          282,
+          713
+        ],
+        "query_time": 2.5994009897112846
+      },
+      {
+        "query_id": 21,
+        "retrieved_indices": [
+          1,
+          3,
+          2,
+          0,
+          4,
+          987,
+          678,
+          247,
+          393,
+          248
+        ],
+        "query_time": 2.5978809017688036
+      },
+      {
+        "query_id": 22,
+        "retrieved_indices": [
+          2,
+          0,
+          4,
+          3,
+          1,
+          972,
+          554,
+          282,
+          610,
+          713
+        ],
+        "query_time": 2.6023692982271314
+      },
+      {
+        "query_id": 23,
+        "retrieved_indices": [
+          1,
+          2,
+          3,
+          0,
+          393,
+          4,
+          178,
+          461,
+          734,
+          620
+        ],
+        "query_time": 2.6070441333577037
+      },
+      {
+        "query_id": 24,
+        "retrieved_indices": [
+          1,
+          3,
+          2,
+          0,
+          4,
+          470,
+          587,
+          461,
+          713,
+          987
+        ],
+        "query_time": 2.599492073059082
+      },
+      {
+        "query_id": 25,
+        "retrieved_indices": [
+          3,
+          2,
+          4,
+          1,
+          0,
+          142,
+          178,
+          610,
+          247,
+          830
+        ],
+        "query_time": 2.6015644473955035
+      },
+      {
+        "query_id": 26,
+        "retrieved_indices": [
+          3,
+          2,
+          4,
+          1,
+          0,
+          247,
+          943,
+          610,
+          470,
+          282
+        ],
+        "query_time": 2.6051948750391603
+      },
+      {
+        "query_id": 27,
+        "retrieved_indices": [
+          2,
+          3,
+          1,
+          4,
+          290,
+          282,
+          470,
+          0,
+          11,
+          987
+        ],
+        "query_time": 2.6032086657360196
+      },
+      {
+        "query_id": 28,
+        "retrieved_indices": [
+          0,
+          4,
+          2,
+          3,
+          247,
+          1,
+          931,
+          461,
+          587,
+          830
+        ],
+        "query_time": 2.6032031597569585
+      },
+      {
+        "query_id": 29,
+        "retrieved_indices": [
+          1,
+          4,
+          0,
+          3,
+          2,
+          178,
+          620,
+          461,
+          11,
+          734
+        ],
+        "query_time": 2.6005012979730964
+      },
+      {
+        "query_id": 30,
+        "retrieved_indices": [
+          0,
+          4,
+          3,
+          2,
+          1,
+          620,
+          830,
+          470,
+          716,
+          622
+        ],
+        "query_time": 2.6031386656686664
+      },
+      {
+        "query_id": 31,
+        "retrieved_indices": [
+          4,
+          2,
+          0,
+          3,
+          1,
+          716,
+          282,
+          622,
+          290,
+          554
+        ],
+        "query_time": 2.5970252631232142
+      },
+      {
+        "query_id": 32,
+        "retrieved_indices": [
+          2,
+          4,
+          3,
+          0,
+          1,
+          587,
+          943,
+          11,
+          461,
+          393
+        ],
+        "query_time": 2.601878134533763
+      },
+      {
+        "query_id": 33,
+        "retrieved_indices": [
+          3,
+          2,
+          1,
+          4,
+          0,
+          931,
+          734,
+          178,
+          470,
+          11
+        ],
+        "query_time": 2.6189374327659607
+      },
+      {
+        "query_id": 34,
+        "retrieved_indices": [
+          0,
+          4,
+          3,
+          2,
+          1,
+          248,
+          587,
+          470,
+          142,
+          247
+        ],
+        "query_time": 2.5994492480531335
+      },
+      {
+        "query_id": 35,
+        "retrieved_indices": [
+          2,
+          3,
+          0,
+          4,
+          1,
+          290,
+          713,
+          247,
+          716,
+          622
+        ],
+        "query_time": 2.6053289733827114
+      },
+      {
+        "query_id": 36,
+        "retrieved_indices": [
+          2,
+          3,
+          4,
+          1,
+          0,
+          943,
+          393,
+          931,
+          178,
+          470
+        ],
+        "query_time": 2.600157232955098
+      },
+      {
+        "query_id": 37,
+        "retrieved_indices": [
+          0,
+          4,
+          2,
+          3,
+          1,
+          610,
+          713,
+          282,
+          972,
+          716
+        ],
+        "query_time": 2.6034874645993114
+      },
+      {
+        "query_id": 38,
+        "retrieved_indices": [
+          2,
+          3,
+          0,
+          1,
+          4,
+          587,
+          178,
+          11,
+          554,
+          830
+        ],
+        "query_time": 2.6075210496783257
+      },
+      {
+        "query_id": 39,
+        "retrieved_indices": [
+          0,
+          4,
+          3,
+          620,
+          972,
+          2,
+          678,
+          447,
+          830,
+          1
+        ],
+        "query_time": 2.6035542637109756
+      },
+      {
+        "query_id": 40,
+        "retrieved_indices": [
+          1,
+          4,
+          2,
+          3,
+          0,
+          587,
+          734,
+          830,
+          678,
+          713
+        ],
+        "query_time": 2.6038937838748097
+      },
+      {
+        "query_id": 41,
+        "retrieved_indices": [
+          2,
+          4,
+          1,
+          3,
+          0,
+          461,
+          554,
+          734,
+          620,
+          622
+        ],
+        "query_time": 2.613565158098936
+      },
+      {
+        "query_id": 42,
+        "retrieved_indices": [
+          0,
+          4,
+          2,
+          3,
+          1,
+          987,
+          716,
+          290,
+          282,
+          248
+        ],
+        "query_time": 2.6026593474671245
+      },
+      {
+        "query_id": 43,
+        "retrieved_indices": [
+          2,
+          1,
+          4,
+          3,
+          0,
+          247,
+          290,
+          943,
+          987,
+          716
+        ],
+        "query_time": 2.6044747792184353
+      },
+      {
+        "query_id": 44,
+        "retrieved_indices": [
+          0,
+          3,
+          4,
+          2,
+          1,
+          931,
+          716,
+          678,
+          178,
+          972
+        ],
+        "query_time": 2.605647938326001
+      },
+      {
+        "query_id": 45,
+        "retrieved_indices": [
+          2,
+          4,
+          0,
+          3,
+          1,
+          393,
+          620,
+          610,
+          713,
+          11
+        ],
+        "query_time": 2.6072690412402153
+      },
+      {
+        "query_id": 46,
+        "retrieved_indices": [
+          3,
+          2,
+          0,
+          1,
+          4,
+          943,
+          587,
+          178,
+          716,
+          610
+        ],
+        "query_time": 2.6076360419392586
+      },
+      {
+        "query_id": 47,
+        "retrieved_indices": [
+          4,
+          0,
+          1,
+          3,
+          2,
+          461,
+          11,
+          734,
+          716,
+          393
+        ],
+        "query_time": 2.600133130326867
+      },
+      {
+        "query_id": 48,
+        "retrieved_indices": [
+          3,
+          0,
+          1,
+          4,
+          2,
+          622,
+          178,
+          587,
+          248,
+          678
+        ],
+        "query_time": 2.602592541836202
+      },
+      {
+        "query_id": 49,
+        "retrieved_indices": [
+          2,
+          4,
+          1,
+          3,
+          0,
+          931,
+          447,
+          247,
+          678,
+          972
+        ],
+        "query_time": 2.601708780042827
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.14098897576332092,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.12180377542972565,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1523677408695221,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1464763730764389,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1511051058769226,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.18535752594470978,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.16426585614681244,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.129251167178154,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1939268857240677,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.12917104363441467,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.12365754693746567,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.17415212094783783,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.31488013066763093,
+        "avg_similarity": 0.16794055700302124,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.14565019309520721,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1552669256925583,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.16309423744678497,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.09758062660694122,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.13385754823684692,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.2934556883974402,
+        "avg_similarity": 0.1478903889656067,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.14000321924686432,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1489507108926773,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.10613229125738144,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.20114965736865997,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.126352921128273,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.13883724808692932,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.17391268908977509,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.12529833614826202,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.10555434226989746,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.11015503108501434,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.16838447749614716,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.15920624136924744,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.15051373839378357,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.15746253728866577,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.10618799924850464,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.14156021177768707,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.07336392209936005,
+        "avg_similarity": 0.1386394202709198,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1520114541053772,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.16990408301353455,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1656600534915924,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.13210546970367432,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.12031924724578857,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.14102612435817719,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.20718029141426086,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.11936521530151367,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1433033049106598,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.14319831132888794,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.16168037056922913,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1580614447593689,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.13837815821170807,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.18164627254009247,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "phase1": 2.008196597918868,
+        "phase2": 0.6128586353734136,
+        "total": 2.621132491156459
+      },
+      {
+        "phase1": 2.0076042506843805,
+        "phase2": 0.5941837131977081,
+        "total": 2.6018430599942803
+      },
+      {
+        "phase1": 2.00749490223825,
+        "phase2": 0.5929114688187838,
+        "total": 2.6004630709066987
+      },
+      {
+        "phase1": 2.00742915738374,
+        "phase2": 0.5953385885804892,
+        "total": 2.6028272453695536
+      },
+      {
+        "phase1": 2.007401991635561,
+        "phase2": 0.5947546102106571,
+        "total": 2.602247854694724
+      },
+      {
+        "phase1": 2.0105813341215253,
+        "phase2": 0.5926065053790808,
+        "total": 2.603251841850579
+      },
+      {
+        "phase1": 2.008486491627991,
+        "phase2": 0.5900099016726017,
+        "total": 2.5985550303012133
+      },
+      {
+        "phase1": 2.0078185349702835,
+        "phase2": 0.5938993794843554,
+        "total": 2.6017749309539795
+      },
+      {
+        "phase1": 2.0077332835644484,
+        "phase2": 0.5899507645517588,
+        "total": 2.597735940478742
+      },
+      {
+        "phase1": 2.0077531840652227,
+        "phase2": 0.5923617286607623,
+        "total": 2.600171878002584
+      },
+      {
+        "phase1": 2.007584536448121,
+        "phase2": 0.5896237213164568,
+        "total": 2.597283554263413
+      },
+      {
+        "phase1": 2.0076902136206627,
+        "phase2": 0.5990241980180144,
+        "total": 2.606773783452809
+      },
+      {
+        "phase1": 2.0073506999760866,
+        "phase2": 0.5895211733877659,
+        "total": 2.596926234662533
+      },
+      {
+        "phase1": 2.0071748746559024,
+        "phase2": 0.7864620024338365,
+        "total": 2.7937019001692533
+      },
+      {
+        "phase1": 2.0073393154889345,
+        "phase2": 0.6000439906492829,
+        "total": 2.607441768050194
+      },
+      {
+        "phase1": 2.007265749387443,
+        "phase2": 0.593994190916419,
+        "total": 2.6013195253908634
+      },
+      {
+        "phase1": 2.0078045846894383,
+        "phase2": 0.5942389173433185,
+        "total": 2.602133771404624
+      },
+      {
+        "phase1": 2.0111912451684475,
+        "phase2": 0.5917237522080541,
+        "total": 2.602971668355167
+      },
+      {
+        "phase1": 2.0085196373984218,
+        "phase2": 0.5966572985053062,
+        "total": 2.6052358811721206
+      },
+      {
+        "phase1": 2.0078035574406385,
+        "phase2": 0.5916080875322223,
+        "total": 2.599466093815863
+      },
+      {
+        "phase1": 2.0074433339759707,
+        "phase2": 0.5919002369046211,
+        "total": 2.599399575032294
+      },
+      {
+        "phase1": 2.0078046303242445,
+        "phase2": 0.5900083724409342,
+        "total": 2.597879289649427
+      },
+      {
+        "phase1": 2.007839908823371,
+        "phase2": 0.5944753969088197,
+        "total": 2.602367983199656
+      },
+      {
+        "phase1": 2.0073246527463198,
+        "phase2": 0.5996362715959549,
+        "total": 2.6070383163169026
+      },
+      {
+        "phase1": 2.0079850452020764,
+        "phase2": 0.5914418129250407,
+        "total": 2.599490604363382
+      },
+      {
+        "phase1": 2.0076326578855515,
+        "phase2": 0.593874336220324,
+        "total": 2.60156281106174
+      },
+      {
+        "phase1": 2.0073306104168296,
+        "phase2": 0.5978063736110926,
+        "total": 2.605193343013525
+      },
+      {
+        "phase1": 2.007670847699046,
+        "phase2": 0.5954796383157372,
+        "total": 2.6032072864472866
+      },
+      {
+        "phase1": 2.0075470143929124,
+        "phase2": 0.5955921001732349,
+        "total": 2.6032016398385167
+      },
+      {
+        "phase1": 2.007687097415328,
+        "phase2": 0.5927589861676097,
+        "total": 2.6004995945841074
+      },
+      {
+        "phase1": 2.0075920624658465,
+        "phase2": 0.5954858046025038,
+        "total": 2.60313705727458
+      },
+      {
+        "phase1": 2.007563417777419,
+        "phase2": 0.5894058421254158,
+        "total": 2.5970236230641603
+      },
+      {
+        "phase1": 2.007425588555634,
+        "phase2": 0.5943936239928007,
+        "total": 2.601876706816256
+      },
+      {
+        "phase1": 2.01119642611593,
+        "phase2": 0.6076763309538364,
+        "total": 2.618936166167259
+      },
+      {
+        "phase1": 2.0085108196362853,
+        "phase2": 0.5908812610432506,
+        "total": 2.5994479982182384
+      },
+      {
+        "phase1": 2.008107528090477,
+        "phase2": 0.59716587793082,
+        "total": 2.6053276546299458
+      },
+      {
+        "phase1": 2.007829667069018,
+        "phase2": 0.5922679575160146,
+        "total": 2.600155794993043
+      },
+      {
+        "phase1": 2.007841912098229,
+        "phase2": 0.5955905923619866,
+        "total": 2.603485965169966
+      },
+      {
+        "phase1": 2.0076814154163003,
+        "phase2": 0.5997861484065652,
+        "total": 2.607519593089819
+      },
+      {
+        "phase1": 2.0074866143986583,
+        "phase2": 0.5960077829658985,
+        "total": 2.6035526245832443
+      },
+      {
+        "phase1": 2.007681405171752,
+        "phase2": 0.596153013408184,
+        "total": 2.6038922825828195
+      },
+      {
+        "phase1": 2.007166284136474,
+        "phase2": 0.6063180649653077,
+        "total": 2.61356090195477
+      },
+      {
+        "phase1": 2.0078050699084997,
+        "phase2": 0.5947894658893347,
+        "total": 2.60265782289207
+      },
+      {
+        "phase1": 2.007596619427204,
+        "phase2": 0.5968197407200933,
+        "total": 2.6044731196016073
+      },
+      {
+        "phase1": 2.007301895879209,
+        "phase2": 0.598288576118648,
+        "total": 2.6056464929133654
+      },
+      {
+        "phase1": 2.0077918777242303,
+        "phase2": 0.5994194941595197,
+        "total": 2.6072675734758377
+      },
+      {
+        "phase1": 2.007408178411424,
+        "phase2": 0.6001698300242424,
+        "total": 2.607634729705751
+      },
+      {
+        "phase1": 2.00737632997334,
+        "phase2": 0.592701573856175,
+        "total": 2.600131681188941
+      },
+      {
+        "phase1": 2.007810305804014,
+        "phase2": 0.5947230765596032,
+        "total": 2.6025909390300512
+      },
+      {
+        "phase1": 2.007368286140263,
+        "phase2": 0.5942810568958521,
+        "total": 2.601707175374031
+      }
+    ],
+    "communication_costs": [
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400,
+      802400
+    ],
+    "avg_metrics": {
+      "avg_query_time": 2.607064314316958,
+      "avg_precision_at_k": 0.01,
+      "avg_recall_at_k": 0.01,
+      "avg_ndcg_at_k": 0.013633994823288625,
+      "avg_similarity": 0.14711891114711761,
+      "avg_communication_per_query": 802400.0,
+      "queries_per_second": 0.3835731993677327,
+      "communication_efficiency": 80240.0
+    }
+  },
+  "tiptoe": null
+}

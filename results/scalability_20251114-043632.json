@@ -1,0 +1,27 @@
+{
+  "doc_sizes": [
+    500,
+    1000,
+    2000,
+    5000
+  ],
+  "dataset_name": "MS_MARCO",
+  "pir_rag_results": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "graph_pir_results": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "tiptoe_results": [
+    null,
+    null,
+    null,
+    null
+  ]
+}

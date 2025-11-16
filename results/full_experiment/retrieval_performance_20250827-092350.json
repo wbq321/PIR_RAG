@@ -1,0 +1,153 @@
+{
+  "experiment_info": {
+    "timestamp": "20250827-092350",
+    "n_docs": 100,
+    "n_queries": 1,
+    "top_k": 10,
+    "embed_dim": 768,
+    "data_type": "real"
+  },
+  "pir_rag": {
+    "system": "PIR-RAG",
+    "setup_time": 0.0031956881284713745,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [],
+        "query_time": 1.4085268070921302
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0,
+        "num_retrieved": 0
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "cluster_selection": 0.000595596618950367,
+        "pir_retrieval": 1.4078605584800243,
+        "reranking": 5.064532160758972e-05,
+        "total": 1.4085237812250853
+      }
+    ],
+    "communication_costs": [
+      37886940
+    ],
+    "avg_metrics": {
+      "avg_query_time": 1.4085268070921302,
+      "avg_precision_at_k": 0.0,
+      "avg_recall_at_k": 0.0,
+      "avg_ndcg_at_k": 0.0,
+      "avg_similarity": 0.0,
+      "avg_communication_per_query": 37886940.0,
+      "queries_per_second": 0.7099616386176391,
+      "communication_efficiency": 3788694.0
+    }
+  },
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 0.4434119937941432,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          25,
+          41,
+          66,
+          2,
+          72,
+          43,
+          82,
+          70,
+          53,
+          78
+        ],
+        "query_time": 1.7972650341689587
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.3589542101716347,
+        "avg_similarity": 0.18453910946846008,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "phase1": 1.7418561987578869,
+        "phase2": 0.05524491239339113,
+        "total": 1.7972618248313665
+      }
+    ],
+    "communication_costs": [
+      170624
+    ],
+    "avg_metrics": {
+      "avg_query_time": 1.7972650341689587,
+      "avg_precision_at_k": 0.2,
+      "avg_recall_at_k": 0.2,
+      "avg_ndcg_at_k": 0.3589542101716347,
+      "avg_similarity": 0.18453910946846008,
+      "avg_communication_per_query": 170624.0,
+      "queries_per_second": 0.5564009653492158,
+      "communication_efficiency": 17062.4
+    }
+  },
+  "tiptoe": {
+    "system": "Tiptoe",
+    "setup_time": 0.042014144361019135,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          16,
+          68,
+          22,
+          58,
+          71,
+          97,
+          90,
+          2,
+          1,
+          11
+        ],
+        "query_time": 1.7542218258604407
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.17736302316188812,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "ranking": 1.745428428053856,
+        "retrieval": 0.008254685439169407,
+        "total": 1.7542186714708805
+      }
+    ],
+    "communication_costs": [
+      0
+    ],
+    "avg_metrics": {
+      "avg_query_time": 1.7542218258604407,
+      "avg_precision_at_k": 0.0,
+      "avg_recall_at_k": 0.0,
+      "avg_ndcg_at_k": 0.0,
+      "avg_similarity": 0.17736302316188812,
+      "avg_communication_per_query": 0.0,
+      "queries_per_second": 0.5700533337678106,
+      "communication_efficiency": 0.0
+    }
+  }
+}

@@ -1,0 +1,956 @@
+{
+  "experiment_info": {
+    "timestamp": "20250827-090020",
+    "n_docs": 1000,
+    "n_queries": 10,
+    "top_k": 10,
+    "embed_dim": 768,
+    "data_type": "real"
+  },
+  "pir_rag": {
+    "system": "PIR-RAG",
+    "setup_time": 0.01640025805681944,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          102,
+          16777296,
+          16777249,
+          382,
+          16777478,
+          16778062,
+          608,
+          92,
+          16777989,
+          25
+        ],
+        "query_time": 6.764509614557028
+      },
+      {
+        "query_id": 1,
+        "retrieved_indices": [
+          16778068,
+          16777807,
+          88,
+          366,
+          16777524,
+          16778066,
+          16777476,
+          16778080,
+          16777216,
+          16778000
+        ],
+        "query_time": 6.747488211840391
+      },
+      {
+        "query_id": 2,
+        "retrieved_indices": [
+          59,
+          303,
+          16777567,
+          596,
+          868,
+          16777999,
+          16778075,
+          16777575,
+          16777280,
+          16777795
+        ],
+        "query_time": 5.756998321972787
+      },
+      {
+        "query_id": 3,
+        "retrieved_indices": [
+          16777840,
+          16777274,
+          16777585,
+          16777291,
+          562,
+          16778013,
+          318,
+          515,
+          527,
+          16777570
+        ],
+        "query_time": 6.938380751758814
+      },
+      {
+        "query_id": 4,
+        "retrieved_indices": [
+          16777545,
+          16777550,
+          16777330,
+          16777512,
+          770,
+          11,
+          96,
+          16777548,
+          16777250,
+          314
+        ],
+        "query_time": 5.97490375302732
+      },
+      {
+        "query_id": 5,
+        "retrieved_indices": [
+          16777802,
+          104,
+          16777855,
+          16777495,
+          16778082,
+          16778038,
+          537,
+          16777785,
+          16777812,
+          518
+        ],
+        "query_time": 5.974559157155454
+      },
+      {
+        "query_id": 6,
+        "retrieved_indices": [
+          545,
+          16777808,
+          16777571,
+          16778032,
+          513,
+          883,
+          334,
+          16778000,
+          16777847,
+          48
+        ],
+        "query_time": 6.755868046544492
+      },
+      {
+        "query_id": 7,
+        "retrieved_indices": [
+          526,
+          16777486,
+          261,
+          16777484,
+          16777280,
+          16777594,
+          16777575,
+          369,
+          58,
+          16778069
+        ],
+        "query_time": 5.957221232354641
+      },
+      {
+        "query_id": 8,
+        "retrieved_indices": [
+          300,
+          863,
+          16777270,
+          875,
+          16777998,
+          16778062,
+          78,
+          93,
+          16778023,
+          16777788
+        ],
+        "query_time": 6.790707218460739
+      },
+      {
+        "query_id": 9,
+        "retrieved_indices": [
+          16777309,
+          22,
+          16778014,
+          6,
+          604,
+          16778069,
+          16777737,
+          16778001,
+          305,
+          369
+        ],
+        "query_time": 5.747034568339586
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.2934556883974402,
+        "avg_similarity": 0.24845340847969055,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.20483424751859086,
+        "avg_similarity": 0.22727905213832855,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.3589542101716347,
+        "avg_similarity": 0.27249401807785034,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.08514311764162098,
+        "avg_similarity": 0.23586618900299072,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.08514311764162098,
+        "avg_similarity": 0.25549399852752686,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.13886244387355454,
+        "avg_similarity": 0.2709011435508728,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.20889826118946075,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.3,
+        "recall_at_k": 0.3,
+        "ndcg_at_k": 0.3963918729015093,
+        "avg_similarity": 0.2672952711582184,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.23076698184013367,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.22400556151517553,
+        "avg_similarity": 0.21074995398521423,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "cluster_selection": 0.0006092945113778114,
+        "pir_retrieval": 6.76226434763521,
+        "reranking": 0.001619003713130951,
+        "total": 6.764500399120152
+      },
+      {
+        "cluster_selection": 0.0002512577921152115,
+        "pir_retrieval": 6.745698572136462,
+        "reranking": 0.0015019336715340614,
+        "total": 6.74747971445322
+      },
+      {
+        "cluster_selection": 0.00025025103241205215,
+        "pir_retrieval": 5.75506054610014,
+        "reranking": 0.0016584806144237518,
+        "total": 5.756995151750743
+      },
+      {
+        "cluster_selection": 0.00021570827811956406,
+        "pir_retrieval": 6.936223280616105,
+        "reranking": 0.0019247326999902725,
+        "total": 6.938371920958161
+      },
+      {
+        "cluster_selection": 0.00026183947920799255,
+        "pir_retrieval": 5.973014164716005,
+        "reranking": 0.0015929816290736198,
+        "total": 5.974896818399429
+      },
+      {
+        "cluster_selection": 0.00021164771169424057,
+        "pir_retrieval": 5.972587333992124,
+        "reranking": 0.0017445730045437813,
+        "total": 5.974553947336972
+      },
+      {
+        "cluster_selection": 0.0002291640266776085,
+        "pir_retrieval": 6.753925323486328,
+        "reranking": 0.001703028567135334,
+        "total": 6.755865243263543
+      },
+      {
+        "cluster_selection": 0.00020377431064844131,
+        "pir_retrieval": 5.955477275885642,
+        "reranking": 0.001529906876385212,
+        "total": 5.957218457944691
+      },
+      {
+        "cluster_selection": 0.00018845777958631516,
+        "pir_retrieval": 6.789298182353377,
+        "reranking": 0.0011857636272907257,
+        "total": 6.790701309219003
+      },
+      {
+        "cluster_selection": 0.0001931292936205864,
+        "pir_retrieval": 5.74515181966126,
+        "reranking": 0.0016745440661907196,
+        "total": 5.74702871683985
+      }
+    ],
+    "communication_costs": [
+      96920647,
+      96920647,
+      96637780,
+      96986357,
+      96703490,
+      96717574,
+      96920647,
+      96703490,
+      96920647,
+      96637780
+    ],
+    "avg_metrics": {
+      "avg_query_time": 6.340767087601125,
+      "avg_precision_at_k": 0.14,
+      "avg_recall_at_k": 0.14,
+      "avg_ndcg_at_k": 0.17867902596611468,
+      "avg_similarity": 0.24281983077526093,
+      "avg_communication_per_query": 96806905.9,
+      "queries_per_second": 0.15770962506341257,
+      "communication_efficiency": 9680690.59
+    }
+  },
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 7.164430113509297,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          248,
+          11,
+          830,
+          2,
+          290,
+          674,
+          565,
+          483,
+          393,
+          713
+        ],
+        "query_time": 2.001224184408784
+      },
+      {
+        "query_id": 1,
+        "retrieved_indices": [
+          982,
+          622,
+          120,
+          11,
+          42,
+          247,
+          2,
+          0,
+          462,
+          713
+        ],
+        "query_time": 2.305536446161568
+      },
+      {
+        "query_id": 2,
+        "retrieved_indices": [
+          713,
+          987,
+          290,
+          248,
+          447,
+          565,
+          2,
+          774,
+          142,
+          293
+        ],
+        "query_time": 2.1432099863886833
+      },
+      {
+        "query_id": 3,
+        "retrieved_indices": [
+          142,
+          0,
+          830,
+          178,
+          943,
+          931,
+          616,
+          837,
+          565,
+          622
+        ],
+        "query_time": 2.062227761372924
+      },
+      {
+        "query_id": 4,
+        "retrieved_indices": [
+          11,
+          178,
+          142,
+          830,
+          393,
+          1,
+          447,
+          713,
+          248,
+          2
+        ],
+        "query_time": 1.9870556769892573
+      },
+      {
+        "query_id": 5,
+        "retrieved_indices": [
+          774,
+          713,
+          943,
+          1,
+          622,
+          830,
+          447,
+          178,
+          142,
+          987
+        ],
+        "query_time": 2.0619584312662482
+      },
+      {
+        "query_id": 6,
+        "retrieved_indices": [
+          483,
+          830,
+          290,
+          622,
+          713,
+          2,
+          987,
+          247,
+          391,
+          1
+        ],
+        "query_time": 2.0697404136881232
+      },
+      {
+        "query_id": 7,
+        "retrieved_indices": [
+          11,
+          178,
+          370,
+          1,
+          393,
+          713,
+          830,
+          2,
+          248,
+          696
+        ],
+        "query_time": 1.9811600660905242
+      },
+      {
+        "query_id": 8,
+        "retrieved_indices": [
+          931,
+          139,
+          622,
+          447,
+          943,
+          0,
+          470,
+          713,
+          987,
+          247
+        ],
+        "query_time": 1.907792465761304
+      },
+      {
+        "query_id": 9,
+        "retrieved_indices": [
+          290,
+          987,
+          142,
+          248,
+          247,
+          1,
+          345,
+          830,
+          11,
+          713
+        ],
+        "query_time": 2.0640001567080617
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.22009176629808017,
+        "avg_similarity": 0.1713404357433319,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.140702486038208,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.19474327564239502,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.17374782264232635,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1873554289340973,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.20284175872802734,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.1,
+        "ndcg_at_k": 0.22009176629808017,
+        "avg_similarity": 0.2005089819431305,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.1583220660686493,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.22586479783058167,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.15636518597602844,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "phase1": 1.4458077885210514,
+        "phase2": 0.555196326225996,
+        "total": 2.001219030469656
+      },
+      {
+        "phase1": 1.766629128716886,
+        "phase2": 0.5387437734752893,
+        "total": 2.3055352987721562
+      },
+      {
+        "phase1": 1.6053515430539846,
+        "phase2": 0.5377028854563832,
+        "total": 2.143208922818303
+      },
+      {
+        "phase1": 1.5254517123103142,
+        "phase2": 0.5366181628778577,
+        "total": 2.0622270442545414
+      },
+      {
+        "phase1": 1.4451365070417523,
+        "phase2": 0.5417619906365871,
+        "total": 1.9870549011975527
+      },
+      {
+        "phase1": 1.525311591103673,
+        "phase2": 0.5364928804337978,
+        "total": 2.061957531608641
+      },
+      {
+        "phase1": 1.5253343414515257,
+        "phase2": 0.5442457646131516,
+        "total": 2.0697396397590637
+      },
+      {
+        "phase1": 1.4449438536539674,
+        "phase2": 0.5360528267920017,
+        "total": 1.9811591636389494
+      },
+      {
+        "phase1": 1.3646727995947003,
+        "phase2": 0.5429615443572402,
+        "total": 1.9077916713431478
+      },
+      {
+        "phase1": 1.5250464705750346,
+        "phase2": 0.5387936234474182,
+        "total": 2.063999374397099
+      }
+    ],
+    "communication_costs": [
+      733056,
+      746624,
+      739840,
+      736448,
+      733056,
+      736448,
+      736448,
+      733056,
+      729664,
+      736448
+    ],
+    "avg_metrics": {
+      "avg_query_time": 2.0583905588835476,
+      "avg_precision_at_k": 0.02,
+      "avg_recall_at_k": 0.02,
+      "avg_ndcg_at_k": 0.04401835325961603,
+      "avg_similarity": 0.1811792105436325,
+      "avg_communication_per_query": 736108.8,
+      "queries_per_second": 0.4858164529001682,
+      "communication_efficiency": 73610.88
+    }
+  },
+  "tiptoe": {
+    "system": "Tiptoe",
+    "setup_time": 0.19394989870488644,
+    "query_results": [
+      {
+        "query_id": 0,
+        "retrieved_indices": [
+          805,
+          222,
+          507,
+          608,
+          268,
+          669,
+          93,
+          564,
+          978,
+          868
+        ],
+        "query_time": 18.946630598977208
+      },
+      {
+        "query_id": 1,
+        "retrieved_indices": [
+          980,
+          133,
+          669,
+          719,
+          165,
+          88,
+          546,
+          814,
+          663,
+          698
+        ],
+        "query_time": 18.81793539132923
+      },
+      {
+        "query_id": 2,
+        "retrieved_indices": [
+          59,
+          276,
+          479,
+          411,
+          891,
+          525,
+          499,
+          567,
+          399,
+          192
+        ],
+        "query_time": 13.699245155788958
+      },
+      {
+        "query_id": 3,
+        "retrieved_indices": [
+          752,
+          960,
+          186,
+          230,
+          105,
+          472,
+          178,
+          184,
+          484,
+          60
+        ],
+        "query_time": 10.610095731914043
+      },
+      {
+        "query_id": 4,
+        "retrieved_indices": [
+          457,
+          770,
+          293,
+          196,
+          977,
+          170,
+          862,
+          741,
+          105,
+          242
+        ],
+        "query_time": 10.606495087966323
+      },
+      {
+        "query_id": 5,
+        "retrieved_indices": [
+          714,
+          104,
+          969,
+          451,
+          767,
+          867,
+          994,
+          690,
+          496,
+          724
+        ],
+        "query_time": 19.25569095928222
+      },
+      {
+        "query_id": 6,
+        "retrieved_indices": [
+          830,
+          545,
+          532,
+          657,
+          260,
+          178,
+          660,
+          68,
+          1,
+          828
+        ],
+        "query_time": 10.604314330033958
+      },
+      {
+        "query_id": 7,
+        "retrieved_indices": [
+          526,
+          396,
+          22,
+          843,
+          276,
+          993,
+          963,
+          687,
+          275,
+          604
+        ],
+        "query_time": 13.65679470449686
+      },
+      {
+        "query_id": 8,
+        "retrieved_indices": [
+          307,
+          490,
+          616,
+          312,
+          391,
+          931,
+          726,
+          615,
+          447,
+          309
+        ],
+        "query_time": 27.771710438653827
+      },
+      {
+        "query_id": 9,
+        "retrieved_indices": [
+          604,
+          194,
+          221,
+          843,
+          305,
+          687,
+          811,
+          649,
+          851,
+          420
+        ],
+        "query_time": 13.655118550173938
+      }
+    ],
+    "quality_metrics": [
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.31488013066763093,
+        "avg_similarity": 0.20191237330436707,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.4,
+        "ndcg_at_k": 0.5321408435198608,
+        "avg_similarity": 0.21123671531677246,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.4,
+        "ndcg_at_k": 0.4789015552876929,
+        "avg_similarity": 0.24978522956371307,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.2,
+        "ndcg_at_k": 0.33013764944712026,
+        "avg_similarity": 0.2240503579378128,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.6,
+        "recall_at_k": 0.6,
+        "ndcg_at_k": 0.7116179486056782,
+        "avg_similarity": 0.28377825021743774,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.6,
+        "recall_at_k": 0.6,
+        "ndcg_at_k": 0.696162268139923,
+        "avg_similarity": 0.28109943866729736,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "avg_similarity": 0.18572404980659485,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.5,
+        "recall_at_k": 0.5,
+        "ndcg_at_k": 0.627507133061656,
+        "avg_similarity": 0.24498489499092102,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.6,
+        "recall_at_k": 0.6,
+        "ndcg_at_k": 0.6871952210980248,
+        "avg_similarity": 0.26765957474708557,
+        "num_retrieved": 10
+      },
+      {
+        "precision_at_k": 0.7,
+        "recall_at_k": 0.7,
+        "ndcg_at_k": 0.7123736502858727,
+        "avg_similarity": 0.22741977870464325,
+        "num_retrieved": 10
+      }
+    ],
+    "timing_breakdown": [
+      {
+        "ranking": 18.868845431134105,
+        "retrieval": 0.07704970333725214,
+        "total": 18.94662368390709
+      },
+      {
+        "ranking": 18.74046541750431,
+        "retrieval": 0.07661921996623278,
+        "total": 18.817933889105916
+      },
+      {
+        "ranking": 13.641636532731354,
+        "retrieval": 0.056905632838606834,
+        "total": 13.699237724766135
+      },
+      {
+        "ranking": 10.56617259606719,
+        "retrieval": 0.043138851411640644,
+        "total": 10.610094427131116
+      },
+      {
+        "ranking": 10.562672824598849,
+        "retrieval": 0.04302986152470112,
+        "total": 10.606493633240461
+      },
+      {
+        "ranking": 19.174415259622037,
+        "retrieval": 0.08050004113465548,
+        "total": 19.255683820694685
+      },
+      {
+        "ranking": 10.560225326567888,
+        "retrieval": 0.043272376991808414,
+        "total": 10.604313044808805
+      },
+      {
+        "ranking": 13.599118808284402,
+        "retrieval": 0.056885527446866035,
+        "total": 13.656793282367289
+      },
+      {
+        "ranking": 27.649344137869775,
+        "retrieval": 0.12159939669072628,
+        "total": 27.771703070029616
+      },
+      {
+        "ranking": 13.59815470688045,
+        "retrieval": 0.056168160401284695,
+        "total": 13.655117147602141
+      }
+    ],
+    "communication_costs": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "avg_metrics": {
+      "avg_query_time": 15.762403094861657,
+      "avg_precision_at_k": 0.42000000000000004,
+      "avg_recall_at_k": 0.42000000000000004,
+      "avg_ndcg_at_k": 0.5090916400113459,
+      "avg_similarity": 0.23776507377624512,
+      "avg_communication_per_query": 0.0,
+      "queries_per_second": 0.06344210295738391,
+      "communication_efficiency": 0.0
+    }
+  }
+}

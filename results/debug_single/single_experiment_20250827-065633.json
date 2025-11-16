@@ -1,0 +1,157 @@
+{
+  "pir_rag": {
+    "system": "PIR-RAG",
+    "setup_time": 0.04031217284500599,
+    "clustering_time": 0.04023850988596678,
+    "server_setup_time": 6.144214421510696e-05,
+    "avg_query_time": 0.14084038976579905,
+    "std_query_time": 0.0026799840852618217,
+    "query_times": [
+      0.14352037385106087,
+      0.13816040568053722
+    ],
+    "step_times": [
+      {
+        "cluster_selection_time": 0.0006003556773066521,
+        "pir_retrieval_time": 0.1425922578200698,
+        "reranking_time": 0.00032723043113946915,
+        "query_gen_time": 1.1952593922615051e-05,
+        "server_time": 0.05303120240569115,
+        "decode_time": 0.06568522937595844
+      },
+      {
+        "cluster_selection_time": 8.630752563476562e-05,
+        "pir_retrieval_time": 0.1378677897155285,
+        "reranking_time": 0.0002057105302810669,
+        "query_gen_time": 9.37189906835556e-06,
+        "server_time": 0.05118767078965902,
+        "decode_time": 0.06519006565213203
+      }
+    ],
+    "avg_upload_bytes": 128.0,
+    "avg_download_bytes": 3329313.0,
+    "communication_costs": [
+      {
+        "upload_bytes": 128,
+        "download_bytes": 3329313
+      },
+      {
+        "upload_bytes": 128,
+        "download_bytes": 3329313
+      }
+    ],
+    "parameters": {
+      "k_clusters": 2,
+      "cluster_top_k": 3,
+      "top_k": 10
+    },
+    "n_documents": 50,
+    "embedding_dim": 768
+  },
+  "graph_pir": {
+    "system": "Graph-PIR",
+    "setup_time": 0.15996079333126545,
+    "graph_setup_time": 0.04494586121290922,
+    "vector_pir_setup_time": 0.004395036958158016,
+    "doc_pir_setup_time": 0.11055632680654526,
+    "avg_query_time": 1.531816376838833,
+    "std_query_time": 0.0003028050996363163,
+    "query_times": [
+      1.5321191819384694,
+      1.5315135717391968
+    ],
+    "step_times": [
+      {
+        "phase1_time": 1.504287269897759,
+        "phase2_time": 0.027694689109921455,
+        "graph_traversal_time": 0,
+        "pir_time": 0,
+        "encryption_time": 0.00023600365966558456,
+        "decryption_time": 0.0002175392583012581
+      },
+      {
+        "phase1_time": 1.5039748307317495,
+        "phase2_time": 0.027408535592257977,
+        "graph_traversal_time": 0,
+        "pir_time": 0,
+        "encryption_time": 0.00023030675947666168,
+        "decryption_time": 0.00020548049360513687
+      }
+    ],
+    "avg_upload_bytes": 36864.0,
+    "avg_download_bytes": 91584.0,
+    "communication_costs": [
+      {
+        "upload_bytes": 36864,
+        "download_bytes": 91584,
+        "phase1_upload": 4864,
+        "phase1_download": 59584,
+        "phase2_upload": 32000,
+        "phase2_download": 32000
+      },
+      {
+        "upload_bytes": 36864,
+        "download_bytes": 91584,
+        "phase1_upload": 4864,
+        "phase1_download": 59584,
+        "phase2_upload": 32000,
+        "phase2_download": 32000
+      }
+    ],
+    "parameters": {
+      "k_neighbors": 16,
+      "ef_construction": 200,
+      "max_connections": 16
+    },
+    "n_documents": 50,
+    "embedding_dim": 768
+  },
+  "tiptoe": {
+    "system": "Tiptoe",
+    "setup_time": 0.04411064274609089,
+    "crypto_setup_time": 0,
+    "clustering_time": 0.008254245854914188,
+    "avg_query_time": 0.4006541967391968,
+    "std_query_time": 0.0024039587005972862,
+    "query_times": [
+      0.40305815543979406,
+      0.3982502380385995
+    ],
+    "step_times": [
+      {
+        "cluster_selection_time": 0,
+        "ranking_time": 0.40241803601384163,
+        "pir_retrieval_time": 0.0001298021525144577,
+        "total_ranking_time": 0
+      },
+      {
+        "cluster_selection_time": 0,
+        "ranking_time": 0.39758534636348486,
+        "pir_retrieval_time": 0.00013277772814035416,
+        "total_ranking_time": 0
+      }
+    ],
+    "avg_upload_bytes": 0.0,
+    "avg_download_bytes": 0.0,
+    "communication_costs": [
+      {
+        "upload_bytes": 0,
+        "download_bytes": 0,
+        "pir_communication": 160
+      },
+      {
+        "upload_bytes": 0,
+        "download_bytes": 0,
+        "pir_communication": 160
+      }
+    ],
+    "parameters": {
+      "k_clusters": 2,
+      "use_real_crypto": false,
+      "poly_degree": 8192,
+      "plain_modulus": 1024
+    },
+    "n_documents": 50,
+    "embedding_dim": 768
+  }
+}

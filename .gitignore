@@ -9,6 +9,12 @@ data/
 results/*.out
 results/*.err
 results/*.csv
+experiments/results/*.out
+experiments/results/*.err
+experiments/results/*.csv
+experiments/results/*.json
+experiments/results/
+
 
 # Python
 __pycache__/
